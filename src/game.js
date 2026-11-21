@@ -1781,6 +1781,7 @@ const Account = {
       INVALID_PASSWORD:"Falsches Passwort.", INVALID_LOGIN_CREDENTIALS:"E-Mail oder Passwort ist falsch.", INVALID_EMAIL:"Ungültige E-Mail-Adresse.",
       MISSING_PASSWORD:"Bitte ein Passwort eingeben.", USER_DISABLED:"Dieses Konto ist gesperrt.", TOO_MANY_ATTEMPTS_TRY_LATER:"Zu viele Versuche – bitte später erneut.",
       OPERATION_NOT_ALLOWED:"E-Mail-Login ist in Firebase noch nicht aktiviert.", PERMISSION_DENIED:"Keine Berechtigung (Firestore-Regeln prüfen).",
+      NOT_FOUND:"Firestore-Datenbank existiert noch nicht.", FAILED_PRECONDITION:"Firestore-Datenbank ist noch nicht eingerichtet.",
       NETWORK:"Keine Internetverbindung."})[String(code).split(" ")[0].split(":")[0]] || ("Fehler: "+code);
   },
   async call(url, body){
@@ -1806,11 +1807,14 @@ const Account = {
   },
   async register(email, pw, nick){
     const j = await this.call(this.idt()+"signUp?key="+FIREBASE.apiKey, {email, password:pw, returnSecureToken:true});
-    this.setSession(j); Store.set("nick", nick); await this.pushNow(); return true;
+    this.setSession(j); Store.set("nick", nick);
+    // Konto steht – ein Fehler beim Cloud-Speichern soll den Login nicht blockieren
+    try{ await this.pushNow(); return "ok"; }catch(e){ this.lastSyncError=e.message; return "nosync"; }
   },
   async login(email, pw){
     const j = await this.call(this.idt()+"signInWithPassword?key="+FIREBASE.apiKey, {email, password:pw, returnSecureToken:true});
-    this.setSession(j); await this.pull(true); return true;
+    this.setSession(j);
+    try{ return await this.pull(true); }catch(e){ this.lastSyncError=e.message; return "nosync"; }
   },
   async resetPassword(email){ await this.call(this.idt()+"sendOobCode?key="+FIREBASE.apiKey, {requestType:"PASSWORD_RESET", email}); },
   logout(){ this.user=null; this.persist(); UI.badges(); },
@@ -1856,7 +1860,7 @@ const Account = {
     $("acForm").style.display = on&&!li?"":"none";
     $("acIn").style.display = on&&li?"":"none";
     if(li){ $("acEmail").textContent=this.user.email||""; $("acNick").textContent=Store.get("nick","")||"–";
-      const s=Store.get("syncedAt",0); $("acSync").textContent = s?("Zuletzt gespeichert: "+new Date(s).toLocaleString("de-DE")):"Noch nicht gespeichert"; }
+      const s=Store.get("syncedAt",0); $("acSync").textContent = s?("Zuletzt gespeichert: "+new Date(s).toLocaleString("de-DE")):"Noch nicht in der Cloud gespeichert"+(this.lastSyncError?" – "+this.errText(this.lastSyncError):""); }
     $("acTabs").querySelectorAll("span").forEach(s=>s.classList.toggle("on",s.dataset.m===this.mode));
     $("acNickRow").style.display = this.mode==="register"?"":"none";
     $("acGo").textContent = this.mode==="register"?"✅ Konto erstellen":"🔑 Anmelden";
@@ -1873,8 +1877,10 @@ const Account = {
     }
     $("acGo").disabled=true; $("acMsg").textContent="Bitte warten …";
     try{
-      if(this.mode==="register"){ await this.register(email,pw,nick); toast("Willkommen, "+nick+"!"); }
-      else { const r=await this.login(email,pw); toast(r==="loaded"?"Angemeldet – Spielstand geladen":"Angemeldet – Spielstand gesichert"); }
+      let r;
+      if(this.mode==="register"){ r=await this.register(email,pw,nick); toast("Willkommen, "+nick+"!"); }
+      else { r=await this.login(email,pw); toast(r==="loaded"?"Angemeldet – Spielstand geladen":r==="nosync"?"Angemeldet":"Angemeldet – Spielstand gesichert"); }
+      if(r==="nosync") setTimeout(()=>toast("Angemeldet, aber Cloud-Speichern klappt noch nicht: "+this.errText(this.lastSyncError)),2600);
       $("acPw").value=""; $("acPw2").value=""; $("acMsg").textContent="";
       UI.badges(); UI.show("home");
     }catch(e){ $("acMsg").textContent="⚠️ "+this.errText(e.message); }
@@ -1885,7 +1891,7 @@ const Account = {
     try{ await this.resetPassword(email); $("acMsg").textContent="📧 Wir haben dir eine E-Mail zum Zurücksetzen geschickt."; }
     catch(e){ $("acMsg").textContent="⚠️ "+this.errText(e.message); }
   },
-  async syncNow(){ try{ await this.pushNow(); toast("Spielstand gesichert"); this.render(); }catch(e){ toast(this.errText(e.message)); } },
+  async syncNow(){ try{ await this.pushNow(); this.lastSyncError=null; toast("Spielstand gesichert"); this.render(); }catch(e){ this.lastSyncError=e.message; toast(this.errText(e.message)); this.render(); } },
   async loadNow(){ if(!await UI.ask("Spielstand vom Konto laden? Der Stand auf diesem Gerät wird ersetzt.")) return;
     try{ await this.pull(); toast("Spielstand geladen"); this.render(); }catch(e){ toast(this.errText(e.message)); } },
   /* Beim Start: neuerer Stand gewinnt (anderes Gerät → laden, sonst hochladen) */
