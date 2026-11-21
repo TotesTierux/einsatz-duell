@@ -1736,7 +1736,7 @@ const SKILLS = [
   {id:"second",max:1, minLv:15, icon:"🚑", name:{polizei:"Rettungsdienst",  verbrecher:"Untertauchen"},  desc:r=>"Einmal pro Duell: bei 0 LP mit 500 LP weiterspielen"},
 ];
 const CARD_LV = [1,3,6,10,15];        // Exemplare für Kartenstufe 1–5 (gesammelt – auch fürs Training verbrauchte zählen)
-const BOOST_MAX=5, BOOST_STAT=100, BOOST_VAL=.1;   // Training: max. +5, je Stufe +100 ATK/DEF bzw. +10 % Effektwert
+const BOOST_MAX=5, BOOST_STAT=100, BOOST_VAL=.1, BOOST_COINS=[500,1000,2000,3000,5000];   // Training: max. +5, je Stufe +100 ATK/DEF bzw. +10 % Effektwert
 
 const Prog = {
   data(){
@@ -1811,7 +1811,7 @@ const Prog = {
   /* ---------- Training: überzählige Exemplare opfern, um Werte dauerhaft zu steigern ---------- */
   boostOf(id){ return (Player.boost&&Player.boost[id]&&Player.boost[id].n)||0; },
   boostable(c){ return isChar(c) || this.valBoostable(c); },
-  boostCost(id){ const k=this.boostOf(id)+1; return {copies:k, coins:100*k}; },
+  boostCost(id){ const k=this.boostOf(id)+1; return {copies:k, coins:BOOST_COINS[k-1]||BOOST_COINS[BOOST_COINS.length-1]}; },
   boostText(c,n){ return isChar(c) ? `+${BOOST_STAT*n} ATK / +${BOOST_STAT*n} DEF` : `+${Math.round(BOOST_VAL*100*n)} % Effektwert`; },
   canBoost(id){ const c=DB.byId(id); if(!c||!this.boostable(c)) return false; const n=this.boostOf(id); if(n>=BOOST_MAX) return false;
     const k=this.boostCost(id); return Player.has(id)-1>=k.copies && Player.coins>=k.coins; },
