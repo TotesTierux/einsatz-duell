@@ -165,7 +165,11 @@
     <div id="onCodeBox" style="display:none;text-align:center;margin-top:14px">
       <div class="muted">Dein Raumcode</div>
       <div class="roomcode" id="onCode"></div>
-      <button class="small blue" onclick="Lobby.share()">📤 Code teilen</button>
+      <div class="row" style="justify-content:center">
+        <button class="small green" onclick="Lobby.share()">📤 Einladung teilen</button>
+        <button class="small blue" onclick="Lobby.copyLink()">🔗 Link kopieren</button>
+      </div>
+      <p class="muted" style="margin:8px 0 0">Dein Gegner tippt einfach auf den Link – oder gibt den Code unten ein.</p>
     </div>
   </div>
   <div class="panel">

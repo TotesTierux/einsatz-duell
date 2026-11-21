@@ -8,6 +8,8 @@ root=os.path.dirname(os.path.abspath(__file__))
 r=lambda p: open(os.path.join(root,p),encoding='utf-8').read()
 version=os.environ.get("APP_VERSION","dev"); vcode=int(os.environ.get("APP_VERSION_CODE","1"))
 repo=os.environ.get("REPO_URL","https://github.com/TotesTierux/einsatz-duell")
+_own,_name=repo.rstrip("/").split("/")[-2:]
+site_url=os.environ.get("SITE_URL",f"https://{_own.lower()}.github.io/{_name}")
 font=base64.b64encode(open(os.path.join(root,'src/bangers-latin-400-normal.woff2'),'rb').read()).decode()
 
 html=(r('src/head.part')+r('src/body.part')).replace('__FONT__',font)
@@ -15,7 +17,7 @@ fb_path=os.path.join(root,'firebase.json')
 fb=json.load(open(fb_path)) if os.path.exists(fb_path) else None
 html=html.replace('/*__FIREBASE__*/', 'window.FIREBASE_CONFIG='+json.dumps(fb)+';')
 html=html.replace('/*__PEERJS__*/', '/* PeerJS 1.5.5 – MIT-Lizenz, https://peerjs.com */\n'+r('src/vendor/peerjs.min.js'))
-html=html.replace('/*__CARDS__*/', f'window.APP_VERSION={json.dumps(version)};window.APP_REPO={json.dumps(repo)};\n'+r('src/cards.js')).replace('/*__GAME__*/',r('src/game.js'))
+html=html.replace('/*__CARDS__*/', f'window.APP_VERSION={json.dumps(version)};window.APP_REPO={json.dumps(repo)};window.APP_SITE={json.dumps(site_url)};\n'+r('src/cards.js')).replace('/*__GAME__*/',r('src/game.js'))
 
 out=os.path.join(root,'android/app/src/main/assets/index.html')
 os.makedirs(os.path.dirname(out),exist_ok=True)
@@ -40,6 +42,7 @@ if '--web' in sys.argv:
     for f in ['manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png']: shutil.copy(os.path.join(root,'web/spiel',f), spiel)
     open(os.path.join(spiel,'sw.js'),'w').write(r('web/spiel/sw.js').replace('__VERSION__',version))
     open(os.path.join(site,'index.html'),'w',encoding='utf-8').write(r('web/index.html').replace('__FONT__',font).replace('__REPO__',repo))
+    open(os.path.join(site,'join.html'),'w',encoding='utf-8').write(r('web/join.html').replace('__FONT__',font).replace('__SITE__',site_url))
     has_apk=os.environ.get("APK_AVAILABLE","")=="1"
     json.dump({"versionCode":vcode if has_apk else 0,"versionName":version,"apk":repo+"/releases/latest/download/EinsatzDuell.apk" if has_apk else "",
                "notes":os.environ.get("APP_NOTES","")}, open(os.path.join(site,'version.json'),'w'), ensure_ascii=False)

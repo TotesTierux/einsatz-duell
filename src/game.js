@@ -1750,10 +1750,27 @@ const Lobby = {
   create(){ const n=this.name(); if(!n) return; Duel._ended=false; Net.host(this.side,n); },
   join(){ const n=this.name(); if(!n) return; const code=($("onJoin").value||"").trim().toUpperCase(); if(code.length<5) return toast("Bitte den 5-stelligen Code eingeben"); Duel._ended=false; Net.join(code,n); },
   showCode(code){ $("onCodeBox").style.display=""; $("onCode").textContent=code; this.status("Warte auf deinen Gegner … Gib ihm den Code."); },
+  inviteUrl(){ return `${window.APP_SITE||"https://totestierux.github.io/einsatz-duell"}/join.html?c=${Net.code}`; },
+  inviteText(){ const n=Store.get("nick","")||"Ich"; return `🚨 ${n} fordert dich zum Einsatz-Duell heraus! Tippe zum Beitreten: ${this.inviteUrl()} (Raumcode: ${Net.code})`; },
   async share(){
-    const text=`Komm ins Einsatz-Duell! Mein Raumcode: ${Net.code}`;
-    try{ if(navigator.share){ await navigator.share({text}); return; } }catch(e){}
-    try{ await navigator.clipboard.writeText(Net.code); toast("Code kopiert"); }catch(e){ toast("Code: "+Net.code); }
+    const text=this.inviteText();
+    if(window.AndroidBridge && AndroidBridge.share){ AndroidBridge.share(text); return; }
+    try{ if(navigator.share){ await navigator.share({title:"Einsatz-Duell", text:`🚨 ${Store.get("nick","")||"Ich"} fordert dich zum Einsatz-Duell heraus! (Raumcode: ${Net.code})`, url:this.inviteUrl()}); return; } }catch(e){ if(e&&e.name==="AbortError") return; }
+    this.copyLink();
+  },
+  async copyLink(){
+    const url=this.inviteUrl();
+    if(window.AndroidBridge && AndroidBridge.copy){ AndroidBridge.copy(url); toast("Einladungslink kopiert"); return; }
+    try{ await navigator.clipboard.writeText(url); toast("Einladungslink kopiert"); }
+    catch(e){ UI.modal(null,[["Link: "+url,null,"ghost"]]); }
+  },
+  /* Über einen Einladungslink geöffnet: Lobby mit Code öffnen und – wenn ein Nickname da ist – direkt beitreten */
+  openInvite(code){
+    code=String(code||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,5); if(code.length<5) return;
+    if(UI.current==="duel" && Duel.online && !Duel.over) return toast("Du bist gerade in einem Online-Duell");
+    UI.show("online"); $("onJoin").value=code;
+    if(Store.get("nick","")){ toast("Einladung angenommen – trete Raum "+code+" bei …"); setTimeout(()=>this.join(),300); }
+    else { toast("Gib deinen Spielernamen ein und tippe auf „Beitreten“"); $("onName").focus(); }
   },
   status(t){ $("onStatus").textContent=t; },
   error(e){ const msg = typeof e==="string" ? e : ({"network":"Keine Internetverbindung zum Vermittlungsserver.","server-error":"Vermittlungsserver nicht erreichbar.","browser-incompatible":"Dieses Gerät unterstützt keine Online-Duelle (WebRTC)."}[e.type] || ("Fehler: "+(e.type||e.message||e)));
@@ -1919,4 +1936,8 @@ if(Account.enabled()){
   else if(!Store.get("skipLogin",false)) setTimeout(()=>UI.show("account"),300);
 }
 $("appVer").textContent = "Version "+(window.APP_VERSION||"dev")+" · 69 Effekte";
-window.onAndroidBack = () => UI.back();   // von der Android-App aufgerufen
+window.onAndroidBack = () => UI.back();
+window.openInvite = code => Lobby.openInvite(code);       // von der Android-App bei Einladungslinks aufgerufen
+// Web-Version: Einladung über #join-CODE
+const _inv = (location.hash||"").match(/^#join-([A-Za-z0-9]{5})/);
+if(_inv){ history.replaceState(null,"",location.pathname+location.search); setTimeout(()=>Lobby.openInvite(_inv[1]),700); }

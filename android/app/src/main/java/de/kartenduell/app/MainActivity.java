@@ -32,6 +32,8 @@ public class MainActivity extends Activity {
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
     private Updater updater;
+    private String pendingInvite;     // Raumcode aus einem Einladungslink
+    private boolean pageReady = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -64,12 +66,15 @@ public class MainActivity extends Activity {
             }
         });
 
+        pendingInvite = inviteCode(getIntent());
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl("file:///android_asset/index.html");
         // Version der App an das Spiel weitergeben (Anzeige im Menü)
         web.setWebViewClient(new WebViewClient() {
             @Override public void onPageFinished(WebView v, String url) {
                 v.evaluateJavascript("window.APP_VERSION='" + BuildConfig.VERSION_NAME + "';var e=document.getElementById('appVer');if(e)e.textContent='Version '+window.APP_VERSION+' · 69 Effekte';", null);
+                pageReady = true;
+                deliverInvite();
             }
         });
         hideSystemBars();
@@ -77,6 +82,32 @@ public class MainActivity extends Activity {
         // Automatische Update-Prüfung kurz nach dem Start
         updater = new Updater(this);
         web.postDelayed(() -> updater.check(true), 2500);
+    }
+
+    /** Liest den Raumcode aus einsatzduell://join/CODE */
+    private String inviteCode(Intent i) {
+        if (i == null || i.getData() == null) return null;
+        Uri u = i.getData();
+        if (!"einsatzduell".equals(u.getScheme())) return null;
+        String code = u.getLastPathSegment();
+        if (code == null) return null;
+        code = code.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        return code.length() == 5 ? code : null;
+    }
+
+    private void deliverInvite() {
+        if (pendingInvite == null || !pageReady) return;
+        final String code = pendingInvite;
+        pendingInvite = null;
+        web.postDelayed(() -> web.evaluateJavascript("window.openInvite && window.openInvite('" + code + "')", null), 600);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String code = inviteCode(intent);
+        if (code != null) { pendingInvite = code; deliverInvite(); }
     }
 
     @Override
@@ -123,6 +154,24 @@ public class MainActivity extends Activity {
 
     /** Wird aus JavaScript als window.AndroidBridge aufgerufen */
     class Bridge {
+        @JavascriptInterface
+        public void share(String text) {
+            runOnUiThread(() -> {
+                Intent i = new Intent(Intent.ACTION_SEND);
+                i.setType("text/plain");
+                i.putExtra(Intent.EXTRA_TEXT, text);
+                startActivity(Intent.createChooser(i, "Einladung teilen"));
+            });
+        }
+
+        @JavascriptInterface
+        public void copy(String text) {
+            runOnUiThread(() -> {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                if (cm != null) cm.setPrimaryClip(android.content.ClipData.newPlainText("Einladung", text));
+            });
+        }
+
         @JavascriptInterface
         public void checkUpdate() { runOnUiThread(() -> updater.check(false)); }
 
