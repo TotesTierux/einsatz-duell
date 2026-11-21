@@ -12,12 +12,12 @@ _own,_name=repo.rstrip("/").split("/")[-2:]
 site_url=os.environ.get("SITE_URL",f"https://{_own.lower()}.github.io/{_name}")
 font=base64.b64encode(open(os.path.join(root,'src/bangers-latin-400-normal.woff2'),'rb').read()).decode()
 
-html=(r('src/head.part')+r('src/body.part')).replace('__FONT__',font)
+html=(r('src/head.part')+r('src/body.part').replace('</style>',r('src/kombi.css')+'</style>',1)).replace('__FONT__',font)
 fb_path=os.path.join(root,'firebase.json')
 fb=json.load(open(fb_path)) if os.path.exists(fb_path) else None
 html=html.replace('/*__FIREBASE__*/', 'window.FIREBASE_CONFIG='+json.dumps(fb)+';')
 html=html.replace('/*__PEERJS__*/', '/* PeerJS 1.5.5 – MIT-Lizenz, https://peerjs.com */\n'+r('src/vendor/peerjs.min.js'))
-html=html.replace('/*__CARDS__*/', f'window.APP_VERSION={json.dumps(version)};window.APP_REPO={json.dumps(repo)};window.APP_SITE={json.dumps(site_url)};\n'+r('src/cards.js')).replace('/*__GAME__*/',r('src/game.js'))
+html=html.replace('/*__CARDS__*/', f'window.APP_VERSION={json.dumps(version)};window.APP_REPO={json.dumps(repo)};window.APP_SITE={json.dumps(site_url)};\n'+r('src/cards.js')).replace('/*__GAME__*/',r('src/game.js')+'\n'+r('src/kombi.js'))
 
 out=os.path.join(root,'android/app/src/main/assets/index.html')
 os.makedirs(os.path.dirname(out),exist_ok=True)

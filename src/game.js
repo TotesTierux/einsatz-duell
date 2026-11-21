@@ -247,7 +247,7 @@ const Player = {
   /* angezeigte Stufe: selbst gewählt, sonst die beste */
   display(id){ const s=this.show[id]; return s&&this.printsOf(id)[s] ? s : this.bestPrint(id); },
   remove(id,pr="C",n=1){ const p=this.prints[id]; if(!p||!(p[pr]>=n)) return false; p[pr]-=n; if(!p[pr]) delete p[pr]; this.owned[id]-=n; if(this.owned[id]<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } return true; },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[]}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],kombi:this.kombi}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1,pr="C"){ this.owned[id]=(this.owned[id]||0)+n; const p=this.prints[id]||(this.prints[id]={}); p[pr]=(p[pr]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -463,6 +463,7 @@ const UI = {
     if(id==="online") Lobby.render();
     if(id==="profile") Prog.render();
     if(id==="tour") Tour.render();
+    if(id==="kombi") Kombi.render();
     if(id==="trade") Trade.render();
     if(id==="account") Account.render();
     if(id==="home") this.badges();
@@ -483,6 +484,7 @@ const UI = {
     if(this.current==="duel"){Duel.quit();return true}
     if(this.current==="opening"){this.show("shop");return true}
     if(this.current==="tour"){Tour.leave();return true}
+    if(this.current==="kombi"){Kombi.leave();return true}
     if(this.current==="trade"){Trade.leave();return true}
     if(this.current!=="home"){this.show("home");return true}
     return false;
@@ -2536,7 +2538,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], decks:Deck.lists, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, decks:Deck.lists, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();

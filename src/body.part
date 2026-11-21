@@ -147,6 +147,7 @@
       <button class="blue" onclick="UI.startDuel()">⚔️ Gegen KI</button>
       <button class="blue" onclick="UI.show('online')" style="background:#a463ff;color:#fff">🌐 Online</button>
     </div>
+    <button class="kb-home" onclick="UI.show('kombi')">🧩 Kombi-Einsatz <small>NEU</small></button>
     <div class="two">
       <button class="green" onclick="UI.show('shop')">🛒 Shop</button>
       <button onclick="UI.show('deck')">🃏 Deck</button>
@@ -161,6 +162,13 @@
     </div>
   </div>
   <p class="muted" style="margin-top:22px" id="appVer">Version</p>
+</section>
+
+<!-- ================= KOMBI-EINSATZ ================= -->
+<section id="kombi" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="Kombi.leave()">◀</button><h2 id="kbTitle">Kombi-Einsatz</h2></div>
+  <div class="kb-bar" id="kbBar"></div>
+  <div id="kbMain"></div>
 </section>
 
 <!-- ================= STORY ================= -->

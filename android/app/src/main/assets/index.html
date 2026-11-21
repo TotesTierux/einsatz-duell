@@ -329,6 +329,69 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 .histlist{background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:12px;padding:10px 12px;max-height:60vh;overflow:auto;width:min(360px,90vw);font-size:14px;line-height:1.35}
 .histlist div{padding:4px 0;border-bottom:1px dashed #0003}
 .histlist .t{font-family:var(--comic);letter-spacing:.5px;color:#666;margin-right:6px}
+/* ---------- Kombi-Einsatz ---------- */
+.kb-home{width:100%;background:linear-gradient(90deg,#ff8c2b,#ffd23f);position:relative}
+.kb-home small{font-size:12px;background:var(--red);color:#fff;border:2px solid var(--ink);border-radius:8px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.kb-intro p{margin:6px 0;line-height:1.4}
+.kb-h{color:var(--yellow);margin:14px 0 8px;font-family:var(--comic);letter-spacing:1px}
+.kb-rulers{display:grid;gap:10px}
+.kb-ruler{display:grid;grid-template-columns:48px 1fr;text-align:left;align-items:center;gap:2px 10px;background:var(--paper)}
+.kb-ruler .em{grid-row:span 2;font-size:36px;text-align:center}
+.kb-ruler small{font-family:var(--body);letter-spacing:0;font-size:13px}
+.kb-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 0 8px}
+.kb-pl{background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.15);border-radius:8px;padding:3px 4px;text-align:center;font-size:11px;line-height:1.25;overflow:hidden}
+.kb-pl b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kb-pl.me{border-color:var(--yellow)}
+.kb-pl.out{opacity:.4}
+.kb-mod{font-size:12px;background:rgba(164,99,255,.25);border-radius:8px;padding:4px 8px;margin-bottom:8px}
+.kb-board{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;border-radius:12px;background:rgba(61,169,255,.14);border:2px dashed rgba(61,169,255,.5)}
+.kb-board.foe{background:rgba(255,59,59,.14);border-color:rgba(255,59,59,.5)}
+.kb-bench{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
+.kb-slot{position:relative;aspect-ratio:1/1.05;border-radius:10px;border:2px dashed rgba(255,255,255,.25)}
+.kb-slot.u{border:3px solid var(--ink);background:linear-gradient(160deg,var(--c1),var(--c2));color:var(--ink);box-shadow:2px 2px 0 var(--ink);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.kb-slot.u.verbrecher{border-color:#5a0f0f}
+.kb-slot .em{font-size:clamp(22px,8vw,38px)}
+.kb-bench .kb-slot .em{font-size:clamp(18px,6vw,28px)}
+.kb-slot .st{position:absolute;top:1px;left:3px;font-size:11px;color:#ffd23f;text-shadow:0 0 2px #000,0 0 2px #000;letter-spacing:-1px}
+.kb-slot .st.s3{color:#ff8cf0}.kb-slot .st.s4{color:#7ff7ff}
+.kb-slot .ro{position:absolute;top:0;right:2px;font-size:12px}
+.kb-slot .nm{position:absolute;bottom:1px;left:0;right:0;text-align:center;font-size:9px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px;background:rgba(255,255,255,.55)}
+.kb-slot.sel{outline:3px solid var(--yellow);outline-offset:2px;transform:translateY(-3px)}
+.kb-slot.merge{animation:kbMerge .9s}
+@keyframes kbMerge{0%{transform:scale(1)}30%{transform:scale(1.35) rotate(-6deg);filter:brightness(1.8)}100%{transform:scale(1)}}
+.kb-slot .hp{position:absolute;left:3px;right:3px;bottom:13px;height:6px;background:#400;border:1px solid #000;border-radius:3px;overflow:hidden}
+.kb-slot .hp i{display:block;height:100%;background:var(--green);transition:width .1s}
+.kb-slot .sh{position:absolute;left:2px;bottom:20px;font-size:11px;font-style:normal}
+.kb-slot.dead{filter:grayscale(1) brightness(.5);opacity:.5}
+.kb-slot.hurt{animation:kbHurt .25s}
+.kb-slot.atk{transform:scale(1.08)}
+@keyframes kbHurt{0%,100%{transform:translateX(0)}30%{transform:translateX(-4px)}60%{transform:translateX(4px)}}
+.kb-slot .dmg{position:absolute;top:30%;left:0;right:0;text-align:center;font-family:var(--comic);font-size:16px;color:#ff3b3b;text-shadow:0 0 3px #fff,0 0 3px #fff;pointer-events:none}
+.kb-rowlbl{display:flex;justify-content:space-between;font-size:11px;opacity:.7;margin:3px 4px 6px}
+.kb-rowlbl .bad{color:var(--red);opacity:1}
+.kb-traits{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;min-height:22px}
+.kb-tr{font-size:11px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2)}
+.kb-tr.l1{background:#c07a2c;border-color:#ffd23f;color:#fff}
+.kb-tr.l2{background:#d6b400;border-color:#fff;color:#111}
+.kb-sub{font-size:12px;opacity:.7;margin:2px 2px 4px}
+.kb-shopbar{display:flex;align-items:center;gap:8px;margin:10px 0 6px}
+.kb-shopbar .kb-el{font-family:var(--comic);font-size:24px;color:var(--yellow);margin-right:auto;letter-spacing:1px}
+.kb-shop{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kb-offer{position:relative;border:3px solid var(--ink);border-radius:12px;background:linear-gradient(160deg,var(--c1),var(--c2));color:var(--ink);box-shadow:3px 3px 0 var(--ink);padding:6px 4px 26px;text-align:center;min-height:118px;display:flex;flex-direction:column;align-items:center;gap:2px}
+.kb-offer.empty{background:rgba(255,255,255,.05);border:2px dashed rgba(255,255,255,.2);box-shadow:none}
+.kb-offer.poor{filter:grayscale(.7);opacity:.6}
+.kb-offer .em{font-size:30px}
+.kb-offer .nm{font-size:11px;font-weight:800;line-height:1.1;background:rgba(255,255,255,.6);border-radius:4px;padding:1px 3px;hyphens:auto}
+.kb-offer .ro{font-size:10px}
+.kb-offer .cost{position:absolute;bottom:3px;left:0;right:0;font-family:var(--comic);font-size:18px;color:#ffd23f;text-shadow:1px 1px 0 #000,-1px -1px 0 #000,1px -1px 0 #000,-1px 1px 0 #000}
+.kb-offer .pair{position:absolute;top:-9px;right:-6px;background:var(--green);border:2px solid var(--ink);border-radius:8px;font-size:10px;font-weight:800;padding:0 4px;transform:rotate(8deg)}
+.kb-offer.have{animation:kbPulse 1.4s infinite}
+@keyframes kbPulse{50%{box-shadow:0 0 14px 3px var(--green),3px 3px 0 var(--ink)}}
+.kb-help{font-size:12px;text-align:center;margin-top:10px}
+.kb-vs{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:15px}
+.kb-vs .tm{margin-left:auto;font-family:var(--comic);font-size:20px;color:var(--yellow)}
+.kb-vs .frenzy{background:var(--red);color:#fff;border-radius:8px;padding:1px 6px;font-size:12px;animation:kbPulse .6s infinite}
+.kb-mid{height:14px}
 </style>
 </head>
 <body>
@@ -345,6 +408,7 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
       <button class="blue" onclick="UI.startDuel()">⚔️ Gegen KI</button>
       <button class="blue" onclick="UI.show('online')" style="background:#a463ff;color:#fff">🌐 Online</button>
     </div>
+    <button class="kb-home" onclick="UI.show('kombi')">🧩 Kombi-Einsatz <small>NEU</small></button>
     <div class="two">
       <button class="green" onclick="UI.show('shop')">🛒 Shop</button>
       <button onclick="UI.show('deck')">🃏 Deck</button>
@@ -359,6 +423,13 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
     </div>
   </div>
   <p class="muted" style="margin-top:22px" id="appVer">Version</p>
+</section>
+
+<!-- ================= KOMBI-EINSATZ ================= -->
+<section id="kombi" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="Kombi.leave()">◀</button><h2 id="kbTitle">Kombi-Einsatz</h2></div>
+  <div class="kb-bar" id="kbBar"></div>
+  <div id="kbMain"></div>
 </section>
 
 <!-- ================= STORY ================= -->
@@ -1237,7 +1308,7 @@ const Player = {
   /* angezeigte Stufe: selbst gewählt, sonst die beste */
   display(id){ const s=this.show[id]; return s&&this.printsOf(id)[s] ? s : this.bestPrint(id); },
   remove(id,pr="C",n=1){ const p=this.prints[id]; if(!p||!(p[pr]>=n)) return false; p[pr]-=n; if(!p[pr]) delete p[pr]; this.owned[id]-=n; if(this.owned[id]<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } return true; },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[]}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],kombi:this.kombi}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1,pr="C"){ this.owned[id]=(this.owned[id]||0)+n; const p=this.prints[id]||(this.prints[id]={}); p[pr]=(p[pr]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -1453,6 +1524,7 @@ const UI = {
     if(id==="online") Lobby.render();
     if(id==="profile") Prog.render();
     if(id==="tour") Tour.render();
+    if(id==="kombi") Kombi.render();
     if(id==="trade") Trade.render();
     if(id==="account") Account.render();
     if(id==="home") this.badges();
@@ -1473,6 +1545,7 @@ const UI = {
     if(this.current==="duel"){Duel.quit();return true}
     if(this.current==="opening"){this.show("shop");return true}
     if(this.current==="tour"){Tour.leave();return true}
+    if(this.current==="kombi"){Kombi.leave();return true}
     if(this.current==="trade"){Trade.leave();return true}
     if(this.current!=="home"){this.show("home");return true}
     return false;
@@ -3526,7 +3599,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], decks:Deck.lists, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, decks:Deck.lists, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -3629,6 +3702,445 @@ window.openInvite = code => Lobby.openInvite(code);       // von der Android-App
 // Web-Version: Einladung über #join-CODE
 const _inv = (location.hash||"").match(/^#join-([A-Za-z0-9]{5})/);
 if(_inv){ history.replaceState(null,"",location.pathname+location.search); setTimeout(()=>Lobby.openInvite(_inv[1]),700); }
+
+/* ============================ KOMBI-EINSATZ ============================
+   Rundenbasierter Auto-Kampf für 4 Spieler (angelehnt an „Kombotaktiken“ aus Clash Royale):
+   - Jede Runde: Aufstellungsphase (Einsatzmittel ausgeben, Einheiten kaufen/verkaufen/platzieren)
+     und Kampfphase (die Einheiten kämpfen automatisch gegen das Team eines Mitspielers).
+   - Zwei gleiche Einheiten gleicher Stufe verschmelzen automatisch zur nächsten Stufe (★ → ★★ …).
+   - Merkmale: Einheiten derselben Einheit-Art (Streife, SEK, Bande …) geben ab 2 bzw. 4 auf dem Feld Boni.
+   - Wer verliert, verliert Lebenspunkte – wer zuletzt übrig ist, gewinnt. Platz 1 und 2 zählen als Sieg.
+   ========================================================================= */
+const KB = {
+  HP:15, BENCH:5, SHOP:3, INCOME:5, MAXTEAM:6, MAXEL:20, BATTLE_MS:30000, FRENZY_MS:10000,
+  COPIES:{2:8,3:6,4:4,5:4},                       // Exemplare je Einheit im gemeinsamen Pool
+  STARMUL:[1,1,1.8,3.2,5.6],                      // Werte je Stufe
+  NEED:[0,1,2,4,8],                               // Exemplare je Stufe
+  RANGED:{kripo:1,verkehr:1,betrug:1,hehler:1},
+  ODDS:[ [70,30,0,0],[55,35,10,0],[45,35,15,5],[35,33,22,10],[30,32,25,13],[25,30,28,17] ],
+};
+const KB_TRAITS = {
+  streife:{d:"+15 % / +35 % Lebenspunkte", hp:[.15,.35]},
+  kripo:  {d:"Fernkampf · +20 % / +45 % Schaden", dmg:[.2,.45]},
+  sek:    {d:"Erster Angriff trifft dreifach / vierfach", first:[3,4]},
+  verkehr:{d:"Fernkampf · Schild +400 / +900 zu Kampfbeginn", shield:[400,900]},
+  hunde:  {d:"+25 % / +60 % Angriffstempo", spd:[.25,.6]},
+  bepo:   {d:"−20 % / −40 % erlittener Schaden", armor:[.2,.4]},
+  dieb:   {d:"20 % / 40 % Ausweichen", dodge:[.2,.4]},
+  betrug: {d:"Fernkampf · Getroffene machen −15 % / −30 % Schaden", weaken:[.15,.3]},
+  bande:  {d:"Ganzes Team +10 % / +20 % Schaden und LP", team:[.1,.2]},
+  hehler: {d:"Fernkampf · +1 / +3 Einsatzmittel pro Runde", income:[1,3]},
+  raub:   {d:"Heilt sich um 25 % / 50 % des Schadens", steal:[.25,.5]},
+  drogen: {d:"Vergiftet: 60 / 150 Schaden pro Sekunde", poison:[60,150]},
+};
+const KB_RULERS = [
+  {id:"praes", name:"Präsidentin Hartmann", emoji:"👩‍✈️", d:"Nach jeder verlorenen Runde +4 Einsatzmittel."},
+  {id:"pate",  name:"Der Pate",             emoji:"🎩",  d:"Jede Kombination bringt +1 zusätzliches Einsatzmittel."},
+  {id:"wolf",  name:"Einsatzleiter Wolf",   emoji:"🧭",  d:"Ein Mal pro Runde gratis neu mischen, +1 Bankplatz."},
+];
+const KB_MODS = [
+  {id:"budget", name:"Sonderbudget",   d:"+2 Einsatzmittel pro Runde."},
+  {id:"preis",  name:"Einheitspreis",  d:"Alle Einheiten kosten 3."},
+  {id:"gross",  name:"Großeinsatz",    d:"Das Team ist von Anfang an um 1 größer."},
+  {id:"rase",   name:"Blaulicht",      d:"Die Raserei (doppeltes Tempo) beginnt schon nach 10 Sekunden."},
+  {id:"kombi",  name:"Doppelkombi",    d:"Jede Kombination bringt +2 statt +1 Einsatzmittel."},
+  {id:"stern",  name:"Sternstart",     d:"Alle starten mit einer ★★-Einheit."},
+];
+const KB_PRIZE = {1:{coins:300,xp:220},2:{coins:160,xp:140},3:{coins:70,xp:80},4:{coins:30,xp:50}};
+
+const Kombi = {
+  g:null, sel:null, anim:null, speed:1,
+
+  /* ---------------- Einheiten ---------------- */
+  cost(c){ if(this.g&&this.g.mod.id==="preis") return 3; const l=c.level||1; return l<=3?2:l===4?3:l<=6?4:5; },
+  tier(c){ const l=c.level||1; return l<=3?2:l===4?3:l<=6?4:5; },
+  card(u){ return DB.byId(u.id); },
+  unit(id,star=1){ return {u:"u"+Math.random().toString(36).slice(2,9), id, star}; },
+  value(u){ return this.cost(this.card(u))*KB.NEED[u.star]; },
+  power(u){ const c=this.card(u); return ((c.atk||0)+(c.def||0))*KB.STARMUL[u.star]; },
+
+  /* ---------------- Spielstart ---------------- */
+  render(){ if(this.g) return this.draw(); this.lobby(); },
+  lobby(){
+    const st=Player.kombi||{n:0,w:0,best:0};
+    $("kbMain").innerHTML=`<div class="panel kb-intro">
+      <p>Vier Einsatzleiter treten gegeneinander an. Kaufe Einheiten, <b>kombiniere zwei gleiche</b> zu einer stärkeren
+      und aktiviere <b>Merkmale</b> mit mehreren Einheiten derselben Art. Die Kämpfe laufen automatisch.
+      Verlierst du, kostet dich jede überlebende gegnerische Einheit Lebenspunkte. Platz 1 und 2 zählen als Sieg.</p>
+      <p class="muted">Gespielt: ${st.n} · Siege: ${st.w}${st.best?` · Bester Platz: ${st.best}`:""}</p></div>
+      <h3 class="kb-h">Wähle deinen Einsatzleiter</h3>
+      <div class="kb-rulers">${KB_RULERS.map(r=>`<button class="kb-ruler" data-r="${r.id}"><span class="em">${r.emoji}</span><b>${esc(r.name)}</b><small>${esc(r.d)}</small></button>`).join("")}</div>`;
+    $("kbMain").querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>this.start(b.dataset.r));
+    $("kbBar").innerHTML=""; $("kbTitle").textContent="Kombi-Einsatz";
+  },
+  pickPool(){
+    // je Einheiten-Art 2 Karten → 24 Einheiten im Spiel, gemischt über alle Kostenstufen
+    const chars=DB.cards.filter(c=>c.type==="monster" && ROLES[c.faction] && ROLES[c.faction][c.attr] && c.atk>0);
+    const ids=[];
+    Object.keys(KB_TRAITS).forEach(role=>{
+      const list=shuffle(chars.filter(c=>c.attr===role));
+      const byTier={}; list.forEach(c=>(byTier[this.tier(c)]=byTier[this.tier(c)]||[]).push(c));
+      const tiers=shuffle(Object.keys(byTier)); const pick=[];
+      for(const t of tiers){ if(pick.length<2) pick.push(byTier[t][0]); }
+      for(const c of list){ if(pick.length>=2) break; if(!pick.includes(c)) pick.push(c); }
+      pick.forEach(c=>ids.push(c.id));
+    });
+    const pool={}; ids.forEach(id=>pool[id]=KB.COPIES[this.tier(DB.byId(id))]); return pool;
+  },
+  start(rulerId){
+    const mod=KB_MODS[Math.floor(Math.random()*KB_MODS.length)];
+    const names=shuffle(["KI Kommissar Klaus","KI Bandenchef Bruno","KI Hauptmeisterin Hanna","KI Phantom Paula","KI Hehler Horst","KI Streifenführer Sven"]).slice(0,3);
+    const mk=(name,ai,ruler)=>({name,ai,ruler,hp:KB.HP,el:0,board:Array(KB.MAXTEAM).fill(null),bench:Array(KB.BENCH+2).fill(null),shop:[],free:0,place:0,lost:false,streak:0,merges:0});
+    this.g={round:0,mod,pool:null,phase:"deploy",log:[],
+      players:[mk(Store.get("nick","")||"Du",false,rulerId), ...names.map(n=>mk(n,true,KB_RULERS[Math.floor(Math.random()*3)].id))]};
+    this.g.pool=this.pickPool(); this.sel=null;
+    // Startaufstellung: eine zufällige günstige Einheit (bei „Sternstart“ ★★)
+    const cheap=Object.keys(this.g.pool).filter(id=>this.tier(DB.byId(id))===2);
+    this.g.players.forEach(p=>{ const id=cheap[Math.floor(Math.random()*cheap.length)]; const star=mod.id==="stern"?2:1;
+      if(this.take(id,KB.NEED[star])) p.board[0]=this.unit(id,star); });
+    UI.modal(null,[[`🎲 Sonderregel: ${mod.name} – ${mod.d}`,null,"ghost"]],null,null,"Los geht's!");
+    this.nextRound();
+  },
+  take(id,n=1){ if((this.g.pool[id]||0)<n) return false; this.g.pool[id]-=n; return true; },
+  give(u){ this.g.pool[u.id]=(this.g.pool[u.id]||0)+KB.NEED[u.star]; },
+  me(){ return this.g.players[0]; },
+  alive(){ return this.g.players.filter(p=>!p.lost); },
+  team(p){ return Math.min(KB.MAXTEAM, 1+this.g.round+(this.g.mod.id==="gross"?1:0)); },
+  benchSize(p){ return KB.BENCH+(p.ruler==="wolf"?1:0); },
+
+  nextRound(){
+    const g=this.g; g.round++; g.phase="deploy";
+    g.players.filter(p=>!p.lost).forEach(p=>{
+      const tr=this.traits(p.board);
+      p.el=Math.min(KB.MAXEL, p.el+KB.INCOME+(g.mod.id==="budget"?2:0)+(tr.hehler?KB_TRAITS.hehler.income[tr.hehler-1]:0));
+      p.free = p.ruler==="wolf"?1:0;
+      this.roll(p);
+    });
+    g.players.filter(p=>p.ai&&!p.lost).forEach(p=>this.aiTurn(p));
+    this.sel=null; this.draw();
+  },
+
+  /* ---------------- Laden ---------------- */
+  roll(p){
+    const odds=KB.ODDS[Math.min(this.g.round-1,KB.ODDS.length-1)];
+    const ids=Object.keys(this.g.pool);
+    p.shop=[];
+    for(let i=0;i<KB.SHOP;i++){
+      let r=Math.random()*100, t=2; for(let k=0;k<4;k++){ if(r<odds[k]){ t=k+2; break; } r-=odds[k]; }
+      let cand=ids.filter(id=>this.tier(DB.byId(id))===t && this.g.pool[id]>0);
+      if(!cand.length) cand=ids.filter(id=>this.g.pool[id]>0);
+      if(!cand.length) break;
+      // gewichtet nach verbliebenen Exemplaren
+      const tot=cand.reduce((s,id)=>s+this.g.pool[id],0); let x=Math.random()*tot, pick=cand[0];
+      for(const id of cand){ x-=this.g.pool[id]; if(x<=0){ pick=id; break; } }
+      p.shop.push(pick);
+    }
+  },
+  reroll(p=this.me()){
+    if(this.g.phase!=="deploy") return;
+    if(p.free>0) p.free--; else { if(p.el<1) return p.ai||toast("Nicht genug Einsatzmittel"); p.el--; }
+    this.roll(p); if(!p.ai) this.draw();
+  },
+  buy(i,p=this.me()){
+    const g=this.g, id=p.shop[i]; if(!id||g.phase!=="deploy") return false;
+    const c=DB.byId(id), cost=this.cost(c);
+    if(p.el<cost){ if(!p.ai) toast("Nicht genug Einsatzmittel"); return false; }
+    const free=p.bench.slice(0,this.benchSize(p)).indexOf(null);
+    const wouldMerge=[...p.board,...p.bench].filter(u=>u&&u.id===id&&u.star===1).length>=1;
+    if(free<0 && !wouldMerge){ if(!p.ai) toast("Deine Bank ist voll – verkaufe oder platziere erst eine Einheit"); return false; }
+    if(!this.take(id)){ if(!p.ai) toast("Diese Einheit ist ausverkauft"); return false; }
+    p.el-=cost; p.shop[i]=null;
+    const u=this.unit(id,1);
+    if(free>=0) p.bench[free]=u; else p.bench[this.benchSize(p)]=u;   // Zwischenplatz nur zum Kombinieren
+    this.merge(p);
+    if(!p.ai) this.draw();
+    return true;
+  },
+  sell(where,i,p=this.me()){
+    const arr=where==="b"?p.board:p.bench, u=arr[i]; if(!u||this.g.phase!=="deploy") return;
+    if(where==="b" && p.board.filter(Boolean).length<=1) return toast("Mindestens eine Einheit muss im Einsatz bleiben");
+    arr[i]=null; this.give(u); p.el=Math.min(KB.MAXEL,p.el+Math.max(1,this.value(u)-(u.star>1?1:0)));
+    if(!p.ai){ this.sel=null; this.draw(); }
+  },
+  /* Zwei gleiche Einheiten gleicher Stufe → nächste Stufe (wiederholt, falls dadurch erneut ein Paar entsteht) */
+  merge(p){
+    let again=true, n=0;
+    while(again){ again=false;
+      const all=[...p.board.map((u,i)=>u&&{u,w:"b",i}),...p.bench.map((u,i)=>u&&{u,w:"n",i})].filter(Boolean);
+      for(const a of all){ if(a.u.star>=4) continue;
+        const b=all.find(x=>x!==a&&x.u.id===a.u.id&&x.u.star===a.u.star); if(!b) continue;
+        const keep = a.w==="b"?a:(b.w==="b"?b:a), drop = keep===a?b:a;
+        (drop.w==="b"?p.board:p.bench)[drop.i]=null;
+        keep.u.star++; n++; again=true;
+        if(!p.ai) this.mergeFx(keep.u);
+        break; }
+    }
+    // Zwischenplatz räumen
+    const extra=p.bench[this.benchSize(p)]; if(extra){ p.bench[this.benchSize(p)]=null; const f=p.bench.indexOf(null); if(f>=0&&f<this.benchSize(p)) p.bench[f]=extra; else { this.give(extra); p.el+=this.cost(this.card(extra)); } }
+    if(n){ const bonus=(this.g.mod.id==="kombi"?2:1)+(p.ruler==="pate"?1:0); p.el=Math.min(KB.MAXEL,p.el+n*bonus); p.merges+=n;
+      if(!p.ai) toast(`Kombiniert! +${n*bonus} Einsatzmittel`); }
+  },
+  mergeFx(u){ this._fx=u.u; setTimeout(()=>{ if(this._fx===u.u) this._fx=null; },900); banner(`${"★".repeat(u.star)} KOMBI!`); },
+
+  /* ---------------- Platzieren ---------------- */
+  tap(where,i){
+    const g=this.g, p=this.me(); if(g.phase!=="deploy") return;
+    const arr=w=>w==="b"?p.board:p.bench;
+    const u=arr(where)[i];
+    if(this.sel){
+      const s=this.sel; this.sel=null;
+      if(s.w===where&&s.i===i){ return this.info(where,i); }
+      const A=arr(s.w), B=arr(where), x=A[s.i], y=B[i];
+      if(where==="b" && s.w==="n" && !y && p.board.filter(Boolean).length>=this.team(p)) { toast(`Teamgröße ${this.team(p)} erreicht – tausche eine Einheit aus`); return this.draw(); }
+      if(s.w==="b" && where==="n" && !y && p.board.filter(Boolean).length<=1){ toast("Mindestens eine Einheit muss im Einsatz bleiben"); return this.draw(); }
+      A[s.i]=y; B[i]=x; return this.draw();
+    }
+    if(u){ this.sel={w:where,i}; this.draw(); }
+  },
+  info(where,i){
+    const p=this.me(), u=(where==="b"?p.board:p.bench)[i]; if(!u) return;
+    const c=this.card(u), s=this.stats(u,{}), tr=KB_TRAITS[c.attr];
+    UI.modal(c,[[`${"★".repeat(u.star)} · ${roleName(c.faction,c.attr)} · ${KB.RANGED[c.attr]?"Fernkampf":"Nahkampf"}`,null,"ghost"],
+      [`❤️ ${s.hp} · 💥 ${s.dmg} pro Angriff`,null,"ghost"],
+      [`Merkmal ${roleName(c.faction,c.attr)}: ${tr.d}`,null,"ghost"],
+      [`Verkaufen (+${Math.max(1,this.value(u)-(u.star>1?1:0))} ⚡)`,()=>{ UI.closeModal(); this.sell(where,i); },"red"]]);
+  },
+  /* Bank automatisch auf freie Feldplätze verteilen (stärkste zuerst) */
+  autoPlace(p){
+    const room=()=>this.team(p)-p.board.filter(Boolean).length;
+    const bench=p.bench.map((u,i)=>u&&{u,i}).filter(Boolean).sort((a,b)=>this.power(b.u)-this.power(a.u));
+    for(const b of bench){ if(room()<=0) break;
+      const ranged=KB.RANGED[this.card(b.u).attr];
+      const order=ranged?[3,4,5,0,1,2]:[0,1,2,3,4,5]; const z=order.find(k=>!p.board[k]);
+      if(z==null) break; p.board[z]=b.u; p.bench[b.i]=null; }
+    // stärkere Bankeinheiten gegen schwächere auf dem Feld tauschen
+    for(let k=0;k<6;k++){
+      const weakest=p.board.map((u,i)=>u&&{u,i}).filter(Boolean).sort((a,b)=>this.power(a.u)-this.power(b.u))[0];
+      const best=p.bench.map((u,i)=>u&&{u,i}).filter(Boolean).sort((a,b)=>this.power(b.u)-this.power(a.u))[0];
+      if(!weakest||!best||this.power(best.u)<=this.power(weakest.u)*1.05) break;
+      p.board[weakest.i]=best.u; p.bench[best.i]=weakest.u;
+    }
+  },
+
+  /* ---------------- KI ---------------- */
+  aiTurn(p){
+    for(let guard=0;guard<12;guard++){
+      const own=[...p.board,...p.bench].filter(Boolean);
+      // 1. Kauf, der eine Kombination ergibt  2. teuerste bezahlbare Einheit, solange Platz
+      let idx=p.shop.findIndex(id=>id&&own.some(u=>u.id===id&&u.star===1)&&p.el>=this.cost(DB.byId(id)));
+      if(idx<0){ const free=p.bench.slice(0,this.benchSize(p)).filter(x=>!x).length;
+        const cands=p.shop.map((id,i)=>id&&{i,c:DB.byId(id)}).filter(x=>x&&p.el>=this.cost(x.c)&&free>0)
+          .sort((a,b)=>this.cost(b.c)-this.cost(a.c)+(Math.random()-.5)); if(cands.length) idx=cands[0].i; }
+      if(idx>=0 && this.buy(idx,p)) continue;
+      if(p.el>=4 || (p.free>0)) { this.reroll(p); continue; }
+      break;
+    }
+    this.autoPlace(p);
+    // Bank überfüllt? Schwächste verkaufen, wenn kein Paar möglich
+    const bench=p.bench.map((u,i)=>u&&{u,i}).filter(Boolean);
+    if(bench.length>=this.benchSize(p)){ const w=bench.sort((a,b)=>this.power(a.u)-this.power(b.u))[0]; this.sell("n",w.i,p); }
+  },
+
+  /* ---------------- Merkmale & Werte ---------------- */
+  traits(board){
+    const cnt={}; board.filter(Boolean).forEach(u=>{ const r=this.card(u).attr; cnt[r]=(cnt[r]||0)+1; });
+    const lv={}; Object.entries(cnt).forEach(([r,n])=>{ if(n>=4) lv[r]=2; else if(n>=2) lv[r]=1; });
+    lv._cnt=cnt; return lv;
+  },
+  stats(u,tr){
+    const c=this.card(u), m=KB.STARMUL[u.star], T=(k,f)=>tr[k]?KB_TRAITS[k][f][tr[k]-1]:0;
+    let hp=((c.def||0)+1000)*m, dmg=(c.atk||0)*0.18*m;
+    const team=T("bande","team"); hp*=1+team; dmg*=1+team;
+    if(c.attr==="streife") hp*=1+T("streife","hp");
+    if(c.attr==="kripo") dmg*=1+T("kripo","dmg");
+    return {hp:Math.round(hp), dmg:Math.round(dmg),
+      as: 1000/(1+(c.attr==="hunde"?T("hunde","spd"):0)),
+      shield: c.attr==="verkehr"?T("verkehr","shield"):0,
+      armor: c.attr==="bepo"?T("bepo","armor"):0,
+      dodge: c.attr==="dieb"?T("dieb","dodge"):0,
+      weaken: c.attr==="betrug"?T("betrug","weaken"):0,
+      steal: c.attr==="raub"?T("raub","steal"):0,
+      poison: c.attr==="drogen"?T("drogen","poison"):0,
+      first: c.attr==="sek"?T("sek","first"):0,
+      ranged: !!KB.RANGED[c.attr] };
+  },
+
+  /* ---------------- Kampf ---------------- */
+  fighters(p,side){
+    const tr=this.traits(p.board);
+    return p.board.map((u,slot)=>{ if(!u) return null; const s=this.stats(u,tr);
+      return Object.assign(s,{u,side,slot,maxhp:s.hp,cd:400+Math.random()*400,weak:0,weakT:0,pois:0,poisT:0,usedFirst:false,hit:0}); }).filter(Boolean);
+  },
+  target(f,enemies){
+    const alive=enemies.filter(e=>e.hp>0); if(!alive.length) return null;
+    if(f.ranged) return alive.sort((a,b)=>a.hp-b.hp)[0];
+    const front=alive.filter(e=>e.slot<3), row=front.length?front:alive;
+    const col=f.slot%3; return row.sort((a,b)=>Math.abs(a.slot%3-col)-Math.abs(b.slot%3-col))[0];
+  },
+  /* ein Simulationsschritt (dt ms); liefert Ereignisse für die Anzeige */
+  step(B,dt){
+    const ev=[]; B.t+=dt; const frenzyAt=KB.BATTLE_MS-(this.g&&this.g.mod.id==="rase"?20000:KB.FRENZY_MS);
+    const sp=B.t>=frenzyAt?2:1; B.frenzy=sp>1;
+    const all=[...B.a,...B.b];
+    all.forEach(f=>{ if(f.hp<=0) return;
+      if(f.poisT>0){ f.poisT-=dt; f.hp-=f.pois*dt/1000; if(f.hp<=0){ f.hp=0; ev.push({k:"die",f}); return; } }
+      if(f.weakT>0) f.weakT-=dt;
+      // Nahkämpfer hinten greifen erst an, wenn die eigene vordere Reihe gefallen ist
+      const mine=f.side==="a"?B.a:B.b, foes=f.side==="a"?B.b:B.a;
+      if(!f.ranged && f.slot>=3 && mine.some(x=>x.hp>0&&x.slot<3)) return;
+      f.cd-=dt*sp; if(f.cd>0) return; f.cd+=f.as;
+      const t=this.target(f,foes); if(!t) return;
+      if(t.dodge && Math.random()<t.dodge){ ev.push({k:"miss",f:t}); return; }
+      let d=f.dmg*(f.weakT>0?1-f.weak:1);
+      if(f.first && !f.usedFirst){ d*=f.first; f.usedFirst=true; }
+      d*=1-t.armor; d=Math.round(d);
+      if(t.shield>0){ const a=Math.min(t.shield,d); t.shield-=a; d-=a; }
+      t.hp-=d; f.hit=B.t; ev.push({k:"hit",f,t,d});
+      if(f.steal) f.hp=Math.min(f.maxhp,f.hp+d*f.steal);
+      if(f.weaken){ t.weak=f.weaken; t.weakT=3000; }
+      if(f.poison){ t.pois=f.poison; t.poisT=3000; }
+      if(t.hp<=0){ t.hp=0; ev.push({k:"die",f:t}); }
+    });
+    const aAlive=B.a.some(f=>f.hp>0), bAlive=B.b.some(f=>f.hp>0);
+    if(!aAlive||!bAlive||B.t>=KB.BATTLE_MS) B.done=true;
+    return ev;
+  },
+  newBattle(pa,pb){ return {pa,pb,a:this.fighters(pa,"a"),b:this.fighters(pb,"b"),t:0,done:false,frenzy:false}; },
+  /* Ergebnis anwenden: Verlierer verliert LP = überlebende Gegner (Sterne zählen) + 1 für den Einsatzleiter */
+  settle(B){
+    const sa=B.a.filter(f=>f.hp>0), sb=B.b.filter(f=>f.hp>0), res={};
+    const dmg=list=>list.reduce((s,f)=>s+f.u.star,0)+1;
+    const hurt=(p,n,ghost)=>{ if(ghost) return; p.hp=Math.max(0,p.hp-n); p.streak=0; if(p.ruler==="praes") p.el=Math.min(KB.MAXEL,p.el+4); };
+    if(sa.length&&!sb.length){ res.win="a"; res.dmg=dmg(sa); hurt(B.pb,res.dmg,B.ghostB); }
+    else if(sb.length&&!sa.length){ res.win="b"; res.dmg=dmg(sb); hurt(B.pa,res.dmg,B.ghostA); }
+    else { res.win=null; res.dmgA=dmg(sb); res.dmgB=dmg(sa); hurt(B.pa,res.dmgA,B.ghostA); hurt(B.pb,res.dmgB,B.ghostB); }
+    return res;
+  },
+  fight(){
+    const g=this.g; if(g.phase!=="deploy") return;
+    const me=this.me(); if(!me.board.some(Boolean)) return toast("Stelle mindestens eine Einheit auf das Feld");
+    g.phase="battle"; this.sel=null;
+    // Paarungen: zufällig unter den Lebenden; bei ungerader Zahl kämpft einer gegen eine Kopie (zählt für die Kopie nicht)
+    const alive=shuffle(this.alive()); const pairs=[];
+    while(alive.length>=2) pairs.push([alive.pop(),alive.pop()]);
+    if(alive.length){ const p=alive.pop(); const others=this.alive().filter(x=>x!==p); pairs.push([p,others[Math.floor(Math.random()*others.length)],true]); }
+    const battles=pairs.map(([a,b,ghost])=>{ const B=this.newBattle(a,b); B.ghostB=!!ghost; return B; });
+    // eigenes Match: ich immer auf Seite a (als Kopie-Gegner eines anderen zähle ich nicht)
+    let mine=battles.find(B=>B.pa===me) || battles.find(B=>B.pb===me&&!B.ghostB);
+    if(mine.pb===me){ const i=battles.indexOf(mine); const B=this.newBattle(me,mine.pa); battles[i]=B; mine=B; }
+    // andere Kämpfe sofort ausrechnen
+    const results=[];
+    battles.filter(B=>B!==mine).forEach(B=>{ while(!B.done) this.step(B,100); results.push([B,this.settle(B)]); });
+    this.anim={B:mine,results}; this.draw(); this.run();
+  },
+  run(){
+    const A=this.anim; if(!A) return;
+    clearInterval(this._t);
+    this._t=setInterval(()=>{
+      if(!this.anim||this.anim!==A){ clearInterval(this._t); return; }
+      let ev=[]; for(let k=0;k<this.speed;k++){ if(A.B.done) break; ev=ev.concat(this.step(A.B,100)); }
+      this.drawBattle(ev);
+      if(A.B.done){ clearInterval(this._t); setTimeout(()=>this.afterBattle(),700); }
+    },60);
+  },
+  skip(){ const A=this.anim; if(!A) return; while(!A.B.done) this.step(A.B,100); clearInterval(this._t); this.drawBattle([]); setTimeout(()=>this.afterBattle(),200); },
+  afterBattle(){
+    const A=this.anim; if(!A||A.over) return; A.over=true;
+    const g=this.g, me=this.me(), r=this.settle(A.B), opp=A.B.pb;
+    let msg;
+    if(r.win==="a") msg=`Sieg gegen ${opp.name}! ${opp.name} verliert ${r.dmg} LP.`;
+    else if(r.win==="b") msg=`Niederlage gegen ${opp.name}. Du verlierst ${r.dmg} LP.`;
+    else msg=`Unentschieden – beide verlieren Lebenspunkte.`;
+    const others=A.results.map(([B,x])=>x.win==="a"?`${B.pa.name} besiegt ${B.pb.name}`:x.win==="b"?`${B.pb.name} besiegt ${B.pa.name}`:`${B.pa.name} und ${B.pb.name}: unentschieden`);
+    // Ausgeschiedene
+    const out=g.players.filter(p=>!p.lost&&p.hp<=0).sort((a,b)=>a.hp-b.hp);
+    out.forEach(p=>{ p.lost=true; p.place=this.alive().length+1; p.board.forEach(u=>u&&this.give(u)); p.bench.forEach(u=>u&&this.give(u)); p.board.fill(null); p.bench.fill(null); });
+    this.anim=null;
+    const left=this.alive();
+    if(me.lost || left.length<=1){
+      if(left.length===1) left[0].place=1;
+      return this.finish(msg);
+    }
+    banner(r.win==="a"?"SIEG!":r.win==="b"?"NIEDERLAGE":"UNENTSCHIEDEN");
+    UI.modal(null,[[msg,null,"ghost"],...others.map(t=>[t,null,"ghost"]),...out.filter(p=>p!==me).map(p=>[`❌ ${p.name} ist ausgeschieden`,null,"ghost"])],null,()=>this.nextRound(),"Nächste Runde ▶");
+    this.draw();
+  },
+  finish(msg){
+    const g=this.g, me=this.me();
+    // verbleibende Plätze nach LP vergeben, falls ich vorzeitig raus bin
+    const rest=this.alive().sort((a,b)=>b.hp-a.hp); rest.forEach((p,i)=>p.place=p.place||i+1);
+    const place=me.place, pr=KB_PRIZE[place];
+    const fac={}; [...me.board,...me.bench].filter(Boolean).forEach(u=>{ const f=this.card(u).faction; fac[f]=(fac[f]||0)+u.star; });
+    const side=Object.keys(fac).sort((a,b)=>fac[b]-fac[a])[0]||"polizei";
+    Prog.reward(side, pr.coins, pr.xp);
+    const st=Player.kombi=Player.kombi||{n:0,w:0,best:0}; st.n++; if(place<=2) st.w++; st.best=st.best?Math.min(st.best,place):place; Player.save();
+    banner(place===1?"EINSATZSIEG!":`PLATZ ${place}!`);
+    const ranking=[...g.players].sort((a,b)=>a.place-b.place).map(p=>`${p.place}. ${p.name}${p.ai?"":" (du)"}`);
+    this.g=null;
+    UI.modal(null,[[msg,null,"ghost"],[`Platz ${place}${place<=2?" – zählt als Sieg!":""} · +${pr.coins} 🪙 · +${pr.xp} XP`,null,"ghost"],...ranking.map(t=>[t,null,"ghost"])],null,()=>this.lobby(),"Fertig");
+    this.lobby();
+  },
+  async leave(){
+    if(this.g && !await UI.ask("Kombi-Einsatz abbrechen? Das Spiel zählt dann als 4. Platz ohne Belohnung.")) return;
+    clearInterval(this._t); this.anim=null; this.g=null; UI.show("home");
+  },
+
+  /* ---------------- Anzeige ---------------- */
+  slot(u,attrs,extra=""){
+    if(!u) return `<div class="kb-slot empty" ${attrs}></div>`;
+    const c=this.card(u), a=c.art||{};
+    return `<div class="kb-slot u ${c.faction} ${extra} ${this._fx===u.u?"merge":""}" ${attrs} style="--c1:${a.c1||"#eee"};--c2:${a.c2||"#888"}">
+      <span class="em">${a.emoji||"❓"}</span><span class="st s${u.star}">${"★".repeat(u.star)}</span>
+      <span class="ro">${(ROLES[c.faction][c.attr]||["",""])[1]}</span><span class="nm">${esc(c.name.split(" ").slice(-1)[0])}</span></div>`;
+  },
+  draw(){
+    const g=this.g; if(!g) return this.lobby(); if(UI.current!=="kombi") return;
+    const me=this.me();
+    $("kbTitle").textContent=`Runde ${g.round}`;
+    $("kbBar").innerHTML=g.players.map(p=>`<div class="kb-pl ${p.lost?"out":""} ${p===me?"me":""}"><b>${esc(p.name.replace(/^KI /,""))}</b><span>${p.lost?`Platz ${p.place}`:p.hp+" ❤️"}</span></div>`).join("");
+    if(g.phase==="battle"&&this.anim) return this.drawBattle([]);
+    const tr=this.traits(me.board), team=this.team(me), n=me.board.filter(Boolean).length;
+    const sel=(w,i)=>this.sel&&this.sel.w===w&&this.sel.i===i?"sel":"";
+    $("kbMain").innerHTML=`
+      <div class="kb-mod">🎲 ${esc(g.mod.name)}: ${esc(g.mod.d)}</div>
+      <div class="kb-rowlbl"><span>▲ vordere Reihe (wird zuerst angegriffen)</span><span class="${n>team?"bad":""}">Team ${n}/${team}</span></div>
+      <div class="kb-board mine">${[0,1,2,3,4,5].map(i=>this.slot(me.board[i],`data-w="b" data-i="${i}"`,sel("b",i))).join("")}</div>
+      <div class="kb-rowlbl"><span>▼ hintere Reihe (gut für 🎯 Fernkampf)</span></div>
+      <div class="kb-traits">${Object.entries(tr._cnt).sort((a,b)=>b[1]-a[1]).map(([r,c])=>{ const f=Object.keys(ROLES).find(k=>ROLES[k][r]); const lv=tr[r]||0;
+        return `<span class="kb-tr l${lv}" data-tr="${r}">${ROLES[f][r][1]} ${ROLES[f][r][0]} <b>${c}</b>/${c>=2?4:2}</span>`; }).join("")||`<span class="muted">Merkmale: 2 bzw. 4 Einheiten gleicher Art geben Boni</span>`}</div>
+      <div class="kb-sub">Bank</div>
+      <div class="kb-bench">${me.bench.slice(0,this.benchSize(me)).map((u,i)=>this.slot(u,`data-w="n" data-i="${i}"`,sel("n",i))).join("")}</div>
+      <div class="kb-shopbar"><span class="kb-el">⚡ ${me.el}</span>
+        <button class="small ghost" onclick="Kombi.reroll()">🔄 Neu ${me.free>0?"(gratis)":"(1 ⚡)"}</button>
+        <button class="small red" onclick="Kombi.fight()">⚔️ Kampf!</button></div>
+      <div class="kb-shop">${me.shop.map((id,i)=>{ if(!id) return `<div class="kb-offer empty"></div>`; const c=DB.byId(id), a=c.art||{}, cost=this.cost(c);
+        const have=[...me.board,...me.bench].some(u=>u&&u.id===id);
+        return `<div class="kb-offer ${me.el<cost?"poor":""} ${have?"have":""}" data-buy="${i}" style="--c1:${a.c1||"#eee"};--c2:${a.c2||"#888"}">
+          <span class="em">${a.emoji||"❓"}</span><span class="nm">${esc(c.name)}</span>
+          <span class="ro">${ROLES[c.faction][c.attr][1]} ${ROLES[c.faction][c.attr][0]}${KB.RANGED[c.attr]?" · 🎯":""}</span>
+          <span class="cost">⚡${cost}</span>${have?`<span class="pair">Kombi!</span>`:""}</div>`; }).join("")}</div>
+      <p class="muted kb-help">Tippe eine Einheit an und dann ein Feld, um sie zu verschieben. Zweimal tippen zeigt Werte und „Verkaufen“.</p>`;
+    $("kbMain").querySelectorAll("[data-w]").forEach(el=>el.onclick=()=>this.tap(el.dataset.w,+el.dataset.i));
+    $("kbMain").querySelectorAll("[data-buy]").forEach(el=>el.onclick=()=>this.buy(+el.dataset.buy));
+    $("kbMain").querySelectorAll("[data-tr]").forEach(el=>el.onclick=()=>{ const r=el.dataset.tr, f=Object.keys(ROLES).find(k=>ROLES[k][r]); toast(`${ROLES[f][r][0]}: ${KB_TRAITS[r].d}`); });
+  },
+  drawBattle(ev){
+    const A=this.anim; if(!A||UI.current!=="kombi") return; const B=A.B;
+    const hits={}; ev.forEach(e=>{ if(e.k==="hit") hits[e.t.u.u]=(hits[e.t.u.u]||0)+e.d; if(e.k==="miss") hits[e.f.u.u]="MISS"; });
+    const cell=(list,slot)=>{ const f=list.find(x=>x.slot===slot); if(!f) return `<div class="kb-slot empty"></div>`;
+      const pct=Math.max(0,f.hp/f.maxhp*100), dead=f.hp<=0, h=hits[f.u.u];
+      return this.slot(f.u,"",`${dead?"dead":""} ${h?"hurt":""} ${B.t-f.hit<150?"atk":""}`).replace("</div>",
+        `<i class="hp"><i style="width:${pct}%"></i></i>${f.shield>0?`<i class="sh">🛡</i>`:""}${h?`<span class="dmg">${h==="MISS"?"weg!":"-"+h}</span>`:""}</div>`); };
+    $("kbMain").innerHTML=`
+      <div class="kb-vs">⚔️ gegen <b>${esc(B.pb.name)}</b> ${B.frenzy?`<span class="frenzy">🚨 RASEREI</span>`:""}<span class="tm">${Math.max(0,Math.ceil((KB.BATTLE_MS-B.t)/1000))} s</span></div>
+      <div class="kb-board foe">${[3,4,5,0,1,2].map(i=>cell(B.b,i)).join("")}</div>
+      <div class="kb-mid"></div>
+      <div class="kb-board mine">${[0,1,2,3,4,5].map(i=>cell(B.a,i)).join("")}</div>
+      <div class="row" style="justify-content:center;margin-top:10px">
+        <button class="small ghost" onclick="Kombi.speed=Kombi.speed===1?3:1;Kombi.drawBattle([])">${this.speed===1?"⏩ Schneller":"▶ Normal"}</button>
+        <button class="small ghost" onclick="Kombi.skip()">⏭ Ergebnis</button></div>`;
+  },
+};
 
 </script>
 </body>
