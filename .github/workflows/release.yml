@@ -60,7 +60,7 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > local.properties   # vorinstalliertes Android-SDK des Runners
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           gradle assembleRelease --no-daemon -PvcCode=$VC -PvcName=$VN \
-            -PupdateUrl=https://$OWNER_LC.github.io/${{ github.event.repository.name }}/version.json
+            "-PupdateUrl=https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/version.json https://$OWNER_LC.github.io/${{ github.event.repository.name }}/version.json"
           cp app/build/outputs/apk/release/app-release.apk ../EinsatzDuell.apk
           rm -f "$RUNNER_TEMP/release.keystore"
 

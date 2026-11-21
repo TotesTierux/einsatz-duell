@@ -41,13 +41,13 @@ class Updater {
     void check(boolean silent) {
         new Thread(() -> {
             try {
-                HttpURLConnection c = (HttpURLConnection) new URL(BuildConfig.UPDATE_URL + "?t=" + System.currentTimeMillis()).openConnection();
-                c.setConnectTimeout(8000); c.setReadTimeout(8000); c.setUseCaches(false);
-                StringBuilder sb = new StringBuilder();
-                try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
-                    String line; while ((line = r.readLine()) != null) sb.append(line);
+                // Mehrere Adressen (durch Leerzeichen getrennt) – die erste, die antwortet, zählt
+                JSONObject j = null; Exception last = null;
+                for (String u : BuildConfig.UPDATE_URL.split(" ")) {
+                    if (u.isEmpty()) continue;
+                    try { j = fetch(u); break; } catch (Exception e) { last = e; }
                 }
-                JSONObject j = new JSONObject(sb.toString());
+                if (j == null) throw (last != null ? last : new Exception("keine Update-Adresse"));
                 int remote = j.optInt("versionCode", 0);
                 String name = j.optString("versionName", "?");
                 String apk = j.optString("apk", "");
@@ -60,6 +60,17 @@ class Updater {
                 if (!silent) act.runOnUiThread(() -> Toast.makeText(act, "Update-Prüfung nicht möglich – bist du online?", Toast.LENGTH_LONG).show());
             }
         }).start();
+    }
+
+    private JSONObject fetch(String url) throws Exception {
+        HttpURLConnection c = (HttpURLConnection) new URL(url + "?t=" + System.currentTimeMillis()).openConnection();
+        c.setConnectTimeout(8000); c.setReadTimeout(8000); c.setUseCaches(false);
+        if (c.getResponseCode() != 200) throw new Exception("HTTP " + c.getResponseCode());
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader r = new BufferedReader(new InputStreamReader(c.getInputStream(), StandardCharsets.UTF_8))) {
+            String line; while ((line = r.readLine()) != null) sb.append(line);
+        }
+        return new JSONObject(sb.toString());
     }
 
     private void offer(String name, String notes, String apk) {

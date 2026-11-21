@@ -4,7 +4,7 @@ plugins { id 'com.android.application' }
 def vcCode = project.hasProperty('vcCode') ? project.property('vcCode').toInteger() : 4
 def vcName = project.hasProperty('vcName') ? project.property('vcName') : "0.4-dev"
 // Update-Adresse: version.json auf der GitHub-Seite
-def updateUrl = project.hasProperty('updateUrl') ? project.property('updateUrl') : "https://totestierux.github.io/einsatz-duell/version.json"
+def updateUrl = project.hasProperty('updateUrl') ? project.property('updateUrl') : "https://raw.githubusercontent.com/TotesTierux/einsatz-duell/gh-pages/version.json https://totestierux.github.io/einsatz-duell/version.json"
 
 android {
     namespace 'de.kartenduell.app'
