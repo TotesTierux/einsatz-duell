@@ -343,6 +343,15 @@ const Prog = {
     else if(x.val && EFFECTS[x.effect]&&EFFECTS[x.effect].val && !["draw","trap_draw","discard","mill","destroy_level"].includes(x.effect)) x.val=Math.round(x.val*(1+.1*b)/50)*50||x.val;
     return x;
   },
+  /* Deck-Kopien mit den tatsächlich besessenen Stufen versehen (angezeigte Stufe zuerst, dann absteigend) */
+  deckCopies(ids){
+    const pool={};
+    return ids.map(id=>{ const c=this.upgraded(DB.byId(id)); if(!c) return null;
+      if(!pool[id]){ const p=Player.printsOf(id), d=Player.display(id); pool[id]=[];
+        if(d&&p[d]) for(let i=0;i<p[d];i++) pool[id].push(d);
+        [...PRINTS].reverse().forEach(x=>{ if(x.k!==d) for(let i=0;i<(p[x.k]||0);i++) pool[id].push(x.k); }); }
+      c._print = pool[id].shift() || c._print || "C"; return c; }).filter(Boolean);
+  },
   bonusText(c,lv){ const b=lv-1; if(b<1) return "Keine Boni"; return isChar(c)?`+${5*b} % ATK/DEF`:(EFFECTS[c.effect]&&EFFECTS[c.effect].val&&!["draw","trap_draw","discard","mill","destroy_level"].includes(c.effect)?`+${10*b} % Effektwert`:"Sammelstufe (kein Wertbonus)"); },
 
   /* ---------- Laufbahn-Bildschirm ---------- */
@@ -773,13 +782,13 @@ const Deck = {
     if(f==="fusion") list=DB.ofFaction(this.faction).filter(c=>c.type==="fusion"&&Player.has(c.id));
     else list=DB.ofFaction(this.faction).filter(c=>c.type!=="fusion"&&Player.has(c.id)&&c.name.toLowerCase().includes(q)&&(!f||this.count(c.id)>0));
     $("deckList").innerHTML=list.map(c=>{const n=this.count(c.id);
-      if(c.type==="fusion") return `<div class="deckitem"><span class="cnt" style="background:var(--purple)">${Math.min(3,Player.has(c.id))}</span>${cardHTML(c,"",`data-id="${c.id}"`)}</div>`;
+      if(c.type==="fusion") return `<div class="deckitem"><span class="cnt" style="background:var(--purple)">${Math.min(3,Player.has(c.id))}</span>${cardHTML(Prog.upgraded(c),"",`data-id="${c.id}"`)}</div>`;
       return `<div class="deckitem">${n?`<span class="cnt">${n}</span>`:""}${cardHTML(Prog.upgraded(c),"",`data-id="${c.id}"`)}
       <div class="ctrl"><button class="red" data-sub="${c.id}">−</button><span class="muted" style="align-self:center">/${this.limit(c.id)}</span><button class="green" data-add="${c.id}">＋</button></div></div>`}).join("")
       || `<p class="muted">${f==="fusion"?"Noch keine Fusionen – im Shop gibt es welche!":"Keine passenden Karten in deiner Sammlung."}</p>`;
     $("deckList").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>this.add(b.dataset.add));
     $("deckList").querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>this.sub(b.dataset.sub));
-    $("deckList").querySelectorAll(".card").forEach(el=>el.onclick=()=>UI.modal(DB.byId(el.dataset.id)));
+    $("deckList").querySelectorAll(".card").forEach(el=>el.onclick=()=>UI.cardInfo(el.dataset.id));
   },
 };
 
@@ -936,7 +945,7 @@ const Duel = {
     const od = opts.oppDeck || Deck.genDeck(other,{});
     const on = opts.online;   // {myName, guestName, guestDeck, guestExtra}
     this.online=!!on; this.host=!!on; this.client=false; this.waiting=false;
-    this.P = makePlayer(on?on.myName:(Store.get("nick","")||"Du"), myDeck.map(id=>Prog.upgraded(DB.byId(id))).filter(Boolean), Deck.fusionDeck(side).map(id=>Prog.upgraded(DB.byId(id))));
+    this.P = makePlayer(on?on.myName:(Store.get("nick","")||"Du"), Prog.deckCopies(myDeck), Prog.deckCopies(Deck.fusionDeck(side)));
     if(!on) this.P.name="Du";
     this.AI = on ? makePlayer(on.guestName, on.guestDeck, on.guestExtra) : makePlayer(opts.oppName||FACTIONS[other][0], od.main, od.extra, opts.oppLP);
     Prog.apply(this.P, Prog.skillsOf(side));
@@ -1686,7 +1695,7 @@ const Net = {
   sendTo(c,m){ try{ if(c&&c.open) c.send(m); }catch(e){ console.error(e); } },
   ask(kind,data){ return new Promise(res=>{ const id=++this.rid; this.pend[id]=res; this.send({t:"ask",id,kind,data}); }); },
   /* nur die Duell-Verbindung beenden (Turnier-Verbindung bleibt bestehen) */
-  endDuelConn(){ const c=this.conn; this.conn=null; this.pend={}; try{ c&&c.close(); }catch(e){} },
+  endDuelConn(){ const c=this.conn; this.conn=null; this.pend={}; if(c&&c===Tour.vc) Tour.vc=null; try{ c&&c.close(); }catch(e){} },
   close(){ this.closing=true; try{ this.conn&&this.conn.close(); }catch(e){} try{ Trade.conn&&Trade.conn.close(); }catch(e){} Tour.reset(); Trade.reset(); try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
   onConnClose(c){
     if(this.closing) return;
@@ -1713,8 +1722,8 @@ const Net = {
         if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
         const side=OTHER[m.side];
         const deckIds = Deck.validFor(side) ? Deck.lists[side] : Deck.autoOwned(side);
-        const deck = (deckIds.length>=10 ? deckIds : Deck.genDeck(side,{maxRarity:"R"}).main).map(id=>Prog.upgraded(DB.byId(id))).filter(Boolean);
-        const extra = Deck.fusionDeck(side).map(id=>Prog.upgraded(DB.byId(id))).filter(Boolean);
+        const deck = deckIds.length>=10 ? Prog.deckCopies(deckIds) : Deck.genDeck(side,{maxRarity:"R"}).main.map(id=>Prog.upgraded(DB.byId(id))).filter(Boolean);
+        const extra = Prog.deckCopies(Deck.fusionDeck(side));
         this.send({t:"join", name:this.name, deck, extra, skills:Prog.skillsOf(side), v:window.APP_VERSION||"dev"});
         Lobby.status(`Verbunden mit ${m.name} – Duell startet …`);
         break; }
@@ -1765,13 +1774,21 @@ const Net = {
    Das Ergebnis meldet jeder Spieler an die Zentrale (doppelte Meldungen werden ignoriert).
    ===================================================================== */
 const TOUR_MAX=8;
+/* Virtuelle Verbindung: Duell-Nachrichten laufen über die Turnier-Zentrale statt direkt */
+class RelayConn {
+  constructor(mid){ this.mid=mid; this.open=true; this.peer="relay"; this._h={data:[],close:[]}; }
+  on(ev,fn){ (this._h[ev]=this._h[ev]||[]).push(fn); if(ev==="open") setTimeout(fn,0); }
+  emit(ev,arg){ (this._h[ev]||[]).forEach(f=>{ try{ f(arg); }catch(e){ console.error(e); } }); }
+  send(m){ if(this.open) Tour.relaySend(this.mid,m); }
+  close(){ if(!this.open) return; this.open=false; this.emit("close"); }
+}
 const TOUR_PRIZE = {1:{coins:500,xp:400,cup:"🥇"}, 2:{coins:250,xp:200,cup:"🥈"}, 3:{coins:120,xp:120,cup:"🥉"}};
 const Tour = {
   hosting:false, member:false, hub:null, conns:{}, seq:0, myId:null,
   players:[], matches:[], format:"ko", status:"lobby", round:0, rrRounds:[], view:null, expect:null, _failT:null, finished:null,
   active(){ return this.hosting||this.member; },
   myName(){ return Store.get("nick","")||"Spieler"; },
-  reset(){ clearTimeout(this._failT); Object.assign(this,{hosting:false,member:false,hub:null,conns:{},seq:0,myId:null,players:[],matches:[],status:"lobby",round:0,rrRounds:[],view:null,expect:null,finished:null}); },
+  reset(){ clearTimeout(this._failT); this.vc=null; this._buf=[]; Object.assign(this,{hosting:false,member:false,hub:null,conns:{},seq:0,myId:null,players:[],matches:[],status:"lobby",round:0,rrRounds:[],view:null,expect:null,finished:null}); },
   isMemberConn(c){ return !!(c&&c._tid); },
 
   /* ---------------- Zentrale (Gastgeber) ---------------- */
@@ -1899,7 +1916,7 @@ const Tour = {
     const p=this.pl(id);
     if(this.status==="lobby"){ this.players=this.players.filter(x=>x.id!==id); }
     else if(p){ p.online=false;
-      this.matches.filter(m=>m.state!=="done"&&(m.a===id||m.b===id)).forEach(m=>this.result(m.mid, m.a===id?m.b:m.a, 0)); }
+      this.matches.filter(m=>m.state!=="done"&&(m.a===id||m.b===id)).forEach(m=>{ if(m.state==="play") this.relayDeliver(m.mid,id,{t:"quit"}); this.result(m.mid, m.a===id?m.b:m.a, 0); }); }
     if(p) toast(`${p.name} hat das Turnier verlassen`);
     this.broadcast();
   },
@@ -1920,15 +1937,19 @@ const Tour = {
   onMatch(m){
     clearTimeout(this._failT);
     this.expect=m; this.myId=m.myId||this.myId;
+    // Duell-Verbindung über die Zentrale aufbauen (funktioniert immer, wenn man im Turnier-Raum ist)
+    try{ Net.conn && Net.conn!==this.vc && Net.endDuelConn(); }catch(e){}
+    const vc=new RelayConn(m.mid); this.vc=vc; Net.conn=vc; Net.pend={}; Net.name=this.myName();
+    Net.role = m.role==="host" ? "host" : "client"; if(m.role==="host") Net.side=m.hostSide;
+    Net.wire(vc);
+    if(m.role==="host") setTimeout(()=>{ if(this.vc===vc) Net.send({t:"welcome",name:Net.name,side:m.hostSide,v:window.APP_VERSION||"dev",mid:m.mid}); },400);
+    (this._buf||[]).filter(x=>x.mid===m.mid).forEach(x=>vc.emit("data",x.m)); this._buf=[];
     const sideTxt = m.role==="host" ? FACTIONS[m.hostSide][0] : FACTIONS[OTHER[m.hostSide]][0];
     if(UI.current!=="duel"){ UI.show("tour"); }
     banner("MATCH!"); toast(`Dein Match: gegen ${m.oppName} – du spielst ${sideTxt}`);
     this.render();
-    if(m.role==="client"){
-      setTimeout(()=>{ if(this.expect===m) Net.connectMatch(m.oppPeer, m.mid); }, 1800);
-    }
     // kommt das Duell nicht zustande, der Zentrale melden
-    this._failT=setTimeout(()=>{ if(this.expect===m && UI.current!=="duel") this.matchFailed(); }, 25000);
+    this._failT=setTimeout(()=>{ if(this.expect===m && UI.current!=="duel") this.matchFailed(); }, 30000);
   },
   matchFailed(){
     const m=this.expect; if(!m) return; this.expect=null; clearTimeout(this._failT);
@@ -1940,6 +1961,18 @@ const Tour = {
     this.report({t:"t_result",mid:m.mid,winner:won?m.myId:m.oppId,lp:won?myLP:oppLP});
   },
   report(msg){ if(this.hosting) this.onData(msg,null); else Net.sendTo(this.hub,msg); },
+  /* ---- Relais ---- */
+  relaySend(mid,m){ if(this.hosting) this.relayDeliver(mid,this.myId,m); else Net.sendTo(this.hub,{t:"t_relay",mid,m}); },
+  relayDeliver(mid,from,m){                // nur Zentrale: Nachricht an den anderen Match-Spieler weiterreichen
+    const x=this.matches.find(q=>q.mid===mid); if(!x) return;
+    const to = from===x.a ? x.b : x.a;
+    if(to===this.myId) return this.relayIn(mid,m);
+    Net.sendTo(this.conns[to],{t:"t_relay",mid,m});
+  },
+  relayIn(mid,m){
+    if(this.vc && this.vc.mid===mid && this.vc.open) return this.vc.emit("data",m);
+    (this._buf=this._buf||[]).push({mid,m}); if(this._buf.length>50) this._buf.shift();
+  },
 
   onData(m,c){
     switch(m.t){
@@ -1956,6 +1989,7 @@ const Tour = {
         toast(`${m.name} ist dem Turnier beigetreten`); this.broadcast(); break; }
       case "t_result": if(this.hosting) this.result(m.mid,m.winner,m.lp); break;
       case "t_fail": if(this.hosting) this.failed(m.mid); break;
+      case "t_relay": if(this.hosting && c && c._tid) this.relayDeliver(m.mid,c._tid,m.m); else this.relayIn(m.mid,m.m); break;
     }
   },
   onEnd(m){
