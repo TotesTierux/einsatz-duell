@@ -61,3 +61,6 @@
 .kb-vs .tm{margin-left:auto;font-family:var(--comic);font-size:20px;color:var(--yellow)}
 .kb-vs .frenzy{background:var(--red);color:#fff;border-radius:8px;padding:1px 6px;font-size:12px;animation:kbPulse .6s infinite}
 .kb-mid{height:14px}
+.kb-dlg{background:var(--paper);color:var(--ink);width:min(320px,86vw);margin:0 auto}
+.kb-dlg p{margin:6px 0;font-weight:700;line-height:1.35}
+.kb-dlg p:first-child{font-size:17px}

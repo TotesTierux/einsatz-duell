@@ -93,7 +93,7 @@ const Kombi = {
     const cheap=Object.keys(this.g.pool).filter(id=>this.tier(DB.byId(id))===2);
     this.g.players.forEach(p=>{ const id=cheap[Math.floor(Math.random()*cheap.length)]; const star=mod.id==="stern"?2:1;
       if(this.take(id,KB.NEED[star])) p.board[0]=this.unit(id,star); });
-    UI.modal(null,[[`🎲 Sonderregel: ${mod.name} – ${mod.d}`,null,"ghost"]],null,null,"Los geht's!");
+    this.dialog([`🎲 Sonderregel: ${mod.name}`, mod.d],"Los geht's!");
     this.nextRound();
   },
   take(id,n=1){ if((this.g.pool[id]||0)<n) return false; this.g.pool[id]-=n; return true; },
@@ -357,9 +357,11 @@ const Kombi = {
       return this.finish(msg);
     }
     banner(r.win==="a"?"SIEG!":r.win==="b"?"NIEDERLAGE":"UNENTSCHIEDEN");
-    UI.modal(null,[[msg,null,"ghost"],...others.map(t=>[t,null,"ghost"]),...out.filter(p=>p!==me).map(p=>[`❌ ${p.name} ist ausgeschieden`,null,"ghost"])],null,()=>this.nextRound(),"Nächste Runde ▶");
+    g.phase="result"; g.summary=[msg,...others,...out.filter(p=>p!==me).map(p=>`❌ ${p.name} ist ausgeschieden`)];
+    this.dialog(g.summary,"Nächste Runde ▶",()=>this.weiter());
     this.draw();
   },
+  weiter(){ if(this.g && this.g.phase==="result"){ UI.closeModal(); this.nextRound(); } },
   finish(msg){
     const g=this.g, me=this.me();
     // verbleibende Plätze nach LP vergeben, falls ich vorzeitig raus bin
@@ -372,7 +374,7 @@ const Kombi = {
     banner(place===1?"EINSATZSIEG!":`PLATZ ${place}!`);
     const ranking=[...g.players].sort((a,b)=>a.place-b.place).map(p=>`${p.place}. ${p.name}${p.ai?"":" (du)"}`);
     this.g=null;
-    UI.modal(null,[[msg,null,"ghost"],[`Platz ${place}${place<=2?" – zählt als Sieg!":""} · +${pr.coins} 🪙 · +${pr.xp} XP`,null,"ghost"],...ranking.map(t=>[t,null,"ghost"])],null,()=>this.lobby(),"Fertig");
+    this.dialog([msg,`Platz ${place}${place<=2?" – zählt als Sieg!":""} · +${pr.coins} 🪙 · +${pr.xp} XP`,...ranking],"Fertig");
     this.lobby();
   },
   async leave(){
@@ -380,6 +382,12 @@ const Kombi = {
     clearInterval(this._t); this.anim=null; this.g=null; UI.show("home");
   },
 
+  /* Hinweisfenster: Textzeilen + ein Knopf; jede Art des Schließens führt weiter */
+  dialog(lines,label,fn){
+    let done=false; const go=()=>{ if(done) return; done=true; fn&&fn(); };
+    UI.modal(null,[],null,go,label);
+    $("modalCard").innerHTML=`<div class="panel kb-dlg">${lines.map(l=>`<p>${esc(l)}</p>`).join("")}</div>`;
+  },
   /* ---------------- Anzeige ---------------- */
   slot(u,attrs,extra=""){
     if(!u) return `<div class="kb-slot empty" ${attrs}></div>`;
@@ -394,6 +402,11 @@ const Kombi = {
     $("kbTitle").textContent=`Runde ${g.round}`;
     $("kbBar").innerHTML=g.players.map(p=>`<div class="kb-pl ${p.lost?"out":""} ${p===me?"me":""}"><b>${esc(p.name.replace(/^KI /,""))}</b><span>${p.lost?`Platz ${p.place}`:p.hp+" ❤️"}</span></div>`).join("");
     if(g.phase==="battle"&&this.anim) return this.drawBattle([]);
+    if(g.phase==="battle"&&!this.anim) g.phase="deploy";                 // Sicherheitsnetz
+    if(g.phase==="result"){
+      $("kbMain").innerHTML=`<div class="panel kb-dlg">${(g.summary||[]).map(l=>`<p>${esc(l)}</p>`).join("")}</div>
+        <button class="red" style="width:100%;margin-top:12px" onclick="Kombi.weiter()">Nächste Runde ▶</button>`;
+      return; }
     const tr=this.traits(me.board), team=this.team(me), n=me.board.filter(Boolean).length;
     const sel=(w,i)=>this.sel&&this.sel.w===w&&this.sel.i===i?"sel":"";
     $("kbMain").innerHTML=`
