@@ -4,5 +4,6 @@
   "projectId": "einsatz-duell",
   "storageBucket": "einsatz-duell.firebasestorage.app",
   "messagingSenderId": "774898064988",
-  "appId": "1:774898064988:web:4d202fe5a4e98021269099"
+  "appId": "1:774898064988:web:4d202fe5a4e98021269099",
+  "databaseURL": "https://einsatz-duell-default-rtdb.europe-west1.firebasedatabase.app"
 }

@@ -728,7 +728,7 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 <div class="toast" id="toast"></div>
 
 <script>
-window.FIREBASE_CONFIG={"apiKey": "AIzaSyABLyRqfChCb_xogFfa7wZN8hca2S6FzFI", "authDomain": "einsatz-duell.firebaseapp.com", "projectId": "einsatz-duell", "storageBucket": "einsatz-duell.firebasestorage.app", "messagingSenderId": "774898064988", "appId": "1:774898064988:web:4d202fe5a4e98021269099"};
+window.FIREBASE_CONFIG={"apiKey": "AIzaSyABLyRqfChCb_xogFfa7wZN8hca2S6FzFI", "authDomain": "einsatz-duell.firebaseapp.com", "projectId": "einsatz-duell", "storageBucket": "einsatz-duell.firebasestorage.app", "messagingSenderId": "774898064988", "appId": "1:774898064988:web:4d202fe5a4e98021269099", "databaseURL": "https://einsatz-duell-default-rtdb.europe-west1.firebasedatabase.app"};
 </script>
 <script>
 /* PeerJS 1.5.5 – MIT-Lizenz, https://peerjs.com */
@@ -2686,7 +2686,7 @@ const Net = {
   ask(kind,data){ return new Promise(res=>{ const id=++this.rid; this.pend[id]=res; this.send({t:"ask",id,kind,data}); }); },
   /* nur die Duell-Verbindung beenden (Turnier-Verbindung bleibt bestehen) */
   endDuelConn(){ const c=this.conn; this.conn=null; this.pend={}; if(c&&c===Tour.vc) Tour.vc=null; try{ c&&c.close(); }catch(e){} },
-  close(){ this.closing=true; try{ this.conn&&this.conn.close(); }catch(e){} try{ Trade.conn&&Trade.conn.close(); }catch(e){} Tour.reset(); Trade.reset(); try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
+  close(){ this.closing=true; Cloud.close(); try{ this.conn&&this.conn.close(); }catch(e){} try{ Trade.conn&&Trade.conn.close(); }catch(e){} Tour.reset(); Trade.reset(); try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
   onConnClose(c){
     if(this.closing) return;
     if(Tour.hub===c) return Tour.onHubClose();
@@ -2769,9 +2769,158 @@ class RelayConn {
   constructor(mid){ this.mid=mid; this.open=true; this.peer="relay"; this._h={data:[],close:[]}; }
   on(ev,fn){ (this._h[ev]=this._h[ev]||[]).push(fn); if(ev==="open") setTimeout(fn,0); }
   emit(ev,arg){ (this._h[ev]||[]).forEach(f=>{ try{ f(arg); }catch(e){ console.error(e); } }); }
-  send(m){ if(this.open) Tour.relaySend(this.mid,m); }
+  send(m){ if(this.open) Tour.relaySend(this.mid,m,this.opp); }
   close(){ if(!this.open) return; this.open=false; this.emit("close"); }
 }
+
+/* ============================ CLOUD-SERVER (Firebase Realtime Database) ============================
+   Turniere laufen über den Server statt über die Handys: Jeder Spieler hat im Raum ein
+   Postfach rooms/{CODE}/box/{id}. Nachrichten werden gebündelt per POST abgelegt und per
+   Server-Sent-Events (EventSource) sofort empfangen. Match-Nachrichten gehen direkt ins
+   Postfach des Gegners – die Zentrale wird dafür nicht mehr gebraucht, alle Matches laufen parallel.
+   ================================================================================================= */
+class MailConn {
+  constructor(to){ this.to=to; this.open=true; this.peer="cloud:"+to; this._h={}; }
+  on(ev,fn){ (this._h[ev]=this._h[ev]||[]).push(fn); if(ev==="open") setTimeout(()=>{ if(this.open) fn(); },0); }
+  emit(ev,arg){ (this._h[ev]||[]).forEach(f=>{ try{ f(arg); }catch(e){ console.error(e); } }); }
+  send(m){ if(this.open) Cloud.send(this.to,m); }
+  close(){ if(!this.open) return; this.open=false; this.emit("close"); }
+}
+const CLOUD_TIMEOUT=150000;   // so lange ohne Lebenszeichen, dann gilt ein Spieler als getrennt
+const Cloud = {
+  room:null, me:null, es:null, seen:{}, del:{}, q:{}, busy:{}, last:{}, hubConn:null, _hb:null, _tick:0, _delT:null, _gen:0,
+  cfg(){ return Store.get("rtdbcfg",null); },                       // für Tests: eigener Server
+  url(){ const c=this.cfg(); return (c&&c.url) || (FIREBASE&&FIREBASE.databaseURL) || ""; },
+  enabled(){ return !!this.url() && typeof fetch!=="undefined" && typeof EventSource!=="undefined"; },
+  /* Zugangs-Token: eingeloggtes Konto, sonst anonyme Anmeldung (für Spieler ohne Konto) */
+  async token(){
+    const c=this.cfg(); if(c&&c.token) return c.token;
+    if(Account.user){ try{ return await Account.token(); }catch(e){} }
+    let a=Store.get("anon",null), j=null;
+    if(a && Date.now()<a.exp) return a.idToken;
+    if(a && a.refreshToken){ try{ const r=await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE.apiKey}`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:"grant_type=refresh_token&refresh_token="+encodeURIComponent(a.refreshToken)}); j=await r.json(); if(!r.ok) j=null; }catch(e){ j=null; } }
+    if(!j){ const r=await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FIREBASE.apiKey}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({returnSecureToken:true})});
+      j=await r.json().catch(()=>({})); if(!r.ok) throw new Error((j.error&&j.error.message)||"AUTH"); }
+    a={uid:j.localId||j.user_id, idToken:j.idToken||j.id_token, refreshToken:j.refreshToken||j.refresh_token, exp:Date.now()+((+(j.expiresIn||j.expires_in)||3600)-120)*1000};
+    Store.set("anon",a); return a.idToken;
+  },
+  async req(path,method="GET",body,query=""){
+    const t=await this.token();
+    const r=await fetch(`${this.url()}/${path}.json?auth=${encodeURIComponent(t)}${query}`,{method, headers:body!==undefined?{"Content-Type":"application/json"}:{}, body:body!==undefined?JSON.stringify(body):undefined});
+    if(!r.ok) throw new Error("DB_"+r.status);
+    return r.json();
+  },
+  /* Neuen Raum anlegen (freien Code suchen), alte verwaiste Räume nebenbei aufräumen */
+  async createRoom(meta){
+    this.cleanup().catch(()=>{});
+    for(let i=0;i<6;i++){
+      const code=Net.newCode();
+      if(await this.req(`rooms/${code}/meta`)) continue;
+      await this.req(`rooms/${code}/meta`,"PUT",Object.assign({},meta,{created:{".sv":"timestamp"},alive:{".sv":"timestamp"}}));
+      return code;
+    }
+    throw new Error("NO_CODE");
+  },
+  async cleanup(){
+    const keys=Object.keys(await this.req("rooms","GET",undefined,"&shallow=true")||{}).slice(0,25);
+    for(const k of keys){ const alive=await this.req(`rooms/${k}/meta/alive`); if(!alive || Date.now()-alive>6*3600e3) await this.req(`rooms/${k}`,"DELETE"); }
+  },
+  /* Eigenes Postfach öffnen */
+  open(room,me){
+    this.close(true);
+    Object.assign(this,{room,me,seen:{},del:{},q:{},busy:{},last:{},hubConn:null,_tick:Date.now()});
+    this.listen();
+    this._hb=setInterval(()=>this.beat(),20000);
+  },
+  async listen(){
+    const gen=++this._gen, room=this.room, me=this.me;
+    let t; try{ t=await this.token(); }catch(e){ console.warn("Cloud-Token:",e); }
+    if(gen!==this._gen||this.room!==room) return;
+    if(!t){ setTimeout(()=>{ if(gen===this._gen) this.listen(); },3000); return; }
+    try{ this.es&&this.es.close(); }catch(e){}
+    const es=new EventSource(`${this.url()}/rooms/${room}/box/${me}.json?auth=${encodeURIComponent(t)}`); this.es=es;
+    const on=e=>{ try{ this.onEvent(e.type,JSON.parse(e.data)); }catch(err){ console.error(err); } };
+    es.addEventListener("put",on); es.addEventListener("patch",on);
+    const again=()=>{ try{ es.close(); }catch(e){} if(gen===this._gen) setTimeout(()=>{ if(gen===this._gen) this.listen(); },1500); };
+    es.addEventListener("auth_revoked",again); es.addEventListener("cancel",again);
+    es.onerror=()=>{ if(es.readyState===2) again(); };
+  },
+  onEvent(type,d){
+    if(!d||!d.data) return;
+    let items=[];
+    if(d.path==="/") items=Object.entries(d.data);
+    else { const parts=d.path.split("/").filter(Boolean); if(parts.length===1) items=[[parts[0],d.data]]; }
+    items.filter(([k,v])=>v&&!this.seen[k]).sort((a,b)=>a[0]<b[0]?-1:1).forEach(([k,v])=>{
+      this.seen[k]=1; this.del[k]=null;
+      let list=[]; try{ list=JSON.parse(v.d)||[]; }catch(e){}
+      list.forEach(m=>{ try{ this.dispatch(v.f,m); }catch(e){ console.error(e); } });
+    });
+    if(!this._delT) this._delT=setTimeout(()=>this.flushDel(),2500);
+  },
+  flushDel(){
+    this._delT=null; const d=this.del; this.del={};
+    if(this.room && Object.keys(d).length) this.req(`rooms/${this.room}/box/${this.me}`,"PATCH",d).catch(()=>{});
+  },
+  /* Nachrichten an einen Empfänger in Reihenfolge und gebündelt verschicken */
+  send(to,m){
+    if(!this.room) return;
+    const key=this.room+"/"+to; (this.q[key]=this.q[key]||[]).push(m); this.pump(this.room,to,this.me);
+  },
+  async pump(room,to,me){
+    const key=room+"/"+to; if(this.busy[key]) return; this.busy[key]=true;
+    try{
+      while(this.q[key]&&this.q[key].length){
+        const batch=this.q[key].splice(0);
+        for(let tries=0;;tries++){
+          try{ await this.req(`rooms/${room}/box/${to}`,"POST",{f:me,d:JSON.stringify(batch)}); break; }
+          catch(e){ if(tries>=4){ console.warn("Cloud-Senden fehlgeschlagen",e); break; } await new Promise(r=>setTimeout(r,800*(tries+1))); }
+        }
+      }
+    } finally { this.busy[key]=false; }
+  },
+  /* Eingehende Nachricht an die passende (virtuelle) Verbindung geben */
+  dispatch(from,m){
+    if(!m||typeof m.t!=="string") return;
+    this.last[from]=Date.now();
+    if(m.t==="t_ping") return;
+    if(Tour.hosting){
+      let c=Tour.conns[from];
+      if(!c && m.t==="t_join"){ c=new MailConn(from); return Tour.addMember(c,from); }
+      if(!c) return;
+      if(m.t==="t_bye") return c.close();
+      return c.emit("data",m);
+    }
+    if(from==="org"){ const c=this.hubConn; if(!c) return; if(m.t==="t_bye") return c.close(); return c.emit("data",m); }
+    if(m.t==="t_relay") Tour.onData(m,null);            // direkt vom Match-Gegner
+  },
+  /* Lebenszeichen senden und Verbindungsabbrüche erkennen */
+  beat(){
+    if(!this.room) return;
+    const now=Date.now(), gap=now-this._tick; this._tick=now;
+    if(gap>60000) Object.keys(this.last).forEach(k=>this.last[k]=now);     // App war im Hintergrund – nicht gleich rauswerfen
+    if(Tour.hosting){
+      this.req(`rooms/${this.room}/meta`,"PATCH",{alive:{".sv":"timestamp"},status:Tour.status}).catch(()=>{});
+      Object.entries(Tour.conns).forEach(([id,c])=>{ if(!(c instanceof MailConn)) return; c.send({t:"t_ping"});
+        if(now-(this.last[id]||now)>CLOUD_TIMEOUT) c.close(); });
+    } else if(this.hubConn){
+      this.hubConn.send({t:"t_ping"});
+      if(now-(this.last.org||now)>CLOUD_TIMEOUT) this.hubConn.close();
+    }
+  },
+  close(silent){
+    clearInterval(this._hb); this._hb=null; this._gen++;
+    try{ this.es&&this.es.close(); }catch(e){} this.es=null;
+    const room=this.room; if(!room) return;
+    if(!silent){
+      if(Tour.hosting){ Object.values(Tour.conns).forEach(c=>{ if(c instanceof MailConn) this.send(c.to,{t:"t_bye"}); });
+        setTimeout(()=>this.req(`rooms/${room}`,"DELETE").catch(()=>{}), 20000); }
+      else if(this.hubConn) this.send("org",{t:"t_bye"});
+    }
+    if(this._delT){ clearTimeout(this._delT); this.flushDel(); }
+    this.room=null; this.hubConn=null;
+  },
+};
 const TOUR_PRIZE = {1:{coins:500,xp:400,cup:"🥇"}, 2:{coins:250,xp:200,cup:"🥈"}, 3:{coins:120,xp:120,cup:"🥉"}};
 const Tour = {
   hosting:false, member:false, hub:null, conns:{}, seq:0, myId:null,
@@ -2782,20 +2931,29 @@ const Tour = {
   isMemberConn(c){ return !!(c&&c._tid); },
 
   /* ---------------- Zentrale (Gastgeber) ---------------- */
-  create(format){
+  async create(format){
     const n=Lobby.name(); if(!n) return;
     Net.close(); this.reset(); this.hosting=true; this.format=format; this.myId="org";
     Net.role="tour"; Net.code=Net.newCode(); Net.name=n;
+    if(Cloud.enabled()){
+      Lobby.status("Turnier-Raum wird auf dem Server erstellt …");
+      try{
+        const code=await Cloud.createRoom({host:n,format});
+        if(!this.hosting) return;
+        Net.code=code; this.players=[{id:"org",name:n,side:Lobby.side,peer:"cloud",online:true}];
+        Cloud.open(code,"org"); UI.show("tour"); this.broadcast(); return;
+      }catch(e){ console.warn("Cloud:",e); if(!this.hosting) return; toast("Turnier-Server nicht erreichbar – Turnier läuft direkt über die Handys"); }
+    }
     this.players=[{id:"org",name:n,side:Lobby.side,peer:Net.pid(Net.code),online:true}];
     Lobby.status("Turnier-Raum wird erstellt …");
     const open=()=>Net.openPeer(Net.pid(Net.code), ()=>{ UI.show("tour"); this.broadcast(); },
       e=>{ if(e.type==="unavailable-id"){ Net.code=Net.newCode(); this.players[0].peer=Net.pid(Net.code); return open(); } Lobby.error(e); this.reset(); });
     open();
   },
-  addMember(c){
+  addMember(c,fixedId){
     if(this.status!=="lobby") return Net.reject(c,"t_started");
     if(this.players.length>=TOUR_MAX) return Net.reject(c,"t_full");
-    const id="m"+(++this.seq); c._tid=id; this.conns[id]=c;
+    const id=fixedId||"m"+(++this.seq); if(fixedId) Cloud.last[id]=Date.now(); c._tid=id; this.conns[id]=c;
     c.on("open",()=>{ Net.wire(c); Net.sendTo(c,{t:"t_welcome",you:id,format:this.format,host:this.players[0].name}); });
   },
   sendToPlayer(id,m){ if(id===this.myId) return this.onData(m,null); Net.sendTo(this.conns[id],m); },
@@ -2912,6 +3070,19 @@ const Tour = {
   },
 
   /* ---------------- Teilnehmer (auch die Zentrale spielt mit) ---------------- */
+  /* Beitritt über den Server: gibt false zurück, wenn es keinen Turnier-Raum mit diesem Code gibt */
+  async tryJoinCloud(code,name){
+    if(!Cloud.enabled()) return false;
+    let meta=null; try{ meta=await Cloud.req(`rooms/${code}/meta`); }catch(e){ console.warn("Cloud:",e); return false; }
+    if(!meta) return false;
+    Net.close(); this.reset(); Net.role="tourjoin"; Net.code=code; Net.name=name;
+    const me="m"+Math.random().toString(36).slice(2,10), hub=new MailConn("org");
+    Cloud.open(code,me); Cloud.hubConn=hub; Cloud.last.org=Date.now(); Net.wire(hub);
+    hub.send({t:"t_join"});
+    Lobby.status(`Verbinde mit dem Turnier von ${meta.host||"Gastgeber"} …`);
+    setTimeout(()=>{ if(Cloud.hubConn===hub && !this.member && Net.role==="tourjoin"){ Cloud.close(true); Lobby.error("Der Turnier-Raum antwortet nicht. Ist der Gastgeber noch online?"); } },20000);
+    return true;
+  },
   becomeMember(c,m){
     this.reset(); this.member=true; this.hub=c; this.myId=m.you; this.format=m.format;
     Net.conn=null; Net.role="tourmember";
@@ -2929,7 +3100,7 @@ const Tour = {
     this.expect=m; this.myId=m.myId||this.myId;
     // Duell-Verbindung über die Zentrale aufbauen (funktioniert immer, wenn man im Turnier-Raum ist)
     try{ Net.conn && Net.conn!==this.vc && Net.endDuelConn(); }catch(e){}
-    const vc=new RelayConn(m.mid); this.vc=vc; Net.conn=vc; Net.pend={}; Net.name=this.myName();
+    const vc=new RelayConn(m.mid); vc.opp=m.oppId; this.vc=vc; Net.conn=vc; Net.pend={}; Net.name=this.myName();
     Net.role = m.role==="host" ? "host" : "client"; if(m.role==="host") Net.side=m.hostSide;
     Net.wire(vc);
     if(m.role==="host") setTimeout(()=>{ if(this.vc===vc) Net.send({t:"welcome",name:Net.name,side:m.hostSide,v:window.APP_VERSION||"dev",mid:m.mid}); },400);
@@ -2952,7 +3123,11 @@ const Tour = {
   },
   report(msg){ if(this.hosting) this.onData(msg,null); else Net.sendTo(this.hub,msg); },
   /* ---- Relais ---- */
-  relaySend(mid,m){ if(this.hosting) this.relayDeliver(mid,this.myId,m); else Net.sendTo(this.hub,{t:"t_relay",mid,m}); },
+  relaySend(mid,m,opp){
+    if(this.hosting) return this.relayDeliver(mid,this.myId,m);
+    if(Cloud.room && opp) return Cloud.send(opp,{t:"t_relay",mid,m});        // Server: direkt ins Postfach des Gegners
+    Net.sendTo(this.hub,{t:"t_relay",mid,m});
+  },
   relayDeliver(mid,from,m){                // nur Zentrale: Nachricht an den anderen Match-Spieler weiterreichen
     const x=this.matches.find(q=>q.mid===mid); if(!x) return;
     const to = from===x.a ? x.b : x.a;
@@ -2968,8 +3143,8 @@ const Tour = {
     switch(m.t){
       // --- Teilnehmer ---
       case "t_welcome": this.becomeMember(c,m); break;
-      case "t_full": Lobby.error("Dieser Turnier-Raum ist voll (max. 8)."); break;
-      case "t_started": Lobby.error("Dieses Turnier hat schon begonnen."); break;
+      case "t_full": Cloud.close(true); Lobby.error("Dieser Turnier-Raum ist voll (max. 8)."); break;
+      case "t_started": Cloud.close(true); Lobby.error("Dieses Turnier hat schon begonnen."); break;
       case "t_state": this.view=m.v; this.format=m.v.format; if(UI.current==="tour") this.render(); break;
       case "t_match": this.onMatch(m); break;
       case "t_end": this.onEnd(m); break;
@@ -3257,7 +3432,8 @@ const Lobby = {
   create(){ const n=this.name(); if(!n) return; Duel._ended=false; Net.host(this.side,n); },
   fmt:"ko",
   createTour(){ Duel._ended=false; Tour.create(this.fmt); },
-  join(){ const n=this.name(); if(!n) return; const code=($("onJoin").value||"").trim().toUpperCase(); if(code.length<5) return toast("Bitte den 5-stelligen Code eingeben"); Duel._ended=false; Net.join(code,n); },
+  async join(){ const n=this.name(); if(!n) return; const code=($("onJoin").value||"").trim().toUpperCase(); if(code.length<5) return toast("Bitte den 5-stelligen Code eingeben"); Duel._ended=false;
+    this.status("Suche Raum "+code+" …"); if(await Tour.tryJoinCloud(code,n)) return; Net.join(code,n); },
   showCode(code){ $("onCodeBox").style.display=""; $("onCode").textContent=code; this.status("Warte auf deinen Gegner … Gib ihm den Code."); },
   inviteUrl(){ return `${window.APP_SITE||"https://totestierux.github.io/einsatz-duell"}/join.html?c=${Net.code}`; },
   inviteText(){ const n=Store.get("nick","")||"Ich";
