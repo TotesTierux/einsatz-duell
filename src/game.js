@@ -213,10 +213,124 @@ const Player = {
       DB.cards.filter(c=>c.starter).forEach(c=>this.owned[c.id]=2); this.save(); }
     else Object.assign(this, d);
   },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,progress:this.progress}); UI.coins(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,progress:this.progress,prog:this.prog}); UI.coins(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1){ this.owned[id]=(this.owned[id]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
+};
+
+
+/* ============================ PROGRESSION ============================
+   - Laufbahn je Partei: XP aus Duellen → Level 1–60, Dienstgrad/Rang alle 5 Level
+   - Pro Level-Aufstieg: 1 Skillpunkt + Münzen
+   - Skills wirken im Duell (auch online) für die jeweilige Partei
+   - Kartenstufen: Mehr Exemplare einer Karte = stärkere Karte (Stufe 1–5)
+   ===================================================================== */
+const RANKS = {
+  polizei:    ["Anwärter","Polizeimeister","Polizeiobermeister","Polizeihauptmeister","Kommissar","Oberkommissar","Hauptkommissar","Erster Hauptkommissar","Polizeirat","Polizeidirektor","Polizeipräsident","Legende des Präsidiums"],
+  verbrecher: ["Kleinganove","Taschendieb","Ganove","Bandenmitglied","Vollstrecker","Hehlerkönig","Unterboss","Boss","Kartellchef","Pate","Phantom","Legende der Unterwelt"],
+};
+const MAX_LEVEL = 60;
+const SKILLS = [
+  {id:"lp",    max:5, minLv:1,  icon:"❤️", name:{polizei:"Schutzweste",     verbrecher:"Dickes Fell"},   desc:r=>`+${200*r} Start-LP im Duell`},
+  {id:"atk",   max:5, minLv:1,  icon:"💪", name:{polizei:"Einsatztraining", verbrecher:"Straßenkampf"},  desc:r=>`Alle eigenen Charaktere +${50*r} ATK`},
+  {id:"eff",   max:3, minLv:5,  icon:"📜", name:{polizei:"Dienstvorschrift", verbrecher:"Gerissenheit"}, desc:r=>`Effektwerte eigener Karten +${10*r} %`},
+  {id:"coins", max:3, minLv:3,  icon:"🪙", name:{polizei:"Besoldung",       verbrecher:"Beuteanteil"},   desc:r=>`+${10*r} % Münzen aus Duellen`},
+  {id:"xp",    max:3, minLv:3,  icon:"🎓", name:{polizei:"Fortbildung",     verbrecher:"Erfahrung"},     desc:r=>`+${10*r} % XP`},
+  {id:"luck",  max:3, minLv:8,  icon:"🍀", name:{polizei:"Beziehungen",     verbrecher:"Kontakte"},      desc:r=>`Bessere Booster: +${r} % SR, +${(r*.5).toFixed(1)} % UR`},
+  {id:"hand",  max:1, minLv:10, icon:"🃏", name:{polizei:"Lagebesprechung", verbrecher:"Plan B"},        desc:r=>r?"6 statt 5 Startkarten":"+1 Startkarte"},
+  {id:"second",max:1, minLv:15, icon:"🚑", name:{polizei:"Rettungsdienst",  verbrecher:"Untertauchen"},  desc:r=>"Einmal pro Duell: bei 0 LP mit 500 LP weiterspielen"},
+];
+const CARD_LV = [1,3,6,10,15];        // Exemplare für Kartenstufe 1–5
+
+const Prog = {
+  data(){
+    if(!Player.prog) Player.prog={};
+    Object.keys(FACTIONS).forEach(f=>{ const p=Player.prog[f]||(Player.prog[f]={});   // Objekt behalten, nur fehlende Felder ergänzen
+      if(p.lv==null) p.lv=1; if(p.xp==null) p.xp=0; if(p.sp==null) p.sp=0; if(!p.skills) p.skills={}; });
+    return Player.prog;
+  },
+  of(f){ return this.data()[f]; },
+  need(lv){ return 150+lv*50; },
+  rank(f,lv){ return RANKS[f][Math.min(Math.floor((lv-1)/5),RANKS[f].length-1)]; },
+  skill(f,id){ return (this.of(f).skills[id])||0; },
+  skillsOf(f){ return Object.assign({},this.of(f).skills); },
+  spentPoints(f){ return Object.values(this.of(f).skills).reduce((a,b)=>a+b,0); },
+  unspent(){ return Object.keys(FACTIONS).reduce((t,f)=>t+this.of(f).sp,0); },
+  /* Belohnung nach einem Duell: Münzen und XP inkl. Skill-Boni */
+  reward(f, coins, xp){
+    const c=Math.round(coins*(1+.1*this.skill(f,"coins"))), x=Math.round(xp*(1+.1*this.skill(f,"xp")));
+    Player.coins+=c; const ups=this.gainXP(f,x); Player.save();
+    toast(`+🪙${c} · +${x} XP`);
+    if(ups.length){ setTimeout(()=>{ banner("LEVEL UP!"); toast(`${FACTIONS[f][1]} Level ${ups[ups.length-1]} – ${this.rank(f,ups[ups.length-1])}! +${ups.length} Skillpunkt${ups.length>1?"e":""}`); },1600); }
+    UI.badges();
+  },
+  gainXP(f,x){
+    const p=this.of(f), ups=[];
+    if(p.lv>=MAX_LEVEL) return ups;
+    p.xp+=x;
+    while(p.lv<MAX_LEVEL && p.xp>=this.need(p.lv)){ p.xp-=this.need(p.lv); p.lv++; p.sp++; Player.coins+=25*p.lv; ups.push(p.lv); }
+    if(p.lv>=MAX_LEVEL) p.xp=0;
+    return ups;
+  },
+  learn(f,id){
+    const s=SKILLS.find(x=>x.id===id), p=this.of(f), r=this.skill(f,id);
+    if(!s||r>=s.max) return toast("Schon voll ausgebaut");
+    if(p.lv<s.minLv) return toast(`Ab Level ${s.minLv}`);
+    if(p.sp<1) return toast("Keine Skillpunkte – gewinne Duelle zum Aufsteigen");
+    p.sp--; p.skills[id]=r+1; Player.save(); UI.badges(); this.render(); toast(`${s.icon} ${s.name[f]} Stufe ${r+1}`);
+  },
+  async reset(f){
+    if(!await UI.ask(`Alle ${FACTIONS[f][0]}-Skillpunkte zurücksetzen? Kostet 🪙200.`)) return;
+    if(Player.coins<200) return toast("Nicht genug Münzen");
+    const p=this.of(f); p.sp+=this.spentPoints(f); p.skills={}; Player.coins-=200; Player.save(); this.render();
+  },
+  /* Skills auf einen Duell-Spieler anwenden (eigene Seite bzw. Online-Gast) */
+  apply(pl, skills){
+    skills=skills||{}; const r=id=>Math.max(0,Math.min(skills[id]||0,(SKILLS.find(s=>s.id===id)||{max:0}).max));
+    pl.lp += 200*r("lp");
+    pl.handSize = HAND + r("hand");
+    pl.secondChance = r("second")>0;
+    const atk=50*r("atk"), eff=1+.1*r("eff");
+    [...pl.deck,...pl.extra].forEach(c=>{
+      if(isChar(c)&&atk){ c.atk+=atk; }
+      if(eff>1 && c.val && EFFECTS[c.effect] && EFFECTS[c.effect].val && !["summon_draw","draw","trap_draw","summon_discard","discard","summon_mill","mill","destroy_level"].includes(c.effect)) c.val=Math.round(c.val*eff/50)*50||c.val;
+    });
+    pl.skills=skills;
+  },
+  /* ---------- Kartenstufen ---------- */
+  cardLv(id){ const n=Player.has(id); let lv=0; CARD_LV.forEach((t,i)=>{ if(n>=t) lv=i+1; }); return lv; },
+  nextAt(id){ const lv=this.cardLv(id); return lv<CARD_LV.length?CARD_LV[lv]:null; },
+  /* Kopie einer Karte mit den Boni ihrer Kartenstufe */
+  upgraded(c, lv){
+    if(!c) return c; lv = lv==null ? this.cardLv(c.id) : lv; const x=clone(c); x._lv=Math.max(1,lv);
+    const b=x._lv-1; if(!b) return x;
+    if(isChar(x)){ x.atk=Math.round(x.atk*(1+.05*b)/50)*50; x.def=Math.round(x.def*(1+.05*b)/50)*50; }
+    else if(x.val && EFFECTS[x.effect]&&EFFECTS[x.effect].val && !["draw","trap_draw","discard","mill","destroy_level"].includes(x.effect)) x.val=Math.round(x.val*(1+.1*b)/50)*50||x.val;
+    return x;
+  },
+  bonusText(c,lv){ const b=lv-1; if(b<1) return "Keine Boni"; return isChar(c)?`+${5*b} % ATK/DEF`:(EFFECTS[c.effect]&&EFFECTS[c.effect].val&&!["draw","trap_draw","discard","mill","destroy_level"].includes(c.effect)?`+${10*b} % Effektwert`:"Sammelstufe (kein Wertbonus)"); },
+
+  /* ---------- Laufbahn-Bildschirm ---------- */
+  tab:"polizei",
+  render(){
+    const nick=Store.get("nick","")||"";
+    $("pfName").value=nick;
+    $("pfTabs").innerHTML=Object.keys(FACTIONS).map(f=>{const p=this.of(f);return `<span data-f="${f}" class="${f===this.tab?"on":""}">${FACTIONS[f][1]} Lv ${p.lv}${p.sp?` <b style="color:var(--red)">● ${p.sp}</b>`:""}</span>`}).join("");
+    $("pfTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.tab=s.dataset.f;this.render()});
+    const f=this.tab, p=this.of(f), need=this.need(p.lv), pct=p.lv>=MAX_LEVEL?100:Math.round(p.xp/need*100);
+    const owned=DB.ofFaction(f).filter(c=>Player.has(c.id)), maxed=owned.filter(c=>this.cardLv(c.id)>=5).length;
+    $("pfHead").innerHTML=`<div class="rankbadge">${FACTIONS[f][1]}</div><div style="flex:1;min-width:0">
+      <div class="rankname">${this.rank(f,p.lv)}</div><div class="muted">Level ${p.lv}${p.lv>=MAX_LEVEL?" (Maximum)":` · ${p.xp}/${need} XP`}</div>
+      <div class="xpbar"><i style="width:${pct}%"></i></div></div>`;
+    $("pfStats").innerHTML=`<div><b>${p.sp}</b><span>Skillpunkte</span></div><div><b>${owned.length}/${DB.ofFaction(f).length}</b><span>Karten</span></div><div><b>${maxed}</b><span>Karten Stufe 5</span></div>`;
+    $("pfSkills").innerHTML=SKILLS.map(s=>{const r=this.skill(f,s.id), locked=p.lv<s.minLv, full=r>=s.max;
+      return `<div class="skill ${locked?"locked":""}"><div class="sk-ic">${locked?"🔒":s.icon}</div><div class="sk-tx"><b>${s.name[f]}</b>
+        <span>${s.desc(Math.max(r,1))}${r?"":" (bei Stufe 1)"}</span><span class="pips">${"●".repeat(r)}${"○".repeat(s.max-r)}${locked?` · ab Level ${s.minLv}`:""}</span></div>
+        <button class="small ${full||locked||!p.sp?"ghost":"green"}" data-s="${s.id}" ${full||locked||!p.sp?"disabled":""}>${full?"MAX":"+1"}</button></div>`}).join("");
+    $("pfSkills").querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>this.learn(f,b.dataset.s));
+  },
+  saveNick(){ const n=($("pfName").value||"").trim().slice(0,16); if(!n) return toast("Bitte einen Nickname eingeben"); Store.set("nick",n); UI.badges(); toast("Nickname gespeichert: "+n); },
 };
 
 /* ============================ KARTEN-HTML ============================ */
@@ -280,7 +394,7 @@ function cardHTML(c, extra="", attrs="", live){
   return `<div class="card ${c.type} ${frame} ${c.rarity} ${extra}" ${attrs}>
     <div class="nm ${nf.two?"two":""}"><span class="nmt" style="font-size:${nf.fs}em">${esc(hyph(c.name))}</span><span class="at">${icon}</span></div>
     <div class="lv">${isM?stars:`<span class="lawtag">${c.law}${c.type==="trap"?" · Reaktion":""}</span>`}</div>
-    <div class="art" style="--c1:${c.art.c1};--c2:${c.art.c2}">${art}<span class="rar">${c.rarity}</span></div>
+    <div class="art" style="--c1:${c.art.c1};--c2:${c.art.c2}">${art}<span class="rar">${c.rarity}${c._lv>1?` · Lv${c._lv}`:""}</span></div>
     <div class="tx"><b>${typeLine}</b> ${mat}${esc(cardText(c))}</div>
     ${isM?`<div class="st"><span${atkStyle}>ATK ${atk}</span><span>DEF ${c.def}</span></div>`:`<div class="st"></div>`}
   </div>`;
@@ -302,8 +416,15 @@ const UI = {
     if(id==="shop") Shop.render();
     if(id==="story") Story.render();
     if(id==="online") Lobby.render();
+    if(id==="profile") Prog.render();
+    if(id==="home") this.badges();
   },
   coins(){ ["homeCoins","shopCoins","openCoins"].forEach(i=>{const e=$(i); if(e) e.textContent="🪙 "+Player.coins}); },
+  badges(){
+    const nick=Store.get("nick","")||"Kein Nickname", pp=Prog.of("polizei"), pv=Prog.of("verbrecher"), sp=Prog.unspent();
+    const me=$("homeMe"); if(me) me.innerHTML=`👤 ${esc(nick)} · 👮${pp.lv} · 🦹${pv.lv}${sp?'<span class="dot"></span>':""}`;
+    const b=$("btnProfile"); if(b) b.innerHTML=`⭐ Laufbahn${sp?` (${sp})`:""}`;
+  },
   back(){ // Android-Zurück-Taste
     if($("reveal").classList.contains("show")){return true}
     if($("scene").classList.contains("show")){Scene.finish();return true}
@@ -341,9 +462,11 @@ const UI = {
     const list=DB.cards.filter(c=>matchFilter(c,t)&&c.name.toLowerCase().includes(q)&&(!o||(o==="own"?Player.has(c.id):!Player.has(c.id))));
     const ownedCount=DB.cards.filter(c=>Player.has(c.id)).length;
     $("colCount").textContent=`${ownedCount}/${DB.cards.length}`;
-    $("colList").innerHTML = list.map(c=>{const n=Player.has(c.id);
-      return `<div class="ownwrap">${n?`<span class="cnt">×${n}</span>`:""}${cardHTML(c,n?"":"owned0",`data-id="${c.id}"`)}</div>`}).join("") || `<p class="muted">Keine Karten gefunden.</p>`;
-    $("colList").querySelectorAll(".card").forEach(el=>el.onclick=()=>this.modal(DB.byId(el.dataset.id)));
+    $("colList").innerHTML = list.map(c=>{const n=Player.has(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id);
+      return `<div class="ownwrap">${n?`<span class="cnt">×${n}</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
+        ${n?`<div class="lvbar" title="Kartenstufe"><i style="width:${nx?Math.round(n/nx*100):100}%"></i><span>Lv${lv}${nx?` · ${n}/${nx}`:" MAX"}</span></div>`:""}</div>`}).join("") || `<p class="muted">Keine Karten gefunden.</p>`;
+    $("colList").querySelectorAll(".card").forEach(el=>el.onclick=()=>{ const c=DB.byId(el.dataset.id), n=Player.has(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id);
+      this.modal(n?Prog.upgraded(c,lv):c, [[n?`Kartenstufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} bei ${nx} Exemplaren (+${isChar(c)?"5 % ATK/DEF":"10 % Effekt"})`:" · Maximum erreicht"}`:"Noch nicht in deiner Sammlung",null,"ghost"]]); });
   },
   async openAdmin(){
     const pin = Store.get("pin","1234");
@@ -361,7 +484,7 @@ const UI = {
   startDuel(){
     this.pickSide("Wähle deine Seite", side=>{
       Duel.start(side,{ oppDeck:Deck.genDeck(OTHER[side],{maxLevel:12,maxRarity:"SR"}),
-        onEnd:win=>{ Player.earn(win?100:25); return Promise.resolve(); } });
+        onEnd:win=>{ Prog.reward(side, win?100:25, win?100:40); return Promise.resolve(); } });
     });
   },
 };
@@ -600,7 +723,7 @@ const Deck = {
     else list=DB.ofFaction(this.faction).filter(c=>c.type!=="fusion"&&Player.has(c.id)&&c.name.toLowerCase().includes(q)&&(!f||this.count(c.id)>0));
     $("deckList").innerHTML=list.map(c=>{const n=this.count(c.id);
       if(c.type==="fusion") return `<div class="deckitem"><span class="cnt" style="background:var(--purple)">${Math.min(3,Player.has(c.id))}</span>${cardHTML(c,"",`data-id="${c.id}"`)}</div>`;
-      return `<div class="deckitem">${n?`<span class="cnt">${n}</span>`:""}${cardHTML(c,"",`data-id="${c.id}"`)}
+      return `<div class="deckitem">${n?`<span class="cnt">${n}</span>`:""}${cardHTML(Prog.upgraded(c),"",`data-id="${c.id}"`)}
       <div class="ctrl"><button class="red" data-sub="${c.id}">−</button><span class="muted" style="align-self:center">/${this.limit(c.id)}</span><button class="green" data-add="${c.id}">＋</button></div></div>`}).join("")
       || `<p class="muted">${f==="fusion"?"Noch keine Fusionen – im Shop gibt es welche!":"Keine passenden Karten in deiner Sammlung."}</p>`;
     $("deckList").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>this.add(b.dataset.add));
@@ -624,8 +747,10 @@ const Shop = {
       <button class="${Player.coins>=p.price?"":"ghost"}" data-p="${p.id}">🪙 ${p.price}</button></div>`).join("");
     $("shopPacks").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>this.buy(b.dataset.p));
   },
-  rollRarity(min="N"){
-    const r=Math.random()*100; let rar = r<2?"UR":r<10?"SR":r<30?"R":"N";
+  rollRarity(min="N", fac){
+    const luck = fac ? Prog.skill(fac,"luck") : Math.max(Prog.skill("polizei","luck"),Prog.skill("verbrecher","luck"));
+    const ur=2+luck*.5, sr=ur+8+luck;
+    const r=Math.random()*100; let rar = r<ur?"UR":r<sr?"SR":r<sr+20?"R":"N";
     return RANK[rar]<RANK[min]?min:rar;
   },
   pickCard(pool, rar){
@@ -645,7 +770,7 @@ const Shop = {
       let min = p.fusion?"R":"N";
       if(last && !out.some(c=>RANK[c.rarity]>=1)) min="R";          // mind. 1× R
       if(last && p.premium && !out.some(c=>RANK[c.rarity]>=2)) min="SR";
-      out.push(this.pickCard(pool.filter(c=>!p.fusion||c.type!=="fusion"), this.rollRarity(min)));
+      out.push(this.pickCard(pool.filter(c=>!p.fusion||c.type!=="fusion"), this.rollRarity(min,p.faction)));
     }
     this.pulled=out.map(c=>({c, isNew:!Player.has(c.id)}));
     out.forEach(c=>Player.add(c.id)); Player.save();
@@ -688,10 +813,10 @@ const Story = {
       const deck=Deck.genDeck(OTHER[f],{maxLevel:c.opp.maxLevel,maxRarity:c.opp.maxRarity});
       Duel.start(f,{oppName:c.opp.name, oppEmoji:c.opp.emoji, oppLP:c.opp.lp, oppDeck:deck,
         onEnd:win=>new Promise(res=>{
-          if(!win){ Player.earn(25); return res(); }
+          if(!win){ Prog.reward(f,25,40); return res(); }
           const first=i>=(Player.progress[f]||0);
           if(first){ Player.progress[f]=i+1; }
-          Player.earn(first?c.reward:50);
+          Prog.reward(f, first?c.reward:50, first?150+25*i:60);
           Scene.play(first?"Kapitel geschafft!":"Wieder gewonnen!", this.parse(c.outro), f, ()=>{ res(); UI.show("story"); });
         })});
     });
@@ -757,13 +882,16 @@ const Duel = {
     const od = opts.oppDeck || Deck.genDeck(other,{});
     const on = opts.online;   // {myName, guestName, guestDeck, guestExtra}
     this.online=!!on; this.host=!!on; this.client=false; this.waiting=false;
-    this.P = makePlayer(on?on.myName:"Du", myDeck, Deck.fusionDeck(side));
+    this.P = makePlayer(on?on.myName:(Store.get("nick","")||"Du"), myDeck.map(id=>Prog.upgraded(DB.byId(id))).filter(Boolean), Deck.fusionDeck(side).map(id=>Prog.upgraded(DB.byId(id))));
+    if(!on) this.P.name="Du";
     this.AI = on ? makePlayer(on.guestName, on.guestDeck, on.guestExtra) : makePlayer(opts.oppName||FACTIONS[other][0], od.main, od.extra, opts.oppLP);
+    Prog.apply(this.P, Prog.skillsOf(side));
+    this.AI.handSize=HAND; if(on) Prog.apply(this.AI, on.guestSkills);
     // jede Kartenkopie bekommt einen eindeutigen Schlüssel (für die Online-Übertragung)
     [[this.P,"h"],[this.AI,"g"]].forEach(([pl,pre])=>[...pl.deck,...pl.extra].forEach((c,i)=>c._k=pre+i));
     this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
     $("reveal").classList.remove("show"); $("fx").innerHTML="";
-    for(let i=0;i<HAND;i++){ this.draw(this.P,true); this.draw(this.AI,true); }
+    for(let i=0;i<Math.max(this.P.handSize||HAND,this.AI.handSize||HAND);i++){ if(i<(this.P.handSize||HAND)) this.draw(this.P,true); if(i<(this.AI.handSize||HAND)) this.draw(this.AI,true); }
     $("oppWho").textContent=`${opts.oppEmoji||FACTIONS[other][1]} ${this.AI.name}`;
     $("myWho").textContent=`${FACTIONS[side][1]} ${on?this.P.name:"Du"} – ${FACTIONS[side][0]}`;
     if(on) Net.sendStart();
@@ -824,6 +952,7 @@ const Duel = {
     const el = p===this.P?$("myLP"):$("oppLP"); el.parentElement.classList.remove("shake"); void el.offsetWidth; el.parentElement.classList.add("shake");
     this.floatText(el, `−${n}`, "#ff3b3b");
     this.log(`${this.me(p,"Du verlierst","verliert")} ${n} LP${src?" ("+src+")":""}`);
+    if(p.lp<=0 && p.secondChance){ p.secondChance=false; p.lp=500; this.bn(p.skills&&p.skills.second?"ZWEITE CHANCE!":"ZWEITE CHANCE!"); this.log(`${p.name}: Zweite Chance – weiter mit 500 LP!`); return; }
     if(p.lp<=0) this.win(this.opp(p));
   },
   heal(p,n){ if(n<=0) return; p.lp+=n; this.floatText(p===this.P?$("myLP"):$("oppLP"), `+${n}`, "#3ddc84"); this.log(`${this.me(p,"Du erhältst","erhält")} ${n} LP`); },
@@ -1482,9 +1611,9 @@ const Net = {
         if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
         const side=OTHER[m.side];
         const deckIds = Deck.validFor(side) ? Deck.lists[side] : Deck.autoOwned(side);
-        const deck = (deckIds.length>=10 ? deckIds : Deck.genDeck(side,{maxRarity:"R"}).main).map(id=>DB.byId(id)).filter(Boolean);
-        const extra = Deck.fusionDeck(side).map(id=>DB.byId(id)).filter(Boolean);
-        this.send({t:"join", name:this.name, deck, extra, v:window.APP_VERSION||"dev"});
+        const deck = (deckIds.length>=10 ? deckIds : Deck.genDeck(side,{maxRarity:"R"}).main).map(id=>Prog.upgraded(DB.byId(id))).filter(Boolean);
+        const extra = Deck.fusionDeck(side).map(id=>Prog.upgraded(DB.byId(id))).filter(Boolean);
+        this.send({t:"join", name:this.name, deck, extra, skills:Prog.skillsOf(side), v:window.APP_VERSION||"dev"});
         Lobby.status(`Verbunden mit ${m.name} – Duell startet …`);
         break; }
       case "busy": Lobby.error("Dieser Raum ist schon voll."); break;
@@ -1499,8 +1628,8 @@ const Net = {
       // ---- beim Gastgeber ----
       case "join": {
         if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
-        Duel.start(this.side,{ online:{myName:this.name, guestName:m.name||"Gast", guestDeck:m.deck, guestExtra:m.extra},
-          onEnd:win=>{ Player.earn(win?ONLINE_WIN:ONLINE_LOSS); return Promise.resolve(); } });
+        Duel.start(this.side,{ online:{myName:this.name, guestName:m.name||"Gast", guestDeck:m.deck, guestExtra:m.extra, guestSkills:m.skills||{}},
+          onEnd:win=>{ Prog.reward(Duel.side, win?ONLINE_WIN:ONLINE_LOSS, win?150:60); return Promise.resolve(); } });
         break; }
       case "act": this.actQ=this.actQ.then(()=>this.runAct(m)).catch(e=>console.error(e)).then(()=>{ this.queueState(); this.send({t:"ack"}); }); break;
       case "reply": { const f=this.pend[m.id]; delete this.pend[m.id]; f&&f(m.val); break; }
@@ -1597,7 +1726,7 @@ Object.assign(Duel, {
   endClient(won){
     if(this.over && this._ended) return; this.over=true; this._ended=true; this.closeReveal(); this.render();
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
-      setTimeout(()=>{ Player.earn(won?ONLINE_WIN:ONLINE_LOSS); if(UI.current!=="duel") return;
+      setTimeout(()=>{ Prog.reward(this.side, won?ONLINE_WIN:ONLINE_LOSS, won?150:60); if(UI.current!=="duel") return;
         UI.modal(null,[["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },1300); },300);
   },
   opponentLeft(){
@@ -1633,6 +1762,6 @@ const Lobby = {
 /* ============================ START ============================ */
 $("colType").innerHTML=filterOptions(); $("admType").innerHTML=filterOptions();
 $("admTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>Admin.tab(s.dataset.t));
-DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins();
+DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins(); Prog.data(); UI.badges();
 $("appVer").textContent = "Version "+(window.APP_VERSION||"dev")+" · 69 Effekte";
 window.onAndroidBack = () => UI.back();   // von der Android-App aufgerufen

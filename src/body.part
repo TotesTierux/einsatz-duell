@@ -49,6 +49,27 @@
 .scene .next{margin-top:14px;align-self:flex-end}
 .scene .skip{position:absolute;top:calc(env(safe-area-inset-top) + 64px);right:14px}
 @media (prefers-reduced-motion:reduce){.scene .avatar,.flip,.card .art::after{animation:none}}
+/* Laufbahn */
+.home-me{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:12px;font-family:var(--comic);letter-spacing:.5px;font-size:15px;
+  background:rgba(0,0,0,.35);border:3px solid var(--ink);border-radius:20px;padding:3px 12px;max-width:58vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);border:2px solid var(--ink);margin-left:6px;vertical-align:middle}
+.pfhead{display:flex;gap:12px;align-items:center}
+.rankbadge{font-size:44px;width:70px;height:70px;border-radius:50%;background:var(--paper);border:4px solid var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:4px 4px 0 var(--ink)}
+.rankname{font-family:var(--comic);font-size:26px;letter-spacing:1px;color:var(--yellow);line-height:1.05}
+.xpbar,.lvbar{height:12px;background:rgba(255,255,255,.15);border:2px solid var(--ink);border-radius:8px;overflow:hidden;margin-top:6px;position:relative}
+.xpbar i,.lvbar i{display:block;height:100%;background:linear-gradient(90deg,var(--yellow),var(--orange))}
+.lvbar{height:16px;width:100px;margin:6px auto 0}
+.lvbar span{position:absolute;inset:0;font-family:var(--comic);font-size:11px;letter-spacing:.5px;color:#fff;text-align:center;line-height:13px;text-shadow:1px 1px 0 #000}
+.pfstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px;text-align:center}
+.pfstats b{display:block;font-family:var(--comic);font-size:24px;color:var(--yellow)}
+.pfstats span{font-size:12px;opacity:.8}
+.skill{display:flex;gap:10px;align-items:center;background:rgba(0,0,0,.28);border:3px solid var(--ink);border-radius:14px;padding:8px 10px;margin-bottom:8px}
+.skill.locked{opacity:.5}
+.sk-ic{font-size:30px;width:46px;height:46px;border-radius:12px;background:var(--paper);border:3px solid var(--ink);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.sk-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+.sk-tx b{font-family:var(--comic);letter-spacing:1px;font-weight:normal;font-size:18px;color:var(--yellow)}
+.sk-tx span{font-size:13px;opacity:.9}
+.pips{color:var(--yellow);letter-spacing:2px}
 /* Online */
 .roomcode{font-family:var(--comic);font-size:56px;letter-spacing:10px;color:var(--yellow);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);margin:4px 0 10px}
 .codein{text-transform:uppercase;letter-spacing:8px;font-size:28px;text-align:center;font-family:var(--comic)}
@@ -96,6 +117,7 @@
 <!-- ================= HOME ================= -->
 <section id="home" class="screen active">
   <div class="home-top"><span class="coins" id="homeCoins">🪙 0</span></div>
+  <div class="home-me" id="homeMe" onclick="UI.show('profile')"></div>
   <div class="logo">EINSATZ<small>DUELL!</small></div>
   <div class="burst">👮 Polizei gegen Verbrecher 🦹</div>
   <div class="menu">
@@ -109,9 +131,10 @@
       <button onclick="UI.show('deck')">🃏 Deck</button>
     </div>
     <div class="two">
+      <button class="ghost" onclick="UI.show('profile')" id="btnProfile">⭐ Laufbahn</button>
       <button class="ghost" onclick="UI.show('collection')">📚 Sammlung</button>
-      <button class="ghost" onclick="UI.openAdmin()">🔧 Admin</button>
     </div>
+    <button class="ghost small" onclick="UI.openAdmin()" style="font-size:16px">🔧 Admin</button>
   </div>
   <p class="muted" style="margin-top:22px" id="appVer">Version</p>
 </section>
@@ -149,6 +172,28 @@
   </div>
   <p class="muted" id="onStatus" style="text-align:center"></p>
   <p class="muted" style="text-align:center">Sieg 🪙150 · Niederlage 🪙30 · Beide brauchen Internet.</p>
+</section>
+
+<!-- ================= LAUFBAHN ================= -->
+<section id="profile" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Laufbahn</h2></div>
+  <div class="panel">
+    <label>Dein Nickname (wird online und im Spiel angezeigt)</label>
+    <div class="row" style="flex-wrap:nowrap"><input id="pfName" maxlength="16" placeholder="z. B. Kommissar Tim"><button class="small green" onclick="Prog.saveNick()">OK</button></div>
+  </div>
+  <div class="tabs" id="pfTabs"></div>
+  <div class="panel"><div class="pfhead" id="pfHead"></div><div class="pfstats" id="pfStats"></div></div>
+  <h3 style="color:var(--yellow);margin:6px 0 8px">Skills</h3>
+  <div id="pfSkills"></div>
+  <div class="panel" style="margin-top:12px">
+    <h3 style="color:var(--yellow)">So steigst du auf</h3>
+    <p class="muted" style="margin:4px 0">XP gibt es für jedes Duell: Sieg gegen KI 100 · Online-Sieg 150 · Story-Kapitel ab 150 · Niederlage 40–60.
+    Jeder Level-Aufstieg bringt 1 Skillpunkt und Münzen. Alle 5 Level steigt dein Dienstgrad bzw. Rang.</p>
+    <h3 style="color:var(--yellow);margin-top:10px">Kartenstufen</h3>
+    <p class="muted" style="margin:4px 0">Sammle mehrere Exemplare einer Karte, um sie zu verbessern: Stufe 2 ab 3 Exemplaren, Stufe 3 ab 6, Stufe 4 ab 10, Stufe 5 ab 15.
+    Pro Stufe: Charaktere +5 % ATK/DEF, Maßnahmen +10 % Effektwert. Der Fortschritt steht in der Sammlung unter jeder Karte.</p>
+    <button class="small ghost" onclick="Prog.reset(Prog.tab)">♻ Skills dieser Partei zurücksetzen (🪙200)</button>
+  </div>
 </section>
 
 <!-- ================= SHOP ================= -->

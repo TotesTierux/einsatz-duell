@@ -1,4 +1,4 @@
-# Einsatz-Duell – Polizei gegen Verbrecher (v0.5)
+# Einsatz-Duell – Polizei gegen Verbrecher (v0.6)
 
 Comic-Kartenspiel ähnlich Yu-Gi-Oh mit Polizeibezug. Zwei Parteien: **Polizei** und **Verbrecher**. Statt Monstern gibt es **Charaktere**, statt Zauber und Fallen gibt es **Maßnahmen** und **Reaktionen** mit Rechtsgrundlage:
 
@@ -24,6 +24,7 @@ Comic-Kartenspiel ähnlich Yu-Gi-Oh mit Polizeibezug. Zwei Parteien: **Polizei**
 - **Gegner-Ansagen**: Jede gegnerische Karte wird groß angezeigt – mit Art (StPO/SOG/Trick, Paragraf), Effektgruppe, Wirkung und Ziel. Die Ansage bleibt stehen, bis du **„Verstanden“** tippst; erst dann wirkt der Effekt. Tipp auf die Statuszeile öffnet das **Einsatzprotokoll**.
 - **Angriffs-Animationen** je Rolle: Die Karte stürmt aufs Ziel, dazu Ausruf, Partikel und Blitzlicht – z. B. Streife „HALT, POLIZEI!“ mit Blaulicht, Diensthunde „WUFF! FASS!“ mit Pfoten, SEK „ZUGRIFF!“, Räuber „ÜBERFALL!“, Betrüger „REINGELEGT!“. Dazu Paragrafen-Stempel bei Maßnahmen, Rauchwolke beim Ausscheiden und LP-Zahlen. (Bei „Bewegung reduzieren“ im System automatisch zurückgenommen.)
 - **Kartennamen** werden immer vollständig angezeigt – Schriftgröße passt sich automatisch an, lange Namen brechen an Wortfugen um.
+- **Laufbahn & Progression (neu in 0.6)**: Je Partei Level 1–60 mit Dienstgraden (Anwärter → Polizeipräsident) bzw. Rängen (Kleinganove → Phantom). XP aus jedem Duell, pro Level 1 Skillpunkt + Münzen. 8 Skills je Partei (Start-LP, ATK, Effektstärke, Münzen, XP, Booster-Glück, Extra-Startkarte, Zweite Chance) – wirken auch online. **Kartenstufen** 1–5 durch Sammeln: ab 3/6/10/15 Exemplaren +5 % ATK/DEF bzw. +10 % Effektwert pro Stufe. Nickname im Laufbahn-Bildschirm.
 - **Online-Duell (neu in 0.5)**: Raum erstellen → 5-stelligen Code teilen → Gegner tritt bei. Eigener Nickname, jeder spielt mit seinem eigenen Deck, Gastgeber wählt die Seite. Peer-to-Peer über PeerJS (WebRTC, kostenloser Vermittlungsserver), funktioniert zwischen Android-App, iPhone-Web-App und Browser. Sieg 🪙150, Niederlage 🪙30. Der Gastgeber berechnet das Duell, der Gast schickt seine Züge; Ansagen, Animationen und Reaktions-Abfragen erscheinen bei beiden.
 - **Duell gegen KI**: 4000 LP, 3 Charakter- und 3 Maßnahmen/Reaktions-Zonen, Ablösung ab Stufe 5 (1) bzw. 7 (2)
 - **Deck-Bau** je Partei: 20–40 Karten, max. 3 Kopien – nur Karten, die du besitzt
