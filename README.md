@@ -45,7 +45,7 @@ Jeder Push auf `main` startet den Workflow **„APK & Webseite veröffentlichen�
 
 Die Android-App prüft beim Start `version.json`. Gibt es eine neuere Version, erscheint „Update verfügbar“ → ein Tipp lädt und installiert sie; der Spielstand bleibt erhalten (gleicher Signaturschlüssel). Die Web-App lädt online immer die neueste Version und funktioniert offline.
 
-**Einmalige Einrichtung im Repo:** Settings → Pages → Source: **GitHub Actions**. Signaturschlüssel als Secret `KEYSTORE_B64` (Base64 der Keystore-Datei, Passwort `KEYSTORE_PASS`).
+**Einmalige Einrichtung im Repo:** Settings → Pages → Source: **GitHub Actions**. Settings → Secrets and variables → Actions: Secrets **`KEYSTORE_B64`** (Signaturschlüssel als Base64) und **`KEYSTORE_PASS`** (Passwort). Der Schlüssel liegt bewusst nicht im Code. Gut aufbewahren – ohne ihn lassen sich keine Updates über die installierte App spielen.
 
 ## Projektstruktur
 

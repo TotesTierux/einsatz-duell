@@ -46,20 +46,19 @@ jobs:
       - name: Signaturschlüssel bereitstellen
         env:
           KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
-            echo "KS_FILE=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
-          elif [ -f android/app/kartenduell.keystore ]; then
-            echo "KS_FILE=$GITHUB_WORKSPACE/android/app/kartenduell.keystore" >> $GITHUB_ENV
-          else
-            echo "::error::Kein Signaturschlüssel: Secret KEYSTORE_B64 anlegen (siehe README)"; exit 1
+          # Schlüssel und Passwort liegen nur in den geschützten Repo-Secrets, nie im Code.
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASS" ]; then
+            echo "::error::Secrets KEYSTORE_B64 und KEYSTORE_PASS fehlen: Settings → Secrets and variables → Actions → New repository secret"; exit 1
           fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "KS_FILE=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
 
       - name: APK bauen
         working-directory: android
         env:
-          KS_PASS: ${{ secrets.KEYSTORE_PASS || 'kartenduell' }}
+          KS_PASS: ${{ secrets.KEYSTORE_PASS }}
         run: |
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           REPO_NAME="${{ github.event.repository.name }}"
