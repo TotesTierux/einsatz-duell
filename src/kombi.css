@@ -74,3 +74,6 @@
 .flv::before{content:"";position:absolute;top:-11px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom:10px solid var(--ink)}
 #storyTabs span.lk{opacity:.55}
 #storyTabs span small{font-size:.8em;color:var(--yellow);letter-spacing:-1px}
+.ownwrap .upg{position:absolute;top:-6px;left:-6px;z-index:3;background:var(--green);color:var(--ink);border:2px solid var(--ink);border-radius:50%;width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:2px 2px 0 var(--ink);animation:kbPulse 1.6s infinite}
+.card .rar .plus{color:#7dff8a;font-weight:normal}

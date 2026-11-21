@@ -405,6 +405,9 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 .flv::before{content:"";position:absolute;top:-11px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom:10px solid var(--ink)}
 #storyTabs span.lk{opacity:.55}
 #storyTabs span small{font-size:.8em;color:var(--yellow);letter-spacing:-1px}
+.ownwrap .upg{position:absolute;top:-6px;left:-6px;z-index:3;background:var(--green);color:var(--ink);border:2px solid var(--ink);border-radius:50%;width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:2px 2px 0 var(--ink);animation:kbPulse 1.6s infinite}
+.card .rar .plus{color:#7dff8a;font-weight:normal}
 </style>
 </head>
 <body>
@@ -1688,7 +1691,7 @@ const Player = {
     if(!d){ this.coins=500; this.owned={}; this.progress={polizei:0,verbrecher:0};
       DB.cards.filter(c=>c.starter).forEach(c=>this.owned[c.id]=2); this.save(); }
     else Object.assign(this, d);
-    this.prints=this.prints||{}; this.show=this.show||{}; this.syncPrints();
+    this.prints=this.prints||{}; this.show=this.show||{}; this.boost=this.boost||{}; this.syncPrints();
   },
   /* Stufen-Zähler mit der Anzahl abgleichen (alte Spielstände: alles Common) */
   syncPrints(){
@@ -1704,7 +1707,7 @@ const Player = {
   /* angezeigte Stufe: selbst gewählt, sonst die beste */
   display(id){ const s=this.show[id]; return s&&this.printsOf(id)[s] ? s : this.bestPrint(id); },
   remove(id,pr="C",n=1){ const p=this.prints[id]; if(!p||!(p[pr]>=n)) return false; p[pr]-=n; if(!p[pr]) delete p[pr]; this.owned[id]-=n; if(this.owned[id]<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } return true; },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],kombi:this.kombi}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],kombi:this.kombi,boost:this.boost}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1,pr="C"){ this.owned[id]=(this.owned[id]||0)+n; const p=this.prints[id]||(this.prints[id]={}); p[pr]=(p[pr]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -1732,7 +1735,8 @@ const SKILLS = [
   {id:"hand",  max:1, minLv:10, icon:"🃏", name:{polizei:"Lagebesprechung", verbrecher:"Plan B"},        desc:r=>r?"6 statt 5 Startkarten":"+1 Startkarte"},
   {id:"second",max:1, minLv:15, icon:"🚑", name:{polizei:"Rettungsdienst",  verbrecher:"Untertauchen"},  desc:r=>"Einmal pro Duell: bei 0 LP mit 500 LP weiterspielen"},
 ];
-const CARD_LV = [1,3,6,10,15];        // Exemplare für Kartenstufe 1–5
+const CARD_LV = [1,3,6,10,15];        // Exemplare für Kartenstufe 1–5 (gesammelt – auch fürs Training verbrauchte zählen)
+const BOOST_MAX=5, BOOST_STAT=100, BOOST_VAL=.1;   // Training: max. +5, je Stufe +100 ATK/DEF bzw. +10 % Effektwert
 
 const Prog = {
   data(){
@@ -1790,15 +1794,38 @@ const Prog = {
     pl.skills=skills;
   },
   /* ---------- Kartenstufen ---------- */
-  cardLv(id){ const n=Player.has(id); let lv=0; CARD_LV.forEach((t,i)=>{ if(n>=t) lv=i+1; }); return lv; },
+  collected(id){ return Player.has(id) + ((Player.boost&&Player.boost[id]&&Player.boost[id].used)||0); },
+  cardLv(id){ const n=Player.has(id)?this.collected(id):0; let lv=0; CARD_LV.forEach((t,i)=>{ if(n>=t) lv=i+1; }); return lv; },
   nextAt(id){ const lv=this.cardLv(id); return lv<CARD_LV.length?CARD_LV[lv]:null; },
   /* Kopie einer Karte mit den Boni ihrer Kartenstufe */
   upgraded(c, lv){
     if(!c) return c; lv = lv==null ? this.cardLv(c.id) : lv; const x=clone(c); x._lv=Math.max(1,lv); if(Player.has(c.id)) x._print=Player.display(c.id);
-    const b=x._lv-1; if(!b) return x;
-    if(isChar(x)){ x.atk=Math.round(x.atk*(1+.05*b)/50)*50; x.def=Math.round(x.def*(1+.05*b)/50)*50; }
-    else if(x.val && EFFECTS[x.effect]&&EFFECTS[x.effect].val && !["draw","trap_draw","discard","mill","destroy_level"].includes(x.effect)) x.val=Math.round(x.val*(1+.1*b)/50)*50||x.val;
+    const b=x._lv-1, t=Player.has(c.id)?this.boostOf(c.id):0;
+    if(isChar(x)){ if(b){ x.atk=Math.round(x.atk*(1+.05*b)/50)*50; x.def=Math.round(x.def*(1+.05*b)/50)*50; }
+      if(t){ x.atk+=BOOST_STAT*t; x.def+=BOOST_STAT*t; } }
+    else if(this.valBoostable(x) && (b||t)) x.val=Math.round(x.val*(1+.1*b)*(1+BOOST_VAL*t)/50)*50||x.val;
+    if(t) x._plus=t;
     return x;
+  },
+  valBoostable(c){ return !!(c.val && EFFECTS[c.effect]&&EFFECTS[c.effect].val && !["draw","trap_draw","discard","mill","destroy_level"].includes(c.effect)); },
+  /* ---------- Training: überzählige Exemplare opfern, um Werte dauerhaft zu steigern ---------- */
+  boostOf(id){ return (Player.boost&&Player.boost[id]&&Player.boost[id].n)||0; },
+  boostable(c){ return isChar(c) || this.valBoostable(c); },
+  boostCost(id){ const k=this.boostOf(id)+1; return {copies:k, coins:100*k}; },
+  boostText(c,n){ return isChar(c) ? `+${BOOST_STAT*n} ATK / +${BOOST_STAT*n} DEF` : `+${Math.round(BOOST_VAL*100*n)} % Effektwert`; },
+  canBoost(id){ const c=DB.byId(id); if(!c||!this.boostable(c)) return false; const n=this.boostOf(id); if(n>=BOOST_MAX) return false;
+    const k=this.boostCost(id); return Player.has(id)-1>=k.copies && Player.coins>=k.coins; },
+  boost(id){
+    const c=DB.byId(id); if(!this.canBoost(id)) return false;
+    const k=this.boostCost(id), show=Player.display(id);
+    // zuerst die gewöhnlichsten Exemplare verbrauchen, die angezeigte Seltenheit möglichst behalten
+    let left=k.copies;
+    const order=[...PRINTS.filter(x=>x.k!==show), ...PRINTS.filter(x=>x.k===show)];
+    for(const x of order){ while(left>0 && (Player.printsOf(id)[x.k]||0)>0 && !(x.k===show && Player.printsOf(id)[x.k]<=1 && Player.has(id)<=1)){ if(!Player.remove(id,x.k,1)) break; left--; } if(!left) break; }
+    if(left) return false;
+    const b=Player.boost[id]=Player.boost[id]||{n:0,used:0}; b.n++; b.used+=k.copies;
+    Player.coins-=k.coins; Deck.prune&&Deck.prune(); Deck.save(); Player.save();
+    return true;
   },
   /* Deck-Kopien mit den tatsächlich besessenen Stufen versehen (angezeigte Stufe zuerst, dann absteigend) */
   deckCopies(ids){
@@ -1897,7 +1924,7 @@ function cardHTML(c, extra="", attrs="", live){
   return `<div class="card ${c.type} ${frame} r-${c.rarity} p-${c._print||"C"} ${extra}" ${attrs}>
     <div class="nm ${nf.two?"two":""}"><span class="nmt" style="font-size:${nf.fs}em">${esc(hyph(c.name))}</span><span class="at">${icon}</span></div>
     <div class="lv">${isM?stars:`<span class="lawtag">${c.law}${c.type==="trap"?" · Reaktion":""}</span>`}</div>
-    <div class="art" style="--c1:${c.art.c1};--c2:${c.art.c2}">${art}<span class="rar"><i class="gem" style="background:${RARITY_GEM[c.rarity]||"#999"}"></i>${c._print&&c._print!=="C"?PRINT[c._print].short:""}${c._lv>1?` Lv${c._lv}`:""}</span></div>
+    <div class="art" style="--c1:${c.art.c1};--c2:${c.art.c2}">${art}<span class="rar"><i class="gem" style="background:${RARITY_GEM[c.rarity]||"#999"}"></i>${c._print&&c._print!=="C"?PRINT[c._print].short:""}${c._lv>1?` Lv${c._lv}`:""}${c._plus?` <b class="plus">+${c._plus}</b>`:""}</span></div>
     <div class="tx"><b>${typeLine}</b> ${mat}${esc(cardText(c))}</div>
     ${isM?`<div class="st"><span${atkStyle}>ATK ${atk}</span><span>DEF ${c.def}</span></div>`:`<div class="st"></div>`}
   </div>`;
@@ -1973,9 +2000,9 @@ const UI = {
     const list=DB.cards.filter(c=>matchFilter(c,t)&&c.name.toLowerCase().includes(q)&&(!o||(o==="own"?Player.has(c.id):o==="fancy"?PRINT[Player.bestPrint(c.id)||"C"].rank>=3:!Player.has(c.id))));
     const ownedCount=DB.cards.filter(c=>Player.has(c.id)).length;
     $("colCount").textContent=`${ownedCount}/${DB.cards.length}`;
-    $("colList").innerHTML = list.map(c=>{const n=Player.has(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id);
-      return `<div class="ownwrap">${n?`<span class="cnt">×${n}</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
-        ${n?`<div class="lvbar" title="Kartenstufe"><i style="width:${nx?Math.round(n/nx*100):100}%"></i><span>Lv${lv}${nx?` · ${n}/${nx}`:" MAX"}</span></div>`:""}</div>`}).join("") || `<p class="muted">Keine Karten gefunden.</p>`;
+    $("colList").innerHTML = list.map(c=>{const n=Player.has(c.id), g=Prog.collected(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id), up=n&&Prog.canBoost(c.id);
+      return `<div class="ownwrap">${n?`<span class="cnt">×${n}</span>`:""}${up?`<span class="upg" title="Kann trainiert werden">⬆</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
+        ${n?`<div class="lvbar" title="Kartenstufe"><i style="width:${nx?Math.round(g/nx*100):100}%"></i><span>Lv${lv}${nx?` · ${g}/${nx}`:" MAX"}</span></div>`:""}</div>`}).join("") || `<p class="muted">Keine Karten gefunden.</p>`;
     $("colList").querySelectorAll(".card").forEach(el=>el.onclick=()=>this.cardInfo(el.dataset.id));
   },
   /* Karte in der Sammlung: Kartenstufe, Seltenheitsstufen und Anzeige wählen */
@@ -1985,8 +2012,24 @@ const UI = {
     const p=Player.printsOf(id), cur=Player.display(id);
     const acts=[[`Kartenstufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} bei ${nx} Exemplaren`:" · Maximum"}`,null,"ghost"],
       [`Exemplare: ${PRINTS.filter(x=>p[x.k]).map(x=>`${x.name} ×${p[x.k]}`).join(", ")}`,null,"ghost"]];
+    if(Prog.boostable(c)){
+      const t=Prog.boostOf(id), k=Prog.boostCost(id), word=c.faction==="polizei"?"Fortbildung":"Training";
+      acts.push([`⬆ ${word} +${t}/${BOOST_MAX}${t?` · ${Prog.boostText(c,t)}`:""}`,null,"ghost"]);
+      if(t<BOOST_MAX){
+        const spare=n-1, ok=spare>=k.copies, rich=Player.coins>=k.coins;
+        if(ok&&rich) acts.push([`⬆ Auf +${t+1} trainieren: ${k.copies} doppelte${k.copies>1?"":"s"} Exemplar${k.copies>1?"e":""} + ${k.coins} 🪙 → ${Prog.boostText(c,1)}`,()=>this.doBoost(id),"green"]);
+        else acts.push([ok?`Für +${t+1} fehlen ${k.coins-Player.coins} 🪙`:`Für +${t+1} brauchst du ${k.copies} doppelte Exemplare (du hast ${Math.max(0,spare)})`,null,"ghost"]);
+      }
+    }
     PRINTS.filter(x=>p[x.k]&&x.k!==cur).reverse().forEach(x=>acts.push([`✨ Als ${x.name} anzeigen`,()=>{ Player.show[id]=x.k; Player.save(); this.renderCollection(); setTimeout(()=>this.cardInfo(id),50); },"blue"]));
     this.modal(Prog.upgraded(c,lv), acts);
+  },
+  async doBoost(id){
+    const c=DB.byId(id), k=Prog.boostCost(id), t=Prog.boostOf(id);
+    if(!await UI.ask(`${k.copies} doppelte${k.copies>1?"":"s"} Exemplar${k.copies>1?"e":""} von „${c.name}“ und ${k.coins} Münzen einsetzen? Die Karte bekommt dauerhaft ${Prog.boostText(c,1)}. Deine Kartenstufe bleibt erhalten.`)) return setTimeout(()=>this.cardInfo(id),50);
+    if(!Prog.boost(id)) return toast("Training nicht möglich");
+    banner(`+${t+1} TRAINIERT!`); toast(`${c.name}: ${Prog.boostText(c,t+1)}`);
+    this.renderCollection(); setTimeout(()=>this.cardInfo(id),400);
   },
   async openAdmin(){
     const pin = Store.get("pin","1234");
@@ -4014,7 +4057,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, decks:Deck.lists, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, boost:Player.boost, decks:Deck.lists, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -4032,10 +4075,10 @@ const Account = {
     if(!r.ok) throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status));
     const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
     const d = JSON.parse(raw);
-    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.syncPrints();
+    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.kombi=d.kombi||Player.kombi; Player.syncPrints();
     if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
     if(d.nick) Store.set("nick", d.nick);
-    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[]}); Deck.save();
+    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],kombi:Player.kombi,boost:Player.boost}); Deck.save();
     UI.coins(); UI.badges(); return "loaded";
   },
   /* nach jeder Änderung am Spielstand: verzögert hochladen */
