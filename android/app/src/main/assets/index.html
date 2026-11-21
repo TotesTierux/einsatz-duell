@@ -403,6 +403,8 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 .flv{max-width:min(300px,82vw);margin:10px auto 0;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;
   padding:8px 12px;font-style:italic;font-weight:600;font-size:15px;line-height:1.35;text-align:center;box-shadow:3px 3px 0 var(--ink);position:relative}
 .flv::before{content:"";position:absolute;top:-11px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom:10px solid var(--ink)}
+#storyTabs span.lk{opacity:.55}
+#storyTabs span small{font-size:.8em;color:var(--yellow);letter-spacing:-1px}
 </style>
 </head>
 <body>
@@ -1495,6 +1497,130 @@ const STORY_DEFAULT = {
   ]},
 };
 
+/* Weitere Kampagnen mit höherem Schwierigkeitsgrad (★★ / ★★★).
+   side = gespielte Seite, diff = Schwierigkeit, unlock = Kampagne, die vorher geschafft sein muss.
+   opp.minLevel = Gegner spielt keine schwachen Charaktere, opp.skills = Talente des Gegners (wie in der Laufbahn). */
+Object.assign(STORY_DEFAULT.polizei,{side:"polizei",diff:1});
+Object.assign(STORY_DEFAULT.verbrecher,{side:"verbrecher",diff:1});
+Object.assign(STORY_DEFAULT, {
+  nachtfalke: {side:"polizei", diff:2, unlock:"polizei", title:"Operation Nachtfalke",
+   desc:"Eine Einbrecherbande räumt nachts Villen, Museen und Juweliere leer. Die Spur führt zu einem Meisterdieb, den noch nie jemand gesehen hat.", chapters:[
+    {id:"n1", title:"Einbruchsserie", reward:400,
+     opp:{name:"Fassadenkletterin Katze", emoji:"🐈‍⬛", lp:5000, minLevel:3, maxLevel:6, maxRarity:"R", skills:{atk:1,lp:1}},
+     intro:"KHK Brandt|🕵️|Fünf Einbrüche in einer Woche – immer im dritten Stock, immer ohne Spuren.\nSpurensicherer Lutz|🧤|Doch, eine Spur: schwarze Katzenhaare am Fensterbrett.\nFassadenkletterin Katze|🐈‍⬛|Miau. Ihr kommt die Fassade nie im Leben hoch.",
+     outro:"Fassadenkletterin Katze|🐈‍⬛|Ich klettere nur. Die Beute holt jemand vom Pfandhaus ab.\nKHK Brandt|🕵️|Dann besuchen wir das Pfandhaus."},
+    {id:"n2", title:"Das Pfandhaus", reward:450,
+     opp:{name:"Pfandleiher Zwielicht", emoji:"🏚️", lp:5500, minLevel:3, maxLevel:7, maxRarity:"SR", skills:{atk:1,lp:2}},
+     intro:"KK Mara|🕵️‍♀️|Im Schaufenster liegt die Uhr aus der Villa am See. Mit Gravur.\nPfandleiher Zwielicht|🏚️|Die hat mir ein freundlicher Herr gebracht. Name? Hab ich vergessen.",
+     outro:"Pfandleiher Zwielicht|🏚️|Der Herr wollte noch ein Gemälde loswerden. Ein echtes. Aus dem Museum.\nKK Mara|🕵️‍♀️|Das Stadtmuseum! Heute ist Nacht der offenen Tür …"},
+    {id:"n3", title:"Kunstraub im Museum", reward:500,
+     opp:{name:"Kunstdieb Rembrandt-Rudi", emoji:"🖼️", lp:6000, minLevel:4, maxLevel:8, maxRarity:"SR", skills:{atk:2,lp:2}},
+     intro:"Museumsdirektorin|🏛️|Die Mona-Lisa-Kopie ist weg! Also … die Kopie der Kopie!\nKunstdieb Rembrandt-Rudi|🖼️|Kunst gehört allen. Vor allem mir.",
+     outro:"Kunstdieb Rembrandt-Rudi|🖼️|Das Bild war nur zur Übung. Der echte Coup ist der Tresor der Privatbank.\nKHK Brandt|🕵️|Alle Kräfte zur Privatbank – leise!"},
+    {id:"n4", title:"Der Tresor im Keller", reward:550,
+     opp:{name:"Tresorknacker Ohr", emoji:"🔐", lp:6500, minLevel:4, maxLevel:9, maxRarity:"SR", skills:{atk:2,lp:3,eff:1}},
+     intro:"Sprengstoffentschärfer Jansen|🧰|Am Tresor klebt was. Alle zurück!\nTresorknacker Ohr|🔐|Psst! Ich höre gerade das letzte Klicken. Stört mich nicht.",
+     outro:"Tresorknacker Ohr|🔐|Der Tresor war leer. Monsieur Blanc war schneller.\nKK Mara|🕵️‍♀️|Der Juwelendieb aus Paris? Der ist hier?"},
+    {id:"n5", title:"Der Gentleman-Dieb", reward:600,
+     opp:{name:"Juwelendieb Monsieur Blanc", emoji:"💎", lp:7000, minLevel:5, maxLevel:10, maxRarity:"UR", skills:{atk:3,lp:3,eff:1}},
+     intro:"Juwelendieb Monsieur Blanc|💎|Bonsoir! Ein Diamant pro Abend – das ist mein Motto.\nZielfahnder Kowalski|🎯|Und meins: Jeder wird gefunden.",
+     outro:"Juwelendieb Monsieur Blanc|💎|Isch bin nur ein Bote. Der Chef heißt Schatten – und er ist schon im Präsidium!\nPolizeipräsidentin Dr. Wolf|🎖️|In meinem Präsidium? Das wollen wir sehen."},
+    {id:"n6", title:"Showdown: Meisterdieb Schatten", reward:1000,
+     opp:{name:"Meisterdieb Schatten", emoji:"🌑", lp:8000, minLevel:5, maxLevel:12, maxRarity:"UR", skills:{atk:3,lp:4,eff:2,hand:1}},
+     intro:"Meisterdieb Schatten|🌑|Ihr sucht mich seit Wochen. Ich stand die ganze Zeit neben euch.\nKHK Brandt|🕵️|Der neue Hausmeister?!\nMeisterdieb Schatten|🌑|Licht aus – und weg bin ich!",
+     outro:"Meisterdieb Schatten|🌑|Gefasst … im Licht einer Taschenlampe. Wie unwürdig.\nPolizeipräsidentin Dr. Wolf|🎖️|Operation Nachtfalke: erfolgreich beendet. Hervorragende Arbeit!"},
+  ]},
+  syndikat: {side:"polizei", diff:3, unlock:"nachtfalke", title:"Das Syndikat",
+   desc:"Drogen, Geldwäsche, Schmuggel – hinter allem steckt ein Syndikat. Die schwerste Ermittlung deiner Laufbahn.", chapters:[
+    {id:"s1", title:"Der Kurier", reward:600,
+     opp:{name:"Kurier Schnell", emoji:"🛵", lp:6500, minLevel:4, maxLevel:8, maxRarity:"SR", skills:{atk:3,lp:3,eff:1}},
+     intro:"Rauschgiftfahnder Can|💊|Dieser Roller liefert keine Pizza. Ich wette mein Mittagessen.\nKurier Schnell|🛵|Lieferung in 10 Minuten oder gratis! Tschüss!",
+     outro:"Kurier Schnell|🛵|Ich fahr nur. Die Ware kommt aus einem Labor im Industriegebiet.\nRauschgiftfahnder Can|💊|Dann machen wir einen Hausbesuch."},
+    {id:"s2", title:"Das Labor", reward:650,
+     opp:{name:"Laborkoch Professor", emoji:"🧪", lp:7000, minLevel:5, maxLevel:9, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"SEK-Teamführer Brenner|🪖|Zugriff in drei … zwei …\nLaborkoch Professor|🧪|Vorsicht mit dem Glas! Das ist … äh … Limonade!",
+     outro:"Laborkoch Professor|🧪|Bezahlt werde ich über eine Reinigung. Sehr … saubere Leute.\nWirtschaftskriminalist Dr. Faber|📊|Geldwäsche. Mein Lieblingsthema!"},
+    {id:"s3", title:"Saubere Geschäfte", reward:700,
+     opp:{name:"Geldwäscherin Saubermann", emoji:"🧼", lp:7500, minLevel:5, maxLevel:10, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Wirtschaftskriminalist Dr. Faber|📊|Diese Reinigung macht 3 Millionen Umsatz. Mit einem Bügeleisen.\nGeldwäscherin Saubermann|🧼|Wir sind eben sehr fleißig!",
+     outro:"Geldwäscherin Saubermann|🧼|Das Bargeld kommt per Schiff. Heute Nacht, Hafenbecken 4.\nWasserschutzpolizist Fiete|🚤|Endlich mal ein Einsatz auf dem Wasser!"},
+    {id:"s4", title:"Hafen bei Nacht", reward:750,
+     opp:{name:"Schmuggler Kapitän Nebel", emoji:"🚢", lp:8000, minLevel:5, maxLevel:11, maxRarity:"UR", skills:{atk:4,lp:4,eff:2}},
+     intro:"Schmuggler Kapitän Nebel|🚢|Nebel zieht auf. Mein Lieblingswetter.\nPolizeihubschrauber Libelle|🚁|Wärmebildkamera an. Wir sehen dich trotzdem.",
+     outro:"Schmuggler Kapitän Nebel|🚢|Die Ladung gehört Narbe. Und Narbe gehört dem Paten.\nKHK Brandt|🕵️|Jetzt wird es ernst."},
+    {id:"s5", title:"Der Unterboss", reward:800,
+     opp:{name:"Unterboss Narbe", emoji:"😠", lp:8500, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:4,lp:5,eff:2,hand:1}},
+     intro:"Unterboss Narbe|😠|Ihr seid mutig, hier aufzutauchen. Oder dumm.\nBereitschaftspolizist Malte|🛡️|Die Halle ist umstellt. Beides.",
+     outro:"Unterboss Narbe|😠|Der Pate wird euch das nie verzeihen.\nKK Mara|🕵️‍♀️|Der Pate soll lieber an seine Verteidigung denken."},
+    {id:"s6", title:"Der Pate", reward:900,
+     opp:{name:"Pate Don Corvo", emoji:"🐦‍⬛", lp:9000, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:5,lp:5,eff:3,hand:1}},
+     intro:"Pate Don Corvo|🐦‍⬛|Setzt euch. Wein? Nein? Schade. Dann eben ein Angebot …\nPolizeipräsidentin Dr. Wolf|🎖️|Wir nehmen keine Angebote an. Nur Festnahmen.",
+     outro:"Pate Don Corvo|🐦‍⬛|Ihr glaubt, ich bin der Kopf? Der Kopf sitzt in Übersee: El Jefe.\nZielfahnder Kowalski|🎯|Er landet morgen früh. Ich weiß sogar, welcher Sitzplatz."},
+    {id:"s7", title:"Finale: El Jefe", reward:1500,
+     opp:{name:"Drogenbaron El Jefe", emoji:"💼", lp:10000, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:5,lp:5,eff:3,hand:1,second:1}},
+     intro:"Drogenbaron El Jefe|💼|Ich habe Anwälte, Inseln und einen Hubschrauber. Und ihr?\nSEK-Teamführer Brenner|🪖|Wir haben einen Haftbefehl. Zugriff!",
+     outro:"Drogenbaron El Jefe|💼|Mein Imperium … zerschlagen von einer Streifenkraft …\nPolizeipräsidentin Dr. Wolf|🎖️|Das Syndikat ist Geschichte. Du bist ab heute eine Legende der Polizei!"},
+  ]},
+  ausbruch: {side:"verbrecher", diff:2, unlock:"verbrecher", title:"Ausbruch aus Block C",
+   desc:"Nach dem großen Coup hat es dich doch erwischt. Jetzt sitzt du in Block C – aber nicht mehr lange.", chapters:[
+    {id:"a1", title:"Zellenkontrolle", reward:400,
+     opp:{name:"Wachhabender Peters", emoji:"☕", lp:5000, minLevel:3, maxLevel:6, maxRarity:"R", skills:{atk:1,lp:1}},
+     intro:"Ausbrecherkönig Houdini-Harry|⛓️‍💥|Neu hier? Ich bin Harry. 14 Ausbrüche. Willst du der 15. sein?\nWachhabender Peters|☕|Zellenkontrolle! Was ist das für ein Löffel unter deinem Kopfkissen?",
+     outro:"Ausbrecherkönig Houdini-Harry|⛓️‍💥|Gut gemacht. Der Löffel bleibt. Jetzt graben wir."},
+    {id:"a2", title:"Hundestaffel am Zaun", reward:450,
+     opp:{name:"Schutzhund Bella", emoji:"🐕‍🦺", lp:5500, minLevel:3, maxLevel:7, maxRarity:"SR", skills:{atk:1,lp:2}},
+     intro:"Ausbrecherkönig Houdini-Harry|⛓️‍💥|Der Tunnel endet am Zaun. Und am Zaun wartet … ein Hund.\nSchutzhund Bella|🐕‍🦺|GRRRR. WUFF!",
+     outro:"Ausbrecherkönig Houdini-Harry|⛓️‍💥|Wurst wirkt immer. Lauf! Turbo wartet mit dem Wagen."},
+    {id:"a3", title:"Die Straßensperre", reward:500,
+     opp:{name:"Autobahnpolizei Lars", emoji:"🚔", lp:6000, minLevel:4, maxLevel:8, maxRarity:"SR", skills:{atk:2,lp:2}},
+     intro:"Fluchtfahrer Turbo|🏎️|Festhalten! Da vorne ist eine Sperre!\nAutobahnpolizei Lars|🚔|Fahrzeug anhalten! Motor aus!",
+     outro:"Fluchtfahrer Turbo|🏎️|Durch! Aber die haben einen Zielfahnder auf uns angesetzt."},
+    {id:"a4", title:"Der Zielfahnder", reward:550,
+     opp:{name:"Zielfahnder Kowalski", emoji:"🎯", lp:6500, minLevel:4, maxLevel:9, maxRarity:"SR", skills:{atk:2,lp:3,eff:1}},
+     intro:"Zielfahnder Kowalski|🎯|Du hast dich in einer Gartenlaube versteckt. Mit Gartenzwergen. Ernsthaft?\nHehlerin Rosi|📦|Ich hab dir gesagt, nimm das Ferienhaus!",
+     outro:"Hehlerin Rosi|📦|Ein Boot wartet am Fluss. Aber die Polizei hat jetzt Hubschrauber in der Luft."},
+    {id:"a5", title:"Von oben gesehen", reward:600,
+     opp:{name:"Polizeihubschrauberstaffel", emoji:"🚁", lp:7000, minLevel:5, maxLevel:10, maxRarity:"UR", skills:{atk:3,lp:3,eff:1}},
+     intro:"Polizeihubschrauberstaffel|🚁|Zielperson am Ufer gesichtet. Bleiben Sie stehen!\nSchmuggler Kapitän Nebel|🚢|Spring an Bord – ich mach Nebel!",
+     outro:"Schmuggler Kapitän Nebel|🚢|Wir sind fast an der Grenze. Aber da wartet das SEK."},
+    {id:"a6", title:"Finale: Die letzte Grenze", reward:1000,
+     opp:{name:"SEK-Teamführer Brenner", emoji:"🪖", lp:8000, minLevel:5, maxLevel:12, maxRarity:"UR", skills:{atk:3,lp:4,eff:2,hand:1}},
+     intro:"SEK-Teamführer Brenner|🪖|Hier ist Endstation. Hände hoch!\nAusbrecherkönig Houdini-Harry|⛓️‍💥|Endstation? Für uns gibt es nur Zwischenstopps!",
+     outro:"Ausbrecherkönig Houdini-Harry|⛓️‍💥|Frei! Ausbruch Nummer 15 – und deiner war der beste.\nHehlerin Rosi|📦|In der Unterwelt erzählt man sich schon von dir."},
+  ]},
+  krone: {side:"verbrecher", diff:3, unlock:"ausbruch", title:"Krone der Unterwelt",
+   desc:"Du willst die ganze Stadt. Dafür musst du die besten Ermittler des Landes ausschalten – einen nach dem anderen.", chapters:[
+    {id:"k1", title:"Digitale Spuren", reward:600,
+     opp:{name:"IT-Forensikerin Pia", emoji:"💻", lp:6500, minLevel:4, maxLevel:8, maxRarity:"SR", skills:{atk:3,lp:3,eff:1}},
+     intro:"Darknet-Händler Null|🕸️|Die Forensik hat unsere Server gefunden. Lösch alles!\nIT-Forensikerin Pia|💻|Zu spät. Ich hab schon eine Kopie. Und eine Kopie der Kopie.",
+     outro:"Darknet-Händler Null|🕸️|Server sauber. Aber in der Bande sitzt ein Spitzel …"},
+    {id:"k2", title:"Der Maulwurf", reward:650,
+     opp:{name:"Verdeckter Ermittler „Fuchs“", emoji:"🥸", lp:7000, minLevel:5, maxLevel:9, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Pate Don Corvo|🐦‍⬛|Einer von uns trägt einen falschen Schnurrbart. Finde ihn.\nVerdeckter Ermittler „Fuchs“|🥸|Ich? Ich bin doch nur … äh … Klaus. Euer Klaus.",
+     outro:"Pate Don Corvo|🐦‍⬛|Der Fuchs ist enttarnt. Aber jetzt kommt die Profilerin."},
+    {id:"k3", title:"Die Profilerin", reward:700,
+     opp:{name:"Fallanalytikerin Dr. Klee", emoji:"🧠", lp:7500, minLevel:5, maxLevel:10, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Fallanalytikerin Dr. Klee|🧠|Ich weiß, was du als Nächstes tust. Du tippst gleich auf „Weiter“.\nHochstapler Graf Zocker|🎩|Unheimlich. Mach sie fertig!",
+     outro:"Hochstapler Graf Zocker|🎩|Das hat sie nicht kommen sehen. Aber das MEK hängt uns an den Fersen."},
+    {id:"k4", title:"Unsichtbare Beschatter", reward:750,
+     opp:{name:"MEK-Observant", emoji:"🕶️", lp:8000, minLevel:5, maxLevel:11, maxRarity:"UR", skills:{atk:4,lp:4,eff:2}},
+     intro:"MEK-Observant|🕶️|Zielperson betritt die Bäckerei. Kauft … drei Berliner.\nFluchtfahrer Turbo|🏎️|Der Typ im grauen Auto steht da seit gestern!",
+     outro:"Fluchtfahrer Turbo|🏎️|Abgehängt! Aber jetzt schicken sie die Elite."},
+    {id:"k5", title:"Die Elite", reward:800,
+     opp:{name:"GSG-Spezialkraft", emoji:"🪂", lp:8500, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:4,lp:5,eff:2,hand:1}},
+     intro:"GSG-Spezialkraft|🪂|Wir kommen von oben, von unten und von der Seite.\nRockerboss Eisenfaust|🏍️|Dann kommen wir von überall!",
+     outro:"Rockerboss Eisenfaust|🏍️|Die Elite ist weg. Es bleibt nur noch die Kriminaldirektion."},
+    {id:"k6", title:"Die Kriminaldirektorin", reward:900,
+     opp:{name:"Kriminaldirektorin Neumann", emoji:"🏛️", lp:9000, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:5,lp:5,eff:3,hand:1}},
+     intro:"Kriminaldirektorin Neumann|🏛️|Ich habe 30 Jahre auf diesen Moment gewartet.\nHehlerkönigin Baronin|👑|Und wir haben 30 Anwälte.",
+     outro:"Hehlerkönigin Baronin|👑|Nur noch eine Person steht zwischen dir und der Krone."},
+    {id:"k7", title:"Finale: Die Krone", reward:1500,
+     opp:{name:"Polizeipräsidentin Dr. Wolf", emoji:"🎖️", lp:10000, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:5,lp:5,eff:3,hand:1,second:1}},
+     intro:"Polizeipräsidentin Dr. Wolf|🎖️|Wir kennen uns. Damals bist du mir entwischt. Heute nicht.\nDas Phantom|🦹‍♀️|Jetzt zeigst du, wer die Stadt regiert!",
+     outro:"Polizeipräsidentin Dr. Wolf|🎖️|Diesmal hast du gewonnen … aber wir sehen uns wieder.\nDas Phantom|🦹‍♀️|Die Krone der Unterwelt gehört dir. Lang lebe der neue Boss!"},
+  ]},
+});
+
 /* ============================ SPEICHER ============================ */
 const Store = {
   get(k,d){try{const v=localStorage.getItem("kd3_"+k);return v?JSON.parse(v):d}catch(e){return d}},
@@ -2023,8 +2149,8 @@ const StoryEd = {
   camp:"polizei", idx:-1,
   renderList(){
     const D=Story.data;
-    $("admStory").innerHTML = Object.keys(FACTIONS).map(f=>`
-      <div class="panel"><h3 style="color:var(--yellow)">${FACTIONS[f][1]} ${FACTIONS[f][0]}-Kampagne</h3>
+    $("admStory").innerHTML = Story.keys().map(f=>`
+      <div class="panel"><h3 style="color:var(--yellow)">${FACTIONS[Story.side(f)][1]} ${FACTIONS[Story.side(f)][0]}-Kampagne ${Story.stars(f)}</h3>
         <label>Titel</label><input data-ct="${f}" value="${esc(D[f].title)}" maxlength="40">
         <label>Beschreibung</label><textarea data-cd="${f}" rows="2" maxlength="200">${esc(D[f].desc)}</textarea>
         <div style="margin-top:10px">${D[f].chapters.map((c,i)=>`<div class="story-row"><b style="font-family:var(--comic)">${i+1}.</b><span>${esc(c.opp.emoji)} ${esc(c.title)}</span>
@@ -2033,11 +2159,11 @@ const StoryEd = {
       </div>`).join("") + `<div class="row"><button class="small green" onclick="StoryEd.saveMeta()">💾 Titel speichern</button><button class="small red" onclick="StoryEd.reset()">♻ Standard-Story</button></div>`;
     $("admStory").querySelectorAll("[data-ed]").forEach(b=>b.onclick=()=>{const [f,i]=b.dataset.ed.split(":");this.open(f,+i)});
     $("admStory").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>{const f=b.dataset.add, n=Story.data[f].chapters.length+1;
-      Story.data[f].chapters.push({id:f[0]+uid(),title:"Neues Kapitel",reward:200,opp:{name:"Gegner",emoji:FACTIONS[OTHER[f]][1],lp:4000,maxLevel:4+Math.min(n,8),maxRarity:"R"},intro:"Erzähler|📖|Hier beginnt ein neues Kapitel.",outro:"Erzähler|📖|Geschafft!"});
+      Story.data[f].chapters.push({id:f[0]+uid(),title:"Neues Kapitel",reward:200,opp:{name:"Gegner",emoji:FACTIONS[OTHER[Story.side(f)]][1],lp:4000,maxLevel:4+Math.min(n,8),maxRarity:"R"},intro:"Erzähler|📖|Hier beginnt ein neues Kapitel.",outro:"Erzähler|📖|Geschafft!"});
       Story.save(); this.open(f,Story.data[f].chapters.length-1);});
     $("admStory").querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>{const [f,i]=b.dataset.up.split(":"), a=Story.data[f].chapters; const k=+i; if(k>0){[a[k-1],a[k]]=[a[k],a[k-1]];Story.save();this.renderList()}});
   },
-  saveMeta(){ Object.keys(FACTIONS).forEach(f=>{ Story.data[f].title=document.querySelector(`[data-ct="${f}"]`).value.trim()||Story.data[f].title; Story.data[f].desc=document.querySelector(`[data-cd="${f}"]`).value.trim(); }); Story.save(); toast("Gespeichert"); },
+  saveMeta(){ Story.keys().forEach(f=>{ Story.data[f].title=document.querySelector(`[data-ct="${f}"]`).value.trim()||Story.data[f].title; Story.data[f].desc=document.querySelector(`[data-cd="${f}"]`).value.trim(); }); Story.save(); toast("Gespeichert"); },
   async reset(){ if(!await UI.ask("Story auf den Standard zurücksetzen? Eigene Kapitel gehen verloren.")) return; Story.data=clone(STORY_DEFAULT); Story.save(); this.renderList(); },
   open(f,i){
     this.camp=f; this.idx=i; const c=Story.data[f].chapters[i];
@@ -2094,8 +2220,8 @@ const Deck = {
   /* Fusionsdeck: alle besessenen Fusionen dieser Partei (max. 15) */
   fusionDeck(f){ const out=[]; DB.ofFaction(f).filter(c=>c.type==="fusion").forEach(c=>{for(let i=0;i<this.limit(c.id);i++) out.push(c.id)}); return out.slice(0,this.FUSION_MAX); },
   /* Deck für KI-Gegner aus allen Karten der Partei */
-  genDeck(f,{maxLevel=12,maxRarity="UR",size=30}={}){
-    const ok=c=>RANK[c.rarity]<=RANK[maxRarity] && (!isChar(c)||c.level<=maxLevel);
+  genDeck(f,{maxLevel=12,minLevel=1,maxRarity="UR",size=30}={}){
+    const ok=c=>RANK[c.rarity]<=RANK[maxRarity] && (!isChar(c)||(c.level<=maxLevel&&(c.type==="fusion"||c.level>=minLevel)));
     const cards=DB.ofFaction(f).filter(ok);
     const fus=cards.filter(c=>c.type==="fusion"), chars=cards.filter(c=>c.type==="monster"), acts=cards.filter(c=>!isChar(c)&&(fus.length||c.effect!=="fusion"));
     const out=[], pick=(pool,n)=>{ let g=0; while(n>0&&pool.length&&g++<4000){const c=pool[Math.floor(Math.random()*pool.length)]; if(out.filter(x=>x===c.id).length<this.COPIES){out.push(c.id);n--}} };
@@ -2189,14 +2315,28 @@ const Shop = {
 /* ============================ STORY ============================ */
 const Story = {
   data:null, camp:"polizei",
-  load(){ this.data=Store.get("story",null)||clone(STORY_DEFAULT); },
+  load(){
+    this.data=Store.get("story",null)||clone(STORY_DEFAULT);
+    // neue Standard-Kampagnen ergänzen, alte Spielstände bekommen Seite/Schwierigkeit
+    Object.keys(STORY_DEFAULT).forEach(k=>{ const D=STORY_DEFAULT[k];
+      if(!this.data[k]) this.data[k]=clone(D);
+      else ["side","diff","unlock"].forEach(x=>{ if(this.data[k][x]==null && D[x]!=null) this.data[k][x]=D[x]; }); });
+  },
   save(){ Store.set("story",this.data); },
+  keys(){ return Object.keys(this.data); },
+  side(k){ return (this.data[k]&&this.data[k].side) || (FACTIONS[k]?k:"polizei"); },
+  done(k){ const C=this.data[k]; return !!C && (Player.progress[k]||0)>=C.chapters.length && C.chapters.length>0; },
+  locked(k){ const u=this.data[k]&&this.data[k].unlock; return !!u && this.data[u] && !this.done(u); },
+  stars(k){ return "★".repeat((this.data[k]&&this.data[k].diff)||1); },
   render(){
-    $("storyTabs").innerHTML=Object.keys(FACTIONS).map(f=>`<span data-f="${f}" class="${f===this.camp?"on":""}">${FACTIONS[f][1]} ${esc(this.data[f].title)}</span>`).join("");
+    if(!this.data[this.camp]) this.camp="polizei";
+    $("storyTabs").innerHTML=this.keys().map(k=>`<span data-f="${k}" class="${k===this.camp?"on":""} ${this.locked(k)?"lk":""}">${FACTIONS[this.side(k)][1]} ${esc(this.data[k].title)} <small>${this.stars(k)}${this.locked(k)?" 🔒":this.done(k)?" ✅":""}</small></span>`).join("");
     $("storyTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.camp=s.dataset.f;this.render()});
-    const C=this.data[this.camp], prog=Player.progress[this.camp]||0;
-    $("storyDesc").textContent=C.desc;
-    $("storyList").innerHTML=C.chapters.map((c,i)=>{const done=i<prog, open=i<=prog;
+    const k=this.camp, C=this.data[k], prog=Player.progress[k]||0, lock=this.locked(k);
+    const diff=["","Normal","Schwer","Sehr schwer"][C.diff||1]||"Extrem";
+    $("storyDesc").innerHTML=`<b>Schwierigkeit: ${this.stars(k)} ${diff}</b><br>${esc(C.desc)}`+
+      (lock?`<br><b style="color:var(--red)">🔒 Schließe zuerst „${esc(this.data[C.unlock].title)}“ ab.</b>`:"");
+    $("storyList").innerHTML=C.chapters.map((c,i)=>{const done=i<prog, open=!lock&&i<=prog;
       return `<div class="chapter ${open?"":"locked"}"><div class="ce">${open?esc(c.opp.emoji):"🔒"}</div><div class="ct"><b>${i+1}. ${esc(c.title)}</b>
         <span class="muted">${open?`Gegner: ${esc(c.opp.name)} · ${c.opp.lp} LP · ${done?"✅ geschafft":"Belohnung 🪙"+c.reward}`:"Noch gesperrt"}</span></div>
         ${open?`<button class="small ${done?"ghost":"red"}" data-c="${i}">${done?"Nochmal":"Start"}</button>`:""}</div>`}).join("")
@@ -2204,17 +2344,21 @@ const Story = {
     $("storyList").querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>this.play(this.camp,+b.dataset.c));
   },
   parse(txt){ return (txt||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.split("|"); return p.length>=3?{who:p[0].trim(),emoji:p[1].trim(),text:p.slice(2).join("|").trim()}:{who:"",emoji:"💬",text:l}}); },
-  play(f,i){
-    const c=this.data[f].chapters[i];
+  play(k,i){
+    const C=this.data[k], c=C.chapters[i], f=this.side(k), hard=(C.diff||1)>1;
     Scene.play(`Kapitel ${i+1}: ${c.title}`, this.parse(c.intro), f, ()=>{
-      const deck=Deck.genDeck(OTHER[f],{maxLevel:c.opp.maxLevel,maxRarity:c.opp.maxRarity});
-      Duel.start(f,{oppName:c.opp.name, oppEmoji:c.opp.emoji, oppLP:c.opp.lp, oppDeck:deck,
+      const deck=Deck.genDeck(OTHER[f],{maxLevel:c.opp.maxLevel,minLevel:c.opp.minLevel||1,maxRarity:c.opp.maxRarity});
+      Duel.start(f,{oppName:c.opp.name, oppEmoji:c.opp.emoji, oppLP:c.opp.lp, oppDeck:deck, oppSkills:c.opp.skills,
         onEnd:win=>new Promise(res=>{
-          if(!win){ Prog.reward(f,25,40); return res(); }
-          const first=i>=(Player.progress[f]||0);
-          if(first){ Player.progress[f]=i+1; }
-          Prog.reward(f, first?c.reward:50, first?150+25*i:60);
-          Scene.play(first?"Kapitel geschafft!":"Wieder gewonnen!", this.parse(c.outro), f, ()=>{ res(); UI.show("story"); });
+          if(!win){ Prog.reward(f,hard?40:25,hard?60:40); return res(); }
+          const first=i>=(Player.progress[k]||0);
+          if(first){ Player.progress[k]=i+1; }
+          const xp=(150+25*i)*(C.diff||1);
+          Prog.reward(f, first?c.reward:50*(C.diff||1), first?xp:60*(C.diff||1));
+          const last=first && i===C.chapters.length-1;
+          const next=last && this.keys().find(x=>this.data[x].unlock===k);
+          const lines=this.parse(c.outro); if(next) lines.push({who:"",emoji:"🔓",text:`Neue Kampagne freigeschaltet: „${this.data[next].title}“ ${this.stars(next)}`});
+          Scene.play(first?"Kapitel geschafft!":"Wieder gewonnen!", lines, f, ()=>{ res(); if(next) this.camp=next; UI.show("story"); });
         })});
     });
   },
@@ -2283,7 +2427,7 @@ const Duel = {
     if(!on) this.P.name="Du";
     this.AI = on ? makePlayer(on.guestName, on.guestDeck, on.guestExtra) : makePlayer(opts.oppName||FACTIONS[other][0], od.main, od.extra, opts.oppLP);
     Prog.apply(this.P, Prog.skillsOf(side));
-    this.AI.handSize=HAND; if(on) Prog.apply(this.AI, on.guestSkills);
+    this.AI.handSize=HAND; if(on) Prog.apply(this.AI, on.guestSkills); else if(opts.oppSkills) Prog.apply(this.AI, opts.oppSkills);
     // jede Kartenkopie bekommt einen eindeutigen Schlüssel (für die Online-Übertragung)
     [[this.P,"h"],[this.AI,"g"]].forEach(([pl,pre])=>[...pl.deck,...pl.extra].forEach((c,i)=>c._k=pre+i));
     this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;

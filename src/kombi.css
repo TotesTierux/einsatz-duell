@@ -72,3 +72,5 @@
 .flv{max-width:min(300px,82vw);margin:10px auto 0;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;
   padding:8px 12px;font-style:italic;font-weight:600;font-size:15px;line-height:1.35;text-align:center;box-shadow:3px 3px 0 var(--ink);position:relative}
 .flv::before{content:"";position:absolute;top:-11px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom:10px solid var(--ink)}
+#storyTabs span.lk{opacity:.55}
+#storyTabs span small{font-size:.8em;color:var(--yellow);letter-spacing:-1px}
