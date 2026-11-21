@@ -26,7 +26,8 @@ const Arena = {
   ok:null, R:null, scene:null, cam:null, units:new Map(), fx:[], raf:0, B:null, host:null, t:0, lastT:0, water:null, lights:[],
   supported(){
     if(this.ok!==null) return this.ok;
-    try{ const c=document.createElement("canvas"); this.ok=!!(window.THREE && (c.getContext("webgl2")||c.getContext("webgl"))); }catch(e){ this.ok=false; }
+    try{ const c=document.createElement("canvas"), gl=c.getContext("webgl2")||c.getContext("webgl"); this.ok=!!(window.THREE && gl);
+      const ext=gl&&gl.getExtension("WEBGL_lose_context"); ext&&ext.loseContext(); }catch(e){ this.ok=false; }
     return this.ok;
   },
   enabled(){ return this.supported() && Store.get("kb3d",true)!==false; },
@@ -36,13 +37,17 @@ const Arena = {
   setup(){
     if(this.R) return;
     const T=THREE;
-    const R=new T.WebGLRenderer({antialias:true}); R.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-    R.shadowMap.enabled=true; R.shadowMap.type=T.PCFSoftShadowMap; this.R=R;
+    const low=Store.get("kb3dq","high")==="low";
+    const R=new T.WebGLRenderer({antialias:!low, powerPreference:"default"});
+    R.setPixelRatio(low?1:Math.min(window.devicePixelRatio||1,1.75));
+    R.shadowMap.enabled=!low; R.shadowMap.type=T.PCFShadowMap; this.R=R; this.low=low;
+    // Grafik abgestürzt (manche Handys) → erst einfache Grafik, dann 2D
+    R.domElement.addEventListener("webglcontextlost",e=>{ e.preventDefault(); this.fail("lost"); },false);
     const S=new T.Scene(); S.background=new T.Color(0x2c1a57); this.scene=S;
     this.cam=new T.PerspectiveCamera(38,1,.1,120);
     S.add(new T.HemisphereLight(0xffffff,0x4a6a3a,.95));
     const sun=new T.DirectionalLight(0xffffff,.95); sun.position.set(6,14,-5); sun.castShadow=true;
-    sun.shadow.mapSize.set(1024,1024); Object.assign(sun.shadow.camera,{left:-9,right:9,top:11,bottom:-11,near:1,far:40}); S.add(sun);
+    sun.shadow.mapSize.set(low?256:1024,low?256:1024); Object.assign(sun.shadow.camera,{left:-9,right:9,top:11,bottom:-11,near:1,far:40}); S.add(sun);
     this.buildField();
   },
   tex(w,h,draw){ const c=document.createElement("canvas"); c.width=w; c.height=h; draw(c.getContext("2d"),w,h); const t=new THREE.CanvasTexture(c); t.colorSpace=THREE.SRGBColorSpace; return t; },
@@ -258,16 +263,32 @@ const Arena = {
     el.appendChild(this.R.domElement); this.resize();
     [...B.a,...B.b].forEach(f=>this.units.set(f,this.build(f)));
     this.lastT=performance.now();
-    const loop=now=>{ this.raf=requestAnimationFrame(loop); const dt=Math.min(.05,(now-this.lastT)/1000); this.lastT=now; this.frame(dt); };
+    const loop=now=>{ this.raf=requestAnimationFrame(loop); const dt=Math.min(.05,(now-this.lastT)/1000); this.lastT=now;
+      try{ this.frame(dt); }catch(e){ console.error("3D-Fehler:",e); this.fail("error"); } };
     this.raf=requestAnimationFrame(loop);
     this._rs=()=>this.resize(); window.addEventListener("resize",this._rs);
+    setTimeout(()=>{ try{ if(this.R && this.B===B && this.R.getContext().isContextLost()) this.fail("lost"); }catch(e){} },1200);
+  },
+  /* Grafikproblem: auf einfache Grafik zurückschalten, beim zweiten Mal auf 2D */
+  fail(why){
+    if(this._failing) return; this._failing=true;
+    const wasLow=Store.get("kb3dq","high")==="low";
+    this.destroy();
+    if(!wasLow){ Store.set("kb3dq","low"); toast("3D-Grafik wird vereinfacht …"); }
+    else { Store.set("kb3d",false); this.ok=false; toast("3D läuft auf diesem Gerät nicht – zeige 2D-Ansicht"); }
+    setTimeout(()=>{ this._failing=false; Kombi._3d=null; if(Kombi.anim) Kombi.drawBattle([]); },300);
+  },
+  destroy(){
+    try{ this.unmount(); }catch(e){}
+    try{ this.R&&this.R.dispose(); }catch(e){}
+    this.R=null; this.scene=null; this.lights=[]; this.water=null;
   },
   unmount(keep){
     cancelAnimationFrame(this.raf); this.raf=0;
     if(this._rs) window.removeEventListener("resize",this._rs);
-    this.units.forEach(U=>{ this.scene.remove(U.root); U.root.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material&&o.material.map&&o.isSprite) o.material.map.dispose(); }); U.mats.forEach(m=>m.dispose()); });
+    if(this.scene) this.units.forEach(U=>{ this.scene.remove(U.root); U.root.traverse(o=>{ if(o.geometry) o.geometry.dispose(); if(o.material&&o.material.map&&o.isSprite) o.material.map.dispose(); }); U.mats.forEach(m=>m.dispose()); });
     this.units.clear();
-    this.fx.forEach(x=>this.scene.remove(x.obj)); this.fx=[];
+    if(this.scene) this.fx.forEach(x=>this.scene.remove(x.obj)); this.fx=[]; this.units.clear();
     if(!keep && this.R && this.R.domElement.parentNode) this.R.domElement.parentNode.removeChild(this.R.domElement);
     this.B=null;
   },

@@ -377,7 +377,7 @@ const Kombi = {
   hud3d(){ const A=this.anim; if(!A||!$("kb3hud")) return; const B=A.B;
     $("kb3hud").innerHTML=`<span style="white-space:nowrap">⚔️ gegen <b>${esc(B.pb.name.replace(/^KI /,""))}</b></span> ${B.frenzy?`<span class="frenzy">🚨 RASEREI</span>`:""}<span class="tm">${Math.max(0,Math.ceil((KB.BATTLE_MS-B.t)/1000))} s</span>`;
     $("kb3spd").textContent=this.speed===1?"⏩ Schneller":"▶ Normal"; },
-  set3d(on){ Store.set("kb3d",on); this._3d=null; Arena.unmount(); if(this.anim) this.drawBattle([]); },
+  set3d(on){ Store.set("kb3d",on); if(on) Arena.ok=null; this._3d=null; Arena.unmount(); if(this.anim) this.drawBattle([]); },
   afterBattle(){
     const A=this.anim; if(!A||A.over) return; A.over=true;
     setTimeout(()=>{ if(!this.anim){ Arena.unmount(); this._3d=null; } },50);
