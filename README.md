@@ -41,11 +41,11 @@ Comic-Kartenspiel ähnlich Yu-Gi-Oh mit Polizeibezug. Zwei Parteien: **Polizei**
 Jeder Push auf `main` startet den Workflow **„APK & Webseite veröffentlichen“**:
 1. baut die APK (Version = Inhalt von `VERSION` + laufende Nummer, z. B. 0.4.7),
 2. veröffentlicht sie als GitHub-Release,
-3. aktualisiert die Webseite inkl. `version.json`.
+3. aktualisiert die Webseite inkl. `version.json` (Branch `gh-pages`). Ohne Secrets wird nur die Webseite veröffentlicht.
 
 Die Android-App prüft beim Start `version.json`. Gibt es eine neuere Version, erscheint „Update verfügbar“ → ein Tipp lädt und installiert sie; der Spielstand bleibt erhalten (gleicher Signaturschlüssel). Die Web-App lädt online immer die neueste Version und funktioniert offline.
 
-**Einmalige Einrichtung im Repo:** Settings → Pages → Source: **GitHub Actions**. Settings → Secrets and variables → Actions: Secrets **`KEYSTORE_B64`** (Signaturschlüssel als Base64) und **`KEYSTORE_PASS`** (Passwort). Der Schlüssel liegt bewusst nicht im Code. Gut aufbewahren – ohne ihn lassen sich keine Updates über die installierte App spielen.
+**Einmalige Einrichtung im Repo:** Die Webseite liegt im Branch `gh-pages` (Settings → Pages → Source: „Deploy from a branch“, Branch `gh-pages`). Settings → Secrets and variables → Actions: Secrets **`KEYSTORE_B64`** (Signaturschlüssel als Base64) und **`KEYSTORE_PASS`** (Passwort). Der Schlüssel liegt bewusst nicht im Code. Gut aufbewahren – ohne ihn lassen sich keine Updates über die installierte App spielen.
 
 ## Projektstruktur
 

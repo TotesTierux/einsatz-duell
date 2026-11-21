@@ -36,7 +36,8 @@ if '--web' in sys.argv:
     for f in ['manifest.webmanifest','icon-180.png','icon-192.png','icon-512.png']: shutil.copy(os.path.join(root,'web/spiel',f), spiel)
     open(os.path.join(spiel,'sw.js'),'w').write(r('web/spiel/sw.js').replace('__VERSION__',version))
     open(os.path.join(site,'index.html'),'w',encoding='utf-8').write(r('web/index.html').replace('__FONT__',font).replace('__REPO__',repo))
-    json.dump({"versionCode":vcode,"versionName":version,"apk":repo+"/releases/latest/download/EinsatzDuell.apk",
+    has_apk=os.environ.get("APK_AVAILABLE","")=="1"
+    json.dump({"versionCode":vcode if has_apk else 0,"versionName":version,"apk":repo+"/releases/latest/download/EinsatzDuell.apk" if has_apk else "",
                "notes":os.environ.get("APP_NOTES","")}, open(os.path.join(site,'version.json'),'w'), ensure_ascii=False)
     open(os.path.join(site,'.nojekyll'),'w').close()
     print('Webseite ok →',site)

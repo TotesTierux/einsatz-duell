@@ -65,7 +65,8 @@ small,.muted{opacity:.75;font-size:14px}
   <p class="muted">Spielstand und Sammlung werden auf dem jeweiligen Gerät gespeichert. Karten lassen sich im Admin-Bereich exportieren und importieren.</p>
 </main>
 <script>
-fetch("version.json",{cache:"no-store"}).then(r=>r.json()).then(v=>{document.getElementById("ver").textContent="Aktuelle Version "+v.versionName}).catch(()=>{});
+fetch("version.json",{cache:"no-store"}).then(r=>r.json()).then(v=>{document.getElementById("ver").textContent="Aktuelle Version "+v.versionName;
+  if(!v.apk){const a=document.getElementById("apk");a.removeAttribute("href");a.textContent="⏳ APK folgt in Kürze";a.style.opacity=".55";}}).catch(()=>{});
 </script>
 </body>
 </html>
