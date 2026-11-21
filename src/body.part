@@ -49,6 +49,9 @@
 .scene .next{margin-top:14px;align-self:flex-end}
 .scene .skip{position:absolute;top:calc(env(safe-area-inset-top) + 64px);right:14px}
 @media (prefers-reduced-motion:reduce){.scene .avatar,.flip,.card .art::after{animation:none}}
+/* Online */
+.roomcode{font-family:var(--comic);font-size:56px;letter-spacing:10px;color:var(--yellow);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);margin:4px 0 10px}
+.codein{text-transform:uppercase;letter-spacing:8px;font-size:28px;text-align:center;font-family:var(--comic)}
 /* Admin-Story-Editor */
 .story-row{display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.25);border:2px solid var(--ink);border-radius:10px;padding:8px;margin-bottom:8px}
 .story-row span{flex:1}
@@ -97,7 +100,10 @@
   <div class="burst">👮 Polizei gegen Verbrecher 🦹</div>
   <div class="menu">
     <button class="red" onclick="UI.show('story')">📖 Story</button>
-    <button class="blue" onclick="UI.startDuel()">⚔️ Freies Duell</button>
+    <div class="two">
+      <button class="blue" onclick="UI.startDuel()">⚔️ Gegen KI</button>
+      <button class="blue" onclick="UI.show('online')" style="background:#a463ff;color:#fff">🌐 Online</button>
+    </div>
     <div class="two">
       <button class="green" onclick="UI.show('shop')">🛒 Shop</button>
       <button onclick="UI.show('deck')">🃏 Deck</button>
@@ -116,6 +122,33 @@
   <div class="tabs" id="storyTabs"></div>
   <p class="muted" id="storyDesc" style="margin-top:0"></p>
   <div id="storyList"></div>
+</section>
+
+<!-- ================= ONLINE-LOBBY ================= -->
+<section id="online" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="Lobby.leave()">◀</button><h2>Online-Duell</h2></div>
+  <div class="panel">
+    <label>Dein Spielername</label><input id="onName" maxlength="16" placeholder="z. B. Kommissar Tim">
+    <label>Deine Seite (als Gastgeber)</label><div class="tabs" id="onSide"></div>
+    <p class="muted" style="margin:0">Wer beitritt, spielt automatisch die andere Seite – mit seinem eigenen Deck.</p>
+  </div>
+  <div class="panel">
+    <h3 style="color:var(--yellow)">Raum erstellen</h3>
+    <p class="muted">Du bekommst einen Code, den du deinem Gegner schickst.</p>
+    <button class="red" onclick="Lobby.create()">🌐 Raum erstellen</button>
+    <div id="onCodeBox" style="display:none;text-align:center;margin-top:14px">
+      <div class="muted">Dein Raumcode</div>
+      <div class="roomcode" id="onCode"></div>
+      <button class="small blue" onclick="Lobby.share()">📤 Code teilen</button>
+    </div>
+  </div>
+  <div class="panel">
+    <h3 style="color:var(--yellow)">Raum beitreten</h3>
+    <input id="onJoin" maxlength="5" placeholder="CODE" autocomplete="off" autocapitalize="characters" class="codein">
+    <button class="blue" onclick="Lobby.join()" style="margin-top:10px;width:100%">Beitreten</button>
+  </div>
+  <p class="muted" id="onStatus" style="text-align:center"></p>
+  <p class="muted" style="text-align:center">Sieg 🪙150 · Niederlage 🪙30 · Beide brauchen Internet.</p>
 </section>
 
 <!-- ================= SHOP ================= -->
@@ -317,6 +350,9 @@
 <div class="banner" id="banner"></div>
 <div class="toast" id="toast"></div>
 
+<script>
+/*__PEERJS__*/
+</script>
 <script>
 /*__CARDS__*/
 </script>

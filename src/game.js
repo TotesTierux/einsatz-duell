@@ -301,6 +301,7 @@ const UI = {
     if(id==="deck") Deck.render();
     if(id==="shop") Shop.render();
     if(id==="story") Story.render();
+    if(id==="online") Lobby.render();
   },
   coins(){ ["homeCoins","shopCoins","openCoins"].forEach(i=>{const e=$(i); if(e) e.textContent="🪙 "+Player.coins}); },
   back(){ // Android-Zurück-Taste
@@ -737,13 +738,14 @@ const ATTACK_FX = {
 };
 
 function makePlayer(name, deckIds, extraIds, lp){
-  const deck = shuffle(deckIds.map(id=>DB.byId(id)).filter(Boolean).map(clone));
-  const extra = (extraIds||[]).map(id=>DB.byId(id)).filter(Boolean).map(clone);
+  const get = x => typeof x==="string" ? DB.byId(x) : x;
+  const deck = shuffle(deckIds.map(get).filter(Boolean).map(clone));
+  const extra = (extraIds||[]).map(get).filter(Boolean).map(clone);
   return {name, lp:lp||START_LP, deck, extra, hand:[], grave:[], mz:Array(ZONES).fill(null), st:Array(ZONES).fill(null), summoned:false};
 }
 
 const Duel = {
-  P:null, AI:null, history:[], turn:0, active:null, busy:false, over:false, ready:false, opts:{},
+  P:null, AI:null, history:[], turn:0, online:false, host:false, client:false, waiting:false, active:null, busy:false, over:false, ready:false, opts:{},
   mode:null,       // null | {type:"attack",from} | {type:"tribute",handIdx,need,picked:[],pos} | {type:"boost",handIdx}
   start(side, opts={}){
     this.side=side; this.opts=opts;
@@ -753,21 +755,32 @@ const Duel = {
     if(myDeck.length<10){ toast("Zu wenige eigene Karten – Leihdeck wird benutzt"); myDeck=Deck.genDeck(side,{maxRarity:"R"}).main; }
     else if(!Deck.validFor(side)) toast("Kein gültiges Deck – automatisches Deck aus deiner Sammlung");
     const od = opts.oppDeck || Deck.genDeck(other,{});
-    this.P = makePlayer("Du", myDeck, Deck.fusionDeck(side));
-    this.AI = makePlayer(opts.oppName||FACTIONS[other][0], od.main, od.extra, opts.oppLP);
+    const on = opts.online;   // {myName, guestName, guestDeck, guestExtra}
+    this.online=!!on; this.host=!!on; this.client=false; this.waiting=false;
+    this.P = makePlayer(on?on.myName:"Du", myDeck, Deck.fusionDeck(side));
+    this.AI = on ? makePlayer(on.guestName, on.guestDeck, on.guestExtra) : makePlayer(opts.oppName||FACTIONS[other][0], od.main, od.extra, opts.oppLP);
+    // jede Kartenkopie bekommt einen eindeutigen Schlüssel (für die Online-Übertragung)
+    [[this.P,"h"],[this.AI,"g"]].forEach(([pl,pre])=>[...pl.deck,...pl.extra].forEach((c,i)=>c._k=pre+i));
     this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
     $("reveal").classList.remove("show"); $("fx").innerHTML="";
     for(let i=0;i<HAND;i++){ this.draw(this.P,true); this.draw(this.AI,true); }
     $("oppWho").textContent=`${opts.oppEmoji||FACTIONS[other][1]} ${this.AI.name}`;
-    $("myWho").textContent=`${FACTIONS[side][1]} Du – ${FACTIONS[side][0]}`;
+    $("myWho").textContent=`${FACTIONS[side][1]} ${on?this.P.name:"Du"} – ${FACTIONS[side][0]}`;
+    if(on) Net.sendStart();
     UI.show("duel");
     this.log(side==="polizei"?"Einsatz beginnt – schnappt die Verbrecher!":"Die Polizei ist dir auf den Fersen!"); banner("EINSATZ!");
     this.active = Math.random()<.5 ? this.P : this.AI;
     setTimeout(()=>this.beginTurn(), 900);
   },
   opp(p){ return p===this.P?this.AI:this.P; },
-  me(p,du,er){ return p===this.P?du:`${p.name} ${er}`; },
-  log(msg){ $("log").textContent=msg; this.history.push({t:Math.ceil(this.turn/2)||1, who:this.active===this.AI?"opp":"me", msg}); if(this.history.length>250) this.history.shift(); },
+  me(p,du,er){ return p===this.P&&!this.online?du:`${p.name} ${er}`; },
+  who(p){ return p===this.P&&!this.online?"Du":p.name; },
+  bn(text){ banner(text); if(this.host) Net.send({t:"fx",k:"banner",text}); },
+  log(msg, who){
+    who = who || (this.active===this.AI?"opp":"me");
+    $("log").textContent=msg; this.history.push({t:Math.ceil(this.turn/2)||1, who, msg}); if(this.history.length>250) this.history.shift();
+    if(this.host) Net.send({t:"log", msg, who: who==="opp"?"me":"opp"});
+  },
   showHistory(){
     $("modalCard").innerHTML=`<h2 style="color:var(--yellow);text-align:center;margin-bottom:8px">Einsatzprotokoll</h2><div class="histlist">${
       this.history.slice().reverse().map(h=>`<div><span class="t">Zug ${h.t} ${h.who==="opp"?"🤖":"😎"}</span>${esc(h.msg)}</div>`).join("")||"Noch nichts passiert."}</div>`;
@@ -777,7 +790,11 @@ const Duel = {
 
   /* ---------- Ansage: gegnerische Karte groß zeigen – schließt nur per Tipp ---------- */
   announce(p, card, head, result){
+    if(this.host && p===this.P && !this.over){ Net.send({t:"ann", c:card._k, head, result}); return this._ann||Promise.resolve(); }
     if(p!==this.AI || this.over) return this._ann||Promise.resolve();
+    return this.showReveal(card, head, result);
+  },
+  showReveal(card, head, result){
     const prev=this._ann||Promise.resolve();
     this._ann = prev.then(()=>new Promise(res=>{
       if(this.over) return res();
@@ -812,13 +829,14 @@ const Duel = {
   heal(p,n){ if(n<=0) return; p.lp+=n; this.floatText(p===this.P?$("myLP"):$("oppLP"), `+${n}`, "#3ddc84"); this.log(`${this.me(p,"Du erhältst","erhält")} ${n} LP`); },
   win(p){
     if(this.over) return; this.over=true; this.render(); this.closeReveal();
+    if(this.host) Net.send({t:"end", w: p===this.P?"h":"g"});
     const won = p===this.P;
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
       setTimeout(async()=>{
         const onEnd=this.opts.onEnd; this.opts.onEnd=null;
         if(onEnd) await onEnd(won);
         if(UI.current!=="duel") return;
-        const again = this.opts.oppName ? ["📖 Zur Story",()=>UI.show("story"),"red"] : ["Nochmal",()=>UI.startDuel(),"red"];
+        const again = this.online ? ["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"] : this.opts.oppName ? ["📖 Zur Story",()=>UI.show("story"),"red"] : ["Nochmal",()=>UI.startDuel(),"red"];
         UI.modal(null,[again,["Hauptmenü",()=>UI.show("home"),"blue"]]);
       },1300); },300);
   },
@@ -837,9 +855,11 @@ const Duel = {
     $("phaseLbl").textContent = p===this.P ? `Dein Zug ${Math.ceil(this.turn/2)}` : `${this.AI.name} am Zug`;
     banner(p===this.P?"DEIN ZUG!":"GEGNER!");
     this.mode=null; this.ready=true; this.render();
+    if(p===this.AI && this.host) return;   // Gast ist am Zug – Aktionen kommen über Net
     if(p===this.AI){ this.busy=true; await sleep(1100); try{ await AI.play(); }catch(e){ console.error(e); } await this.idle(); this.busy=false; if(!this.over) this.endTurn(true); }
   },
   endTurn(fromAI){
+    if(this.client){ if(this.myTurn()) this.sendAct("endTurn",[]); return; }
     if(this.over) return;
     if(!fromAI && (this.active!==this.P || this.busy)) return;
     this.mode=null; this.ready=false; this.active=this.opp(this.active); this.render();
@@ -917,9 +937,11 @@ const Duel = {
   /* Effekt nach Ansage auslösen (bei der KI erst, wenn du die Ansage weggetippt hast) */
   triggerSummon(p,c,head,extra){
     if(p===this.AI){ const prev=this.announce(p,c,head,extra); this._ann=prev.then(()=>{ if(!this.over){ this.monsterEffect(p,c); this.render(); } }); }
-    else { this.monsterEffect(p,c); }
+    else { this.announce(p,c,head,extra); this.monsterEffect(p,c); }
   },
+  sendAct(fn,args){ Net.send({t:"act",fn,a:args}); this.waiting=true; this.mode=null; this.render(); return true; },
   summon(p, handIdx, pos, tributes=[]){
+    if(this.client) return this.sendAct("summon",[handIdx,pos,tributes]);
     const c=p.hand[handIdx]; if(!c||c.type!=="monster"||p.summoned) return false;
     if(tributes.length<this.tributesNeeded(c)) return false;
     tributes.forEach(z=>{ if(p.mz[z]){ p.grave.push(p.mz[z].card); p.mz[z]=null; } });
@@ -931,6 +953,7 @@ const Duel = {
     this.render(); return true;
   },
   changePos(p,z){
+    if(this.client) return this.sendAct("changePos",[z]);
     const m=p.mz[z]; if(!m||m.changed||m.attacks) return;
     const wasDown=m.faceDown; m.pos = m.pos==="atk"?"def":"atk"; m.changed=true;
     this.log(`${m.card.name} wechselt in ${m.pos==="atk"?"Angriffs":"Verteidigungs"}position`);
@@ -938,6 +961,7 @@ const Duel = {
     this.render();
   },
   setST(p, handIdx){
+    if(this.client) return this.sendAct("setST",[handIdx]);
     const z=this.freeZone(p.st); if(z<0) return false;
     const c=p.hand.splice(handIdx,1)[0]; p.st[z]={card:c,faceDown:true};
     this.log(`${this.me(p,"Du setzt","setzt")} eine Karte verdeckt.`); this.render(); return true;
@@ -969,7 +993,7 @@ const Duel = {
       else { const h=p.hand.indexOf(m.c); if(h>=0) p.grave.push(p.hand.splice(h,1)[0]); }
     });
     const ei=p.extra.findIndex(c=>c.id===opt.fusion.id); const f=p.extra.splice(ei,1)[0];
-    this.place(p,f,"atk"); banner("FUSION!");
+    this.place(p,f,"atk"); this.bn("FUSION!");
     this.log(`${this.me(p,"Du bildest","bildet")} ${f.name}!`);
     this.triggerSummon(p,f,`${p.name} bildet eine Fusion!`,`Material: ${opt.mats.map(m=>m.c.name).join(" + ")}`);
   },
@@ -1021,6 +1045,11 @@ const Duel = {
   },
   async activateSpell(p, handIdx, targetZ, fusionOpt){
     const c=p.hand[handIdx]; if(!c||c.type!=="spell") return false;
+    if(this.client){
+      let fid=null;
+      if(c.effect==="fusion"){ const o=await this.pickFusion(this.fusionOptions(p)); if(!o) return false; fid=o.fusion.id; }
+      return this.sendAct("activateSpell",[handIdx, targetZ==null?null:targetZ, fid]);
+    }
     const o=this.opp(p), v=c.val;
     if(!this.canActivate(p,c)){ if(p===this.P) toast("Kein passendes Ziel!"); return false; }
     if(c.effect==="boost" && (targetZ==null||!p.mz[targetZ])) return false;
@@ -1029,10 +1058,10 @@ const Duel = {
       if(!fusionOpt) return false;
     }
     p.hand.splice(p.hand.indexOf(c),1); p.grave.push(c);
-    if(p===this.AI) await this.announce(p,c,`${p.name} setzt ${c.law==="Trick"?"einen Trick":"eine "+c.law+"-Maßnahme"} ein!`,this.spellPreview(p,c,targetZ));
+    await this.announce(p,c,`${p.name} setzt ${c.law==="Trick"?"einen Trick":"eine "+c.law+"-Maßnahme"} ein!`,this.spellPreview(p,c,targetZ));
     if(this.over) return false;
-    banner(c.law==="Trick"?c.name+"!":c.law+"!"); this.fxStamp(c);
-    this.log(`${p===this.P?"Du":p.name}: ${c.name}${c.ref&&c.ref!==c.law?" ("+c.ref+")":""}`);
+    this.bn(c.law==="Trick"?c.name+"!":c.law+"!"); this.fxStamp(c);
+    this.log(`${this.who(p)}: ${c.name}${c.ref&&c.ref!==c.law?" ("+c.ref+")":""}`);
     const n=this.monsterCount(p);
     switch(c.effect){
       case "heal": this.heal(p,v); break;
@@ -1081,13 +1110,16 @@ const Duel = {
         if(use){ ti=i; break; }
       }
       if(ti<0) return false;
+    } else if(this.host){
+      const r = await Net.ask("trap",{traps:traps.map(i=>d.st[i].card._k), att:attacker.mz[fromZ]?attacker.mz[fromZ].card.name:"?"});
+      ti = r>=0 && r<traps.length ? traps[r] : -1;
     } else ti=AI.pickTrap(traps, attacker.mz[fromZ]);
     if(ti<0) return false;
     const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t);
     const a=attacker.mz[fromZ];
-    if(d===this.AI) await this.announce(d,t,`${d.name} reagiert auf deinen Angriff!`,`Gegen: ${a?a.card.name:"deinen Angreifer"}`);
+    await this.announce(d,t,`${d.name} reagiert auf deinen Angriff!`,`Gegen: ${a?a.card.name:"deinen Angreifer"}`);
     if(this.over) return true;
-    banner(t.law==="Trick"?t.name+"!":t.law+"!"); this.fxStamp(t);
+    this.bn(t.law==="Trick"?t.name+"!":t.law+"!"); this.fxStamp(t);
     this.log(`${this.me(d,"Du setzt","setzt")} ${t.name} ein!`); await sleep(600);
     const imm=this.isImmune(a);
     switch(t.effect){
@@ -1108,6 +1140,7 @@ const Duel = {
   },
   async attack(p, fromZ, toZ){ // toZ=null => direkt
     const a=p.mz[fromZ], o=this.opp(p);
+    if(this.client){ if(this.canAttack(a) && (toZ!=null || this.canDirect(p,a))) this.sendAct("attack",[fromZ,toZ]); return; }
     if(this.over||!this.canAttack(a)) return;
     if(toZ==null && !this.canDirect(p,a)) return;
     if(toZ!=null && !this.validTargets(o).includes(toZ)) { if(p===this.P) toast("Ein Charakter mit Deckung schützt die anderen!"); return; }
@@ -1136,12 +1169,13 @@ const Duel = {
         if(a.card.effect==="battle_burn") this.damage(o,a.card.val,a.card.name);
         if(a.card.effect==="battle_draw"){ this.draw(p); this.log(`${a.card.name}: ${this.me(p,"du ziehst","zieht")} 1 Karte`); }
       }
-    } finally { this.render(); this.busy = this.active===this.AI && !this.over; }
+    } finally { this.render(); this.busy = this.active===this.AI && !this.over && !this.host; }
   },
 
   /* ---------- Animationen ---------- */
   zoneEl(p,z){ const el=(p===this.P?$("myMZ"):$("oppMZ")); return el&&el.children[z]; },
   async fxAttack(p, fromZ, toZ){
+    if(this.host) Net.send({t:"fx",k:"atk",s:p===this.P?"h":"g",from:fromZ,to:toZ});
     const src=this.zoneEl(p,fromZ), a=p.mz[fromZ];
     const dst = toZ==null ? (p===this.P?$("oppLP"):$("myLP")).parentElement : this.zoneEl(this.opp(p),toZ);
     if(!src||!dst||!a) return;
@@ -1180,12 +1214,14 @@ const Duel = {
     const field=$("duel"); field.classList.remove("shake"); void field.offsetWidth; field.classList.add("shake");
   },
   fxPoof(p,z){
+    if(this.host) Net.send({t:"fx",k:"poof",s:p===this.P?"h":"g",z});
     const el=this.zoneEl(p,z); if(!el||UI.current!=="duel") return;
     const r=el.getBoundingClientRect(), s=document.createElement("div"); s.className="fx-part"; s.textContent="💨";
     s.style.left=(r.left+r.width/2)+"px"; s.style.top=(r.top+r.height/2)+"px"; s.style.fontSize="54px"; $("fx").appendChild(s);
     s.animate([{transform:"translate(-50%,-50%) scale(.5)",opacity:1},{transform:"translate(-50%,-70%) scale(1.8)",opacity:0}],{duration:REDUCED()?300:700}).finished.then(()=>s.remove());
   },
   fxStamp(c){
+    if(this.host) Net.send({t:"fx",k:"stamp",c:c._k});
     if(UI.current!=="duel"||REDUCED()) return;
     const s=document.createElement("div"); s.className="fx-stamp "+(c.law||""); s.textContent=c.ref&&c.ref!==c.law?c.ref:(c.law==="Trick"?"TRICK!":c.law); $("fx").appendChild(s);
     s.animate([{transform:"translate(-50%,-50%) scale(2.6) rotate(-14deg)",opacity:0},{transform:"translate(-50%,-50%) scale(1) rotate(-8deg)",opacity:.95,offset:.25},
@@ -1199,7 +1235,7 @@ const Duel = {
   },
 
   /* ---------- Spieler-Interaktion ---------- */
-  myTurn(){ return this.active===this.P && this.ready && !this.busy && !this.over; },
+  myTurn(){ return this.active===this.P && this.ready && !this.busy && !this.over && !(this.client && this.waiting); },
   tapHand(i){
     const c=this.P.hand[i]; if(!c) return;
     if(!this.myTurn()) return UI.modal(c);
@@ -1250,7 +1286,9 @@ const Duel = {
   },
   directAttack(){ if(this.mode&&this.mode.type==="attack"){ const f=this.mode.from; this.mode=null; this.attack(this.P,f,null); } },
   tapMyST(z){ const s=this.P.st[z]; if(s) UI.modal(s.card,[["Wird automatisch bei einem Angriff angeboten",null,"ghost"]]); },
-  async quit(){ if(this.over||await UI.ask("Einsatz abbrechen? (zählt als Niederlage)")){ this.over=true; this.opts.onEnd=null; this.closeReveal(); UI.show("home"); } },
+  async quit(){ if(this.over||await UI.ask("Einsatz abbrechen? (zählt als Niederlage)")){
+    if(this.online && !this.over) Net.send({t:"quit"});
+    this.over=true; this.opts.onEnd=null; this.closeReveal(); if(this.online) Net.close(); UI.show("home"); } },
 
   /* ---------- Rendering ---------- */
   renderMZ(p, el, mine){
@@ -1277,6 +1315,7 @@ const Duel = {
   },
   render(){
     const P=this.P, A=this.AI; if(!P) return;
+    if(this.host) Net.queueState();
     $("myLP").textContent=P.lp; $("oppLP").textContent=A.lp;
     $("myPile").textContent=`Deck ${P.deck.length} · Fusion ${P.extra.length} · Raus ${P.grave.length}`;
     $("oppPile").textContent=`Deck ${A.deck.length} · Fusion ${A.extra.length} · Raus ${A.grave.length}`;
@@ -1384,6 +1423,211 @@ const AI = {
       }
     }
   },
+};
+
+/* ============================ ONLINE-MODUS ============================
+   Peer-to-Peer über PeerJS (WebRTC). Kein eigener Server nötig: Der kostenlose
+   PeerJS-Vermittlungsserver hilft nur beim Verbindungsaufbau, danach laufen die Daten
+   direkt zwischen den Geräten.
+   Gastgeber (host) rechnet das komplette Duell; der Gast (client) schickt nur seine
+   Aktionen und bekommt nach jeder Änderung den neuen Spielstand.
+   ===================================================================== */
+const HIDDEN = {id:"?",_k:null,name:"Verdeckt",faction:"polizei",type:"monster",attr:"streife",level:1,atk:0,def:0,effect:"none",val:0,rarity:"N",
+  law:"StPO",ref:"",materials:[],text:"",art:{emoji:"❓",c1:"#ccc",c2:"#555",img:""}};
+const ONLINE_WIN=150, ONLINE_LOSS=30;
+
+const Net = {
+  peer:null, conn:null, role:null, code:"", table:{}, pend:{}, rid:0, actQ:Promise.resolve(), _sq:false, closing:false,
+  cfg(){ return Object.assign({debug:0}, Store.get("peercfg",{})); },   // für Tests: eigener PeerServer
+  pid(code){ return "einsatzduell-"+code.toLowerCase(); },
+  newCode(){ const A="ABCDEFGHJKMNPQRSTUVWXYZ23456789"; return Array.from({length:5},()=>A[Math.floor(Math.random()*A.length)]).join(""); },
+  available(){ return typeof Peer!=="undefined"; },
+  host(side,name){
+    this.close(); this.closing=false; this.role="host"; this.side=side; this.name=name; this.code=this.newCode();
+    Lobby.status("Raum wird erstellt …");
+    this.peer=new Peer(this.pid(this.code), this.cfg());
+    this.peer.on("open",()=>Lobby.showCode(this.code));
+    this.peer.on("error",e=>{ if(e.type==="unavailable-id") return this.host(side,name); Lobby.error(e); });
+    this.peer.on("connection",c=>{
+      if(this.conn){ c.on("open",()=>{ c.send({t:"busy"}); setTimeout(()=>c.close(),500); }); return; }
+      this.conn=c; c.on("open",()=>{ this.wire(); this.send({t:"welcome",name,side,v:window.APP_VERSION||"dev"}); Lobby.status("Gegner verbunden – Duell startet …"); });
+    });
+  },
+  join(code,name){
+    this.close(); this.closing=false; this.role="client"; this.name=name; this.code=code.toUpperCase();
+    Lobby.status("Verbinde mit Raum "+this.code+" …");
+    this.peer=new Peer(undefined, this.cfg());
+    this.peer.on("open",()=>{ this.conn=this.peer.connect(this.pid(this.code),{reliable:true}); this.conn.on("open",()=>this.wire()); });
+    this.peer.on("error",e=>{ if(e.type==="peer-unavailable") return Lobby.error("Raum "+this.code+" nicht gefunden. Code prüfen – ist der Gastgeber noch in der Lobby?"); Lobby.error(e); });
+  },
+  wire(){ this.conn.on("data",m=>{ try{ this.onData(m); }catch(e){ console.error(e); } }); this.conn.on("close",()=>this.onClose()); },
+  send(m){ try{ if(this.conn&&this.conn.open) this.conn.send(m); }catch(e){ console.error(e); } },
+  ask(kind,data){ return new Promise(res=>{ const id=++this.rid; this.pend[id]=res; this.send({t:"ask",id,kind,data}); }); },
+  close(){ this.closing=true; try{ this.conn&&this.conn.close(); }catch(e){} try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
+  onClose(){
+    if(this.closing) return;
+    this.conn=null;
+    if(UI.current==="duel" && Duel.online && !Duel.over){ toast("Verbindung zum Gegner verloren"); Duel.opponentLeft(); }
+    else if(UI.current==="online") Lobby.error("Verbindung getrennt");
+  },
+  queueState(){ if(this._sq) return; this._sq=true; Promise.resolve().then(()=>{ this._sq=false; this.send({t:"state",s:Duel.snap()}); }); },
+  sendStart(){
+    const table={}; [Duel.P,Duel.AI].forEach(pl=>[...pl.deck,...pl.extra,...pl.hand].forEach(c=>table[c._k]=c));
+    this.send({t:"start", table, hostName:Duel.P.name, guestName:Duel.AI.name, hostSide:Duel.side});
+  },
+  onData(m){
+    switch(m.t){
+      // ---- beim Gast ----
+      case "welcome": {
+        if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
+        const side=OTHER[m.side];
+        const deckIds = Deck.validFor(side) ? Deck.lists[side] : Deck.autoOwned(side);
+        const deck = (deckIds.length>=10 ? deckIds : Deck.genDeck(side,{maxRarity:"R"}).main).map(id=>DB.byId(id)).filter(Boolean);
+        const extra = Deck.fusionDeck(side).map(id=>DB.byId(id)).filter(Boolean);
+        this.send({t:"join", name:this.name, deck, extra, v:window.APP_VERSION||"dev"});
+        Lobby.status(`Verbunden mit ${m.name} – Duell startet …`);
+        break; }
+      case "busy": Lobby.error("Dieser Raum ist schon voll."); break;
+      case "start": Duel.startClient(m); break;
+      case "state": Duel.applyState(m.s); break;
+      case "ack": Duel.waiting=false; Duel.render(); break;
+      case "log": Duel.history.push({t:Math.ceil(Duel.turn/2)||1, who:m.who, msg:m.msg}); $("log").textContent=m.msg; break;
+      case "ann": { const c=this.table[m.c]; if(c) Duel.showReveal(c,m.head,m.result); break; }
+      case "fx": Duel.clientFx(m); break;
+      case "ask": Duel.clientAsk(m); break;
+      case "end": Duel.endClient(m.w==="g"); break;
+      // ---- beim Gastgeber ----
+      case "join": {
+        if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
+        Duel.start(this.side,{ online:{myName:this.name, guestName:m.name||"Gast", guestDeck:m.deck, guestExtra:m.extra},
+          onEnd:win=>{ Player.earn(win?ONLINE_WIN:ONLINE_LOSS); return Promise.resolve(); } });
+        break; }
+      case "act": this.actQ=this.actQ.then(()=>this.runAct(m)).catch(e=>console.error(e)).then(()=>{ this.queueState(); this.send({t:"ack"}); }); break;
+      case "reply": { const f=this.pend[m.id]; delete this.pend[m.id]; f&&f(m.val); break; }
+      // ---- beide ----
+      case "quit": if(UI.current==="duel" && !Duel.over){ toast("Der Gegner hat aufgegeben"); Duel.opponentLeft(); } break;
+    }
+  },
+  /* Aktion des Gastes beim Gastgeber ausführen (nur wenn der Gast wirklich am Zug ist) */
+  async runAct(m){
+    const D=Duel, G=D.AI;
+    if(!D.host || D.over || D.active!==G || !D.ready) return;
+    const a=m.a||[];
+    switch(m.fn){
+      case "summon": D.summon(G,a[0],a[1],a[2]||[]); break;
+      case "setST": D.setST(G,a[0]); break;
+      case "changePos": D.changePos(G,a[0]); break;
+      case "activateSpell": { let opt; if(a[2]) opt=D.fusionOptions(G).find(o=>o.fusion.id===a[2]); if(a[2]&&!opt) break;
+        await D.activateSpell(G,a[0],a[1],opt); break; }
+      case "attack": await D.attack(G,a[0],a[1]); break;
+      case "endTurn": await D.idle(); D.endTurn(true); break;
+    }
+    await D.idle();
+  },
+};
+
+/* ---------- Duell-Erweiterungen für den Online-Modus ---------- */
+Object.assign(Duel, {
+  /* Spielstand aus Sicht des Gastes (verdeckte Karten des Gastgebers bleiben geheim) */
+  snap(){
+    const K=c=>c._k;
+    const pl=(p,own)=>({name:p.name, lp:p.lp, summoned:p.summoned,
+      hand: own? p.hand.map(K) : p.hand.length,
+      deck: own? p.deck.map(K).sort() : p.deck.length,
+      extra: own? p.extra.map(K) : p.extra.length,
+      grave: p.grave.map(K),
+      mz: p.mz.map(m=>m&&{k:(m.faceDown&&!own)?null:K(m.card), pos:m.pos, faceDown:m.faceDown, atk:m.atk, attacks:m.attacks, attacked:m.attacked, changed:m.changed, lockedUntil:m.lockedUntil}),
+      st: p.st.map(x=>x&&{k: own?K(x.card):null})});
+    return {turn:this.turn, active:this.active===this.AI?"me":"opp", ready:this.ready, over:this.over, me:pl(this.AI,true), opp:pl(this.P,false)};
+  },
+  startClient(m){
+    this.online=true; this.client=true; this.host=false; this.waiting=false; this.over=false; this.mode=null; this.busy=false;
+    this.side=OTHER[m.hostSide]; this.opts={}; this.history=[]; this._ann=null; this._lastTurn=-1; this.turn=0;
+    Net.table=m.table;
+    $("reveal").classList.remove("show"); $("fx").innerHTML="";
+    $("oppWho").textContent=`${FACTIONS[m.hostSide][1]} ${m.hostName}`;
+    $("myWho").textContent=`${FACTIONS[this.side][1]} ${m.guestName} – ${FACTIONS[this.side][0]}`;
+    UI.show("duel"); banner("ONLINE-DUELL!");
+    this.log("Online-Duell gegen "+m.hostName+" beginnt!","opp");
+  },
+  applyState(s){
+    const T=Net.table, card=k=>k==null?HIDDEN:(T[k]||HIDDEN);
+    const mk=(d,own)=>({name:d.name, lp:d.lp, summoned:d.summoned,
+      hand: own? d.hand.map(card) : Array(d.hand).fill(HIDDEN),
+      deck: own? d.deck.map(card) : Array(d.deck).fill(HIDDEN),
+      extra: own? d.extra.map(card) : Array(d.extra).fill(HIDDEN),
+      grave: d.grave.map(card),
+      mz: d.mz.map(m=>m&&Object.assign({},m,{card:card(m.k)})),
+      st: d.st.map(x=>x&&{faceDown:true, card:card(x.k)})});
+    const oldMe=this.P&&this.P.lp, oldOpp=this.AI&&this.AI.lp;
+    this.P=mk(s.me,true); this.AI=mk(s.opp,false);
+    this.active = s.active==="me" ? this.P : this.AI; this.ready=s.ready;
+    if(s.turn!==this._lastTurn && s.ready){
+      this._lastTurn=s.turn; this.turn=s.turn; this.mode=null;
+      banner(s.active==="me"?"DEIN ZUG!":"GEGNER!");
+      $("phaseLbl").textContent = s.active==="me" ? `Dein Zug ${Math.ceil(s.turn/2)}` : `${this.AI.name} am Zug`;
+    }
+    this.turn=s.turn;
+    if(UI.current==="duel"){
+      if(oldMe!=null && s.me.lp!==oldMe){ this.floatText($("myLP"), (s.me.lp<oldMe?"−":"+")+Math.abs(s.me.lp-oldMe), s.me.lp<oldMe?"#ff3b3b":"#3ddc84"); if(s.me.lp<oldMe) this.shakeLP($("myLP")); }
+      if(oldOpp!=null && s.opp.lp!==oldOpp){ this.floatText($("oppLP"), (s.opp.lp<oldOpp?"−":"+")+Math.abs(s.opp.lp-oldOpp), s.opp.lp<oldOpp?"#ff3b3b":"#3ddc84"); if(s.opp.lp<oldOpp) this.shakeLP($("oppLP")); }
+    }
+    this.render();
+  },
+  shakeLP(el){ el.parentElement.classList.remove("shake"); void el.offsetWidth; el.parentElement.classList.add("shake"); },
+  clientFx(m){
+    const side = s => s==="g" ? this.P : this.AI;      // "g" = Gast = ich
+    if(m.k==="atk") this.fxAttack(side(m.s), m.from, m.to);
+    if(m.k==="poof") this.fxPoof(side(m.s), m.z);
+    if(m.k==="stamp" && Net.table[m.c]) this.fxStamp(Net.table[m.c]);
+    if(m.k==="banner") banner(m.text);
+  },
+  /* Gastgeber fragt: Willst du eine Reaktion einsetzen? */
+  async clientAsk(m){
+    let val=-1;
+    if(m.kind==="trap"){
+      for(let i=0;i<m.data.traps.length;i++){
+        const c=Net.table[m.data.traps[i]]; if(!c) continue;
+        const use = await new Promise(res=>UI.modal(c,[[`Reaktion gegen ${m.data.att} einsetzen`,()=>res(true),"red"]],null,()=>res(false),"Nicht einsetzen"));
+        if(use){ val=i; break; }
+      }
+    }
+    Net.send({t:"reply", id:m.id, val});
+  },
+  endClient(won){
+    if(this.over && this._ended) return; this.over=true; this._ended=true; this.closeReveal(); this.render();
+    setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
+      setTimeout(()=>{ Player.earn(won?ONLINE_WIN:ONLINE_LOSS); if(UI.current!=="duel") return;
+        UI.modal(null,[["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },1300); },300);
+  },
+  opponentLeft(){
+    if(this.over) return;
+    if(this.host){ this.win(this.P); } else { this.endClient(true); }
+  },
+});
+
+/* ---------- Lobby ---------- */
+const Lobby = {
+  side:"polizei",
+  render(){
+    $("onName").value = Store.get("nick","") || "";
+    $("onSide").innerHTML=Object.keys(FACTIONS).map(f=>`<span data-f="${f}" class="${f===this.side?"on":""}">${FACTIONS[f][1]} ${FACTIONS[f][0]}</span>`).join("");
+    $("onSide").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.side=s.dataset.f;this.render()});
+    $("onCodeBox").style.display="none"; this.status(Net.available()?"":"Online-Modus nicht verfügbar (Bibliothek fehlt).");
+  },
+  name(){ const n=($("onName").value||"").trim().slice(0,16); if(!n){ toast("Bitte gib zuerst deinen Spielernamen ein"); $("onName").focus(); return null; } Store.set("nick",n); return n; },
+  create(){ const n=this.name(); if(!n) return; Duel._ended=false; Net.host(this.side,n); },
+  join(){ const n=this.name(); if(!n) return; const code=($("onJoin").value||"").trim().toUpperCase(); if(code.length<5) return toast("Bitte den 5-stelligen Code eingeben"); Duel._ended=false; Net.join(code,n); },
+  showCode(code){ $("onCodeBox").style.display=""; $("onCode").textContent=code; this.status("Warte auf deinen Gegner … Gib ihm den Code."); },
+  async share(){
+    const text=`Komm ins Einsatz-Duell! Mein Raumcode: ${Net.code}`;
+    try{ if(navigator.share){ await navigator.share({text}); return; } }catch(e){}
+    try{ await navigator.clipboard.writeText(Net.code); toast("Code kopiert"); }catch(e){ toast("Code: "+Net.code); }
+  },
+  status(t){ $("onStatus").textContent=t; },
+  error(e){ const msg = typeof e==="string" ? e : ({"network":"Keine Internetverbindung zum Vermittlungsserver.","server-error":"Vermittlungsserver nicht erreichbar.","browser-incompatible":"Dieses Gerät unterstützt keine Online-Duelle (WebRTC)."}[e.type] || ("Fehler: "+(e.type||e.message||e)));
+    this.status("⚠️ "+msg); toast(msg); },
+  leave(){ Net.close(); UI.show("home"); },
 };
 
 /* ============================ START ============================ */
