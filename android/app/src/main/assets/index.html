@@ -232,6 +232,23 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 .sk-tx b{font-family:var(--comic);letter-spacing:1px;font-weight:normal;font-size:18px;color:var(--yellow)}
 .sk-tx span{font-size:13px;opacity:.9}
 .pips{color:var(--yellow);letter-spacing:2px}
+/* Turnier */
+.tstatus{font-family:var(--comic);font-size:24px;letter-spacing:1px;color:var(--yellow)}
+.tmine{margin-top:10px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:12px;padding:8px 10px;font-weight:600}
+.tp{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.28);border:3px solid var(--ink);border-radius:12px;padding:8px 10px;margin-bottom:6px}
+.tp.me{border-color:var(--yellow)}
+.tp .pl{width:34px;text-align:center;font-family:var(--comic);font-size:20px}
+.tp .nm2{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.tp .sc{font-family:var(--comic);font-size:18px;color:var(--yellow)}
+.tround{margin-bottom:12px}
+.tround>b{font-family:var(--comic);letter-spacing:1px;font-weight:normal;font-size:18px;color:var(--blue)}
+.tm{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);align-items:center;gap:6px;background:rgba(0,0,0,.25);border:2px solid var(--ink);border-radius:10px;padding:6px 10px;margin-top:6px}
+.tm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm span:last-child{text-align:right}
+.tm i{font-style:normal;text-align:center;opacity:.7}
+.tm.play{border-color:var(--red)} .tm.mine{box-shadow:0 0 0 2px var(--yellow)}
+.tm .win{color:var(--green);font-weight:800}
+.tm.done span:not(.win){opacity:.55}
 /* Online */
 .roomcode{font-family:var(--comic);font-size:56px;letter-spacing:10px;color:var(--yellow);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);margin:4px 0 10px}
 .codein{text-transform:uppercase;letter-spacing:8px;font-size:28px;text-align:center;font-family:var(--comic)}
@@ -317,8 +334,8 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
   <div class="topbar"><button class="small ghost" onclick="Lobby.leave()">◀</button><h2>Online-Duell</h2></div>
   <div class="panel">
     <label>Dein Spielername</label><input id="onName" maxlength="16" placeholder="z. B. Kommissar Tim">
-    <label>Deine Seite (als Gastgeber)</label><div class="tabs" id="onSide"></div>
-    <p class="muted" style="margin:0">Wer beitritt, spielt automatisch die andere Seite – mit seinem eigenen Deck.</p>
+    <label>Deine Seite</label><div class="tabs" id="onSide"></div>
+    <p class="muted" style="margin:0">Im Duell spielt, wer beitritt, automatisch die andere Seite – jeder mit seinem eigenen Deck. Im Turnier zählt die Seite, die du hier wählst.</p>
   </div>
   <div class="panel">
     <h3 style="color:var(--yellow)">Raum erstellen</h3>
@@ -335,7 +352,14 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
     </div>
   </div>
   <div class="panel">
+    <h3 style="color:var(--yellow)">🏆 Turnier erstellen</h3>
+    <p class="muted">Bis zu 8 Spieler in einem Raum. Pokal, Münzen und XP für die Besten.</p>
+    <div class="tabs" id="onFmt"></div>
+    <button class="red" onclick="Lobby.createTour()" style="background:#a463ff">🏆 Turnier-Raum erstellen</button>
+  </div>
+  <div class="panel">
     <h3 style="color:var(--yellow)">Raum beitreten</h3>
+    <p class="muted" style="margin-top:0">Funktioniert für Duelle und Turniere.</p>
     <input id="onJoin" maxlength="5" placeholder="CODE" autocomplete="off" autocapitalize="characters" class="codein">
     <button class="blue" onclick="Lobby.join()" style="margin-top:10px;width:100%">Beitreten</button>
   </div>
@@ -387,7 +411,7 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
     <div class="row" style="flex-wrap:nowrap"><input id="pfName" maxlength="16" placeholder="z. B. Kommissar Tim"><button class="small green" onclick="Prog.saveNick()">OK</button></div>
   </div>
   <div class="tabs" id="pfTabs"></div>
-  <div class="panel"><div class="pfhead" id="pfHead"></div><div class="pfstats" id="pfStats"></div></div>
+  <div class="panel"><div class="pfhead" id="pfHead"></div><div class="pfstats" id="pfStats"></div><p class="muted" id="pfCups" style="text-align:center;margin:10px 0 0"></p></div>
   <h3 style="color:var(--yellow);margin:6px 0 8px">Skills</h3>
   <div id="pfSkills"></div>
   <div class="panel" style="margin-top:12px">
@@ -399,6 +423,29 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
     Pro Stufe: Charaktere +5 % ATK/DEF, Maßnahmen +10 % Effektwert. Der Fortschritt steht in der Sammlung unter jeder Karte.</p>
     <button class="small ghost" onclick="Prog.reset(Prog.tab)">♻ Skills dieser Partei zurücksetzen (🪙200)</button>
   </div>
+</section>
+
+<!-- ================= TURNIER ================= -->
+<section id="tour" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="Tour.leave()">◀</button><h2 id="tTitle">Turnier</h2></div>
+  <div class="panel" style="text-align:center">
+    <div class="tstatus" id="tStatus">Verbinde …</div>
+    <div id="tCodeBox" style="display:none">
+      <div class="muted">Turnier-Code</div>
+      <div class="roomcode" id="tCode"></div>
+      <div class="row" style="justify-content:center">
+        <button class="small green" onclick="Lobby.share()">📤 Einladung teilen</button>
+        <button class="small blue" onclick="Lobby.copyLink()">🔗 Link kopieren</button>
+      </div>
+    </div>
+    <div class="tmine" id="tMine"></div>
+    <button class="red" id="tStart" onclick="Tour.start()" style="margin-top:12px;display:none">▶ Turnier starten</button>
+  </div>
+  <h3 style="color:var(--yellow);margin:6px 0 8px">Spieler</h3>
+  <div id="tPlayers"></div>
+  <h3 style="color:var(--yellow);margin:14px 0 8px">Paarungen</h3>
+  <div id="tMatches"></div>
+  <button class="small ghost" onclick="Tour.leave()" style="margin-top:16px">Turnier verlassen</button>
 </section>
 
 <!-- ================= SHOP ================= -->
@@ -1076,7 +1123,7 @@ const Player = {
       DB.cards.filter(c=>c.starter).forEach(c=>this.owned[c.id]=2); this.save(); }
     else Object.assign(this, d);
   },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,progress:this.progress,prog:this.prog}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,progress:this.progress,prog:this.prog,trophies:this.trophies||[]}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1){ this.owned[id]=(this.owned[id]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -1186,6 +1233,8 @@ const Prog = {
     $("pfHead").innerHTML=`<div class="rankbadge">${FACTIONS[f][1]}</div><div style="flex:1;min-width:0">
       <div class="rankname">${this.rank(f,p.lv)}</div><div class="muted">Level ${p.lv}${p.lv>=MAX_LEVEL?" (Maximum)":` · ${p.xp}/${need} XP`}</div>
       <div class="xpbar"><i style="width:${pct}%"></i></div></div>`;
+    const tr=Player.trophies||[], cups=[1,2,3].map(pl=>tr.filter(t=>t.place===pl).length);
+    $("pfCups").innerHTML = tr.length ? `🏆 Pokale: 🥇 ${cups[0]} · 🥈 ${cups[1]} · 🥉 ${cups[2]}` : "🏆 Noch keine Turnier-Pokale – gewinne ein Online-Turnier!";
     $("pfStats").innerHTML=`<div><b>${p.sp}</b><span>Skillpunkte</span></div><div><b>${owned.length}/${DB.ofFaction(f).length}</b><span>Karten</span></div><div><b>${maxed}</b><span>Karten Stufe 5</span></div>`;
     $("pfSkills").innerHTML=SKILLS.map(s=>{const r=this.skill(f,s.id), locked=p.lv<s.minLv, full=r>=s.max;
       return `<div class="skill ${locked?"locked":""}"><div class="sk-ic">${locked?"🔒":s.icon}</div><div class="sk-tx"><b>${s.name[f]}</b>
@@ -1280,6 +1329,7 @@ const UI = {
     if(id==="story") Story.render();
     if(id==="online") Lobby.render();
     if(id==="profile") Prog.render();
+    if(id==="tour") Tour.render();
     if(id==="account") Account.render();
     if(id==="home") this.badges();
   },
@@ -1298,6 +1348,7 @@ const UI = {
     if(this.current==="storyEditor"){StoryEd.back();return true}
     if(this.current==="duel"){Duel.quit();return true}
     if(this.current==="opening"){this.show("shop");return true}
+    if(this.current==="tour"){Tour.leave();return true}
     if(this.current!=="home"){this.show("home");return true}
     return false;
   },
@@ -1830,6 +1881,7 @@ const Duel = {
         const onEnd=this.opts.onEnd; this.opts.onEnd=null;
         if(onEnd) await onEnd(won);
         if(UI.current!=="duel") return;
+        if(this.online && Tour.active()) return UI.modal(null,[["🏆 Zum Turnier",()=>{Net.endDuelConn();UI.show("tour")},"red"]]);
         const again = this.online ? ["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"] : this.opts.oppName ? ["📖 Zur Story",()=>UI.show("story"),"red"] : ["Nochmal",()=>UI.startDuel(),"red"];
         UI.modal(null,[again,["Hauptmenü",()=>UI.show("home"),"blue"]]);
       },1300); },300);
@@ -2282,7 +2334,10 @@ const Duel = {
   tapMyST(z){ const s=this.P.st[z]; if(s) UI.modal(s.card,[["Wird automatisch bei einem Angriff angeboten",null,"ghost"]]); },
   async quit(){ if(this.over||await UI.ask("Einsatz abbrechen? (zählt als Niederlage)")){
     if(this.online && !this.over) Net.send({t:"quit"});
-    this.over=true; this.opts.onEnd=null; this.closeReveal(); if(this.online) Net.close(); UI.show("home"); } },
+    const inTour = this.online && Tour.active();
+    if(inTour && !this.over) Tour.duelEnded(false, 0, 1);
+    this.over=true; this.opts.onEnd=null; this.closeReveal();
+    if(inTour){ Net.endDuelConn(); UI.show("tour"); } else { if(this.online) Net.close(); UI.show("home"); } } },
 
   /* ---------- Rendering ---------- */
   renderMZ(p, el, mine){
@@ -2436,40 +2491,81 @@ const Net = {
   pid(code){ return "einsatzduell-"+code.toLowerCase(); },
   newCode(){ const A="ABCDEFGHJKMNPQRSTUVWXYZ23456789"; return Array.from({length:5},()=>A[Math.floor(Math.random()*A.length)]).join(""); },
   available(){ return typeof Peer!=="undefined"; },
-  host(side,name){
-    this.close(); this.closing=false; this.role="host"; this.side=side; this.name=name; this.code=this.newCode();
-    Lobby.status("Raum wird erstellt …");
-    this.peer=new Peer(this.pid(this.code), this.cfg());
-    this.peer.on("open",()=>Lobby.showCode(this.code));
-    this.peer.on("error",e=>{ if(e.type==="unavailable-id") return this.host(side,name); Lobby.error(e); });
-    this.peer.on("connection",c=>{
-      if(this.conn){ c.on("open",()=>{ c.send({t:"busy"}); setTimeout(()=>c.close(),500); }); return; }
-      this.conn=c; c.on("open",()=>{ this.wire(); this.send({t:"welcome",name,side,v:window.APP_VERSION||"dev"}); Lobby.status("Gegner verbunden – Duell startet …"); });
+  /* Eigene Peer-Verbindung zum Vermittlungsserver öffnen (id = Raumcode für Gastgeber, sonst zufällig) */
+  openPeer(id, onOpen, onFail){
+    try{ this.peer&&this.peer.destroy(); }catch(e){}
+    this.closing=false; let opened=false;
+    const p=new Peer(id||undefined, this.cfg()); this.peer=p;
+    p.on("open",()=>{ opened=true; onOpen&&onOpen(p); });
+    p.on("connection",c=>this.route(c));
+    p.on("disconnected",()=>{ if(!this.closing){ try{ p.reconnect(); }catch(e){} } });
+    p.on("error",e=>{
+      if(!opened){ onFail&&onFail(e); return; }
+      if(e.type==="peer-unavailable" && Tour.expect && Tour.expect.role==="client") return Tour.matchFailed();
+      if(e.type==="peer-unavailable" && this.role==="client" && !Tour.active()) return Lobby.error("Raum "+this.code+" nicht gefunden. Code prüfen – ist der Gastgeber noch in der Lobby?");
+      if(!Tour.active()) Lobby.error(e); else console.warn("Peer:",e.type);
     });
   },
-  join(code,name){
-    this.close(); this.closing=false; this.role="client"; this.name=name; this.code=code.toUpperCase();
-    Lobby.status("Verbinde mit Raum "+this.code+" …");
-    this.peer=new Peer(undefined, this.cfg());
-    this.peer.on("open",()=>{ this.conn=this.peer.connect(this.pid(this.code),{reliable:true}); this.conn.on("open",()=>this.wire()); });
-    this.peer.on("error",e=>{ if(e.type==="peer-unavailable") return Lobby.error("Raum "+this.code+" nicht gefunden. Code prüfen – ist der Gastgeber noch in der Lobby?"); Lobby.error(e); });
+  /* Eingehende Verbindungen verteilen: Turnier-Match, Turnier-Beitritt oder normales Duell */
+  route(c){
+    const k=c.metadata&&c.metadata.kind;
+    if(k==="match") return this.acceptMatch(c);
+    if(Tour.hosting) return Tour.addMember(c);
+    if(this.role==="host") return this.acceptDuel(c);
+    try{ c.close(); }catch(e){}
   },
-  wire(){ this.conn.on("data",m=>{ try{ this.onData(m); }catch(e){ console.error(e); } }); this.conn.on("close",()=>this.onClose()); },
+  reject(c,t){ c.on("open",()=>{ try{ c.send({t}); }catch(e){} setTimeout(()=>{ try{c.close()}catch(e){} },500); }); },
+  acceptDuel(c){
+    if(this.conn) return this.reject(c,"busy");
+    this.conn=c;
+    c.on("open",()=>{ this.wire(c); this.send({t:"welcome",name:this.name,side:this.side,v:window.APP_VERSION||"dev"}); Lobby.status("Gegner verbunden – Duell startet …"); });
+  },
+  acceptMatch(c){
+    const e=Tour.expect;
+    if(!e || e.role!=="host" || !c.metadata || c.metadata.mid!==e.mid || this.conn) return this.reject(c,"busy");
+    this.conn=c; this.role="host"; this.side=e.hostSide; this.name=Tour.myName();
+    c.on("open",()=>{ this.wire(c); this.send({t:"welcome",name:this.name,side:this.side,v:window.APP_VERSION||"dev",mid:e.mid}); });
+  },
+  host(side,name){
+    this.close(); this.role="host"; this.side=side; this.name=name; this.code=this.newCode();
+    Lobby.status("Raum wird erstellt …");
+    this.openPeer(this.pid(this.code), ()=>Lobby.showCode(this.code), e=>{ if(e.type==="unavailable-id") return this.host(side,name); Lobby.error(e); });
+  },
+  join(code,name){
+    this.close(); this.role="client"; this.name=name; this.code=code.toUpperCase();
+    Lobby.status("Verbinde mit Raum "+this.code+" …");
+    this.openPeer(null, p=>{ const c=p.connect(this.pid(this.code),{reliable:true,metadata:{kind:"join"}}); this.conn=c; c.on("open",()=>this.wire(c)); }, e=>Lobby.error(e));
+  },
+  /* Turnier: direkte Verbindung zum Match-Gegner aufbauen */
+  connectMatch(peerId, mid){
+    if(!this.peer) return Tour.matchFailed();
+    this.role="client"; this.name=Tour.myName();
+    const c=this.peer.connect(peerId,{reliable:true,metadata:{kind:"match",mid}}); this.conn=c; c.on("open",()=>this.wire(c));
+  },
+  wire(c){ c=c||this.conn; c.on("data",m=>{ try{ this.onData(m,c); }catch(e){ console.error(e); } }); c.on("close",()=>this.onConnClose(c)); },
   send(m){ try{ if(this.conn&&this.conn.open) this.conn.send(m); }catch(e){ console.error(e); } },
+  sendTo(c,m){ try{ if(c&&c.open) c.send(m); }catch(e){ console.error(e); } },
   ask(kind,data){ return new Promise(res=>{ const id=++this.rid; this.pend[id]=res; this.send({t:"ask",id,kind,data}); }); },
-  close(){ this.closing=true; try{ this.conn&&this.conn.close(); }catch(e){} try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
-  onClose(){
+  /* nur die Duell-Verbindung beenden (Turnier-Verbindung bleibt bestehen) */
+  endDuelConn(){ const c=this.conn; this.conn=null; this.pend={}; try{ c&&c.close(); }catch(e){} },
+  close(){ this.closing=true; try{ this.conn&&this.conn.close(); }catch(e){} Tour.reset(); try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
+  onConnClose(c){
     if(this.closing) return;
+    if(Tour.hub===c) return Tour.onHubClose();
+    if(c._tid) return Tour.onMemberClose(c);
+    if(c!==this.conn) return;
     this.conn=null;
     if(UI.current==="duel" && Duel.online && !Duel.over){ toast("Verbindung zum Gegner verloren"); Duel.opponentLeft(); }
     else if(UI.current==="online") Lobby.error("Verbindung getrennt");
   },
+  onClose(){ this.onConnClose(this.conn); },
   queueState(){ if(this._sq) return; this._sq=true; Promise.resolve().then(()=>{ this._sq=false; this.send({t:"state",s:Duel.snap()}); }); },
   sendStart(){
     const table={}; [Duel.P,Duel.AI].forEach(pl=>[...pl.deck,...pl.extra,...pl.hand].forEach(c=>table[c._k]=c));
     this.send({t:"start", table, hostName:Duel.P.name, guestName:Duel.AI.name, hostSide:Duel.side});
   },
-  onData(m){
+  onData(m,c){
+    if(m && typeof m.t==="string" && m.t.startsWith("t_")) return Tour.onData(m,c);
     switch(m.t){
       // ---- beim Gast ----
       case "welcome": {
@@ -2494,7 +2590,7 @@ const Net = {
       case "join": {
         if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
         Duel.start(this.side,{ online:{myName:this.name, guestName:m.name||"Gast", guestDeck:m.deck, guestExtra:m.extra, guestSkills:m.skills||{}},
-          onEnd:win=>{ Prog.reward(Duel.side, win?ONLINE_WIN:ONLINE_LOSS, win?150:60); return Promise.resolve(); } });
+          onEnd:win=>{ Prog.reward(Duel.side, win?ONLINE_WIN:ONLINE_LOSS, win?150:60); Tour.duelEnded(win, Duel.P.lp, Duel.AI.lp); return Promise.resolve(); } });
         break; }
       case "act": this.actQ=this.actQ.then(()=>this.runAct(m)).catch(e=>console.error(e)).then(()=>{ this.queueState(); this.send({t:"ack"}); }); break;
       case "reply": { const f=this.pend[m.id]; delete this.pend[m.id]; f&&f(m.val); break; }
@@ -2518,6 +2614,254 @@ const Net = {
     }
     await D.idle();
   },
+};
+
+/* ============================ TURNIER ============================
+   Ein Turnier-Raum (Gastgeber = Zentrale) mit bis zu 8 Spielern.
+   Formate: K.-o.-System ("ko") oder Jeder gegen jeden ("rr").
+   Die Zentrale verteilt die Paarungen; die beiden Spieler eines Matches verbinden
+   sich direkt miteinander (Peer-to-Peer) und spielen ein normales Online-Duell.
+   Das Ergebnis meldet jeder Spieler an die Zentrale (doppelte Meldungen werden ignoriert).
+   ===================================================================== */
+const TOUR_MAX=8;
+const TOUR_PRIZE = {1:{coins:500,xp:400,cup:"🥇"}, 2:{coins:250,xp:200,cup:"🥈"}, 3:{coins:120,xp:120,cup:"🥉"}};
+const Tour = {
+  hosting:false, member:false, hub:null, conns:{}, seq:0, myId:null,
+  players:[], matches:[], format:"ko", status:"lobby", round:0, rrRounds:[], view:null, expect:null, _failT:null, finished:null,
+  active(){ return this.hosting||this.member; },
+  myName(){ return Store.get("nick","")||"Spieler"; },
+  reset(){ clearTimeout(this._failT); Object.assign(this,{hosting:false,member:false,hub:null,conns:{},seq:0,myId:null,players:[],matches:[],status:"lobby",round:0,rrRounds:[],view:null,expect:null,finished:null}); },
+  isMemberConn(c){ return !!(c&&c._tid); },
+
+  /* ---------------- Zentrale (Gastgeber) ---------------- */
+  create(format){
+    const n=Lobby.name(); if(!n) return;
+    Net.close(); this.reset(); this.hosting=true; this.format=format; this.myId="org";
+    Net.role="tour"; Net.code=Net.newCode(); Net.name=n;
+    this.players=[{id:"org",name:n,side:Lobby.side,peer:Net.pid(Net.code),online:true}];
+    Lobby.status("Turnier-Raum wird erstellt …");
+    const open=()=>Net.openPeer(Net.pid(Net.code), ()=>{ UI.show("tour"); this.broadcast(); },
+      e=>{ if(e.type==="unavailable-id"){ Net.code=Net.newCode(); this.players[0].peer=Net.pid(Net.code); return open(); } Lobby.error(e); this.reset(); });
+    open();
+  },
+  addMember(c){
+    if(this.status!=="lobby") return Net.reject(c,"t_started");
+    if(this.players.length>=TOUR_MAX) return Net.reject(c,"t_full");
+    const id="m"+(++this.seq); c._tid=id; this.conns[id]=c;
+    c.on("open",()=>{ Net.wire(c); Net.sendTo(c,{t:"t_welcome",you:id,format:this.format,host:this.players[0].name}); });
+  },
+  sendToPlayer(id,m){ if(id===this.myId) return this.onData(m,null); Net.sendTo(this.conns[id],m); },
+  broadcast(){
+    this.view=this.buildView();
+    Object.values(this.conns).forEach(c=>Net.sendTo(c,{t:"t_state",v:this.view}));
+    this.render();
+  },
+  buildView(){
+    return {format:this.format, status:this.status, round:this.round, code:Net.code, host:this.players[0]&&this.players[0].name,
+      players:this.players.map(p=>({id:p.id,name:p.name,side:p.side,online:p.online,w:p.w||0,l:p.l||0,lp:p.lp||0})),
+      matches:this.matches.map(m=>({mid:m.mid,round:m.round,a:m.a,b:m.b,winner:m.winner||null,state:m.state})),
+      ranking:this.finished};
+  },
+  start(){
+    if(!this.hosting||this.status!=="lobby") return;
+    const ps=this.players.filter(p=>p.online);
+    if(ps.length<2) return toast("Mindestens 2 Spieler nötig (empfohlen 3–8)");
+    this.players=ps; this.status="running"; this.round=0; this.matches=[];
+    const ids=shuffle(ps.map(p=>p.id));
+    if(this.format==="ko"){ let size=1; while(size<ids.length) size*=2; const slots=[...ids]; while(slots.length<size) slots.push(null);
+      // Freilose gleichmäßig verteilen: Spieler auf gerade Plätze, Freilose auf ungerade
+      const arr=[]; const real=slots.filter(Boolean), byes=size-real.length;
+      for(let i=0;i<size/2;i++){ arr.push(real.shift()||null); arr.push(i<byes?null:(real.shift()||null)); }
+      this.koRound(arr);
+    } else { this.rrRounds=this.roundRobin(ids); this.nextRR(); }
+  },
+  roundRobin(ids){
+    const a=[...ids]; if(a.length%2) a.push(null); const n=a.length, rounds=[];
+    for(let r=0;r<n-1;r++){ const pairs=[]; for(let i=0;i<n/2;i++){ const x=a[i], y=a[n-1-i]; if(x&&y) pairs.push([x,y]); } rounds.push(pairs); a.splice(1,0,a.pop()); }
+    return rounds;
+  },
+  newMatch(a,b){ const m={mid:"x"+Math.random().toString(36).slice(2,8),round:this.round,a,b,state:"wait",tries:0}; this.matches.push(m); return m; },
+  koRound(parts){
+    this.round++;
+    for(let i=0;i<parts.length;i+=2){
+      const a=parts[i], b=parts[i+1], m=this.newMatch(a,b);
+      if(!a||!b){ m.state="done"; m.winner=a||b; m.bye=true; }
+    }
+    this.launch();
+  },
+  nextRR(){
+    if(this.round>=this.rrRounds.length) return this.finish();
+    this.round++; this.rrRounds[this.round-1].forEach(([a,b])=>this.newMatch(a,b)); this.launch();
+  },
+  pl(id){ return this.players.find(p=>p.id===id); },
+  launch(){
+    this.matches.filter(m=>m.round===this.round && m.state==="wait").forEach(m=>{
+      const A=this.pl(m.a), B=this.pl(m.b);
+      if(!A||!A.online) return this.result(m.mid,m.b,0);
+      if(!B||!B.online) return this.result(m.mid,m.a,0);
+      const [H,G] = m.tries%2 ? [B,A] : [A,B];                 // bei Verbindungsproblemen Rollen tauschen
+      const hostSide = H.side!==G.side ? H.side : (Math.random()<.5?"polizei":"verbrecher");   // Münzwurf bei gleicher Seite
+      m.state="play";
+      this.sendToPlayer(H.id,{t:"t_match",mid:m.mid,role:"host",hostSide,oppId:G.id,oppName:G.name,myId:H.id});
+      this.sendToPlayer(G.id,{t:"t_match",mid:m.mid,role:"client",hostSide,oppId:H.id,oppName:H.name,oppPeer:H.peer,myId:G.id});
+    });
+    this.checkRound();
+    this.broadcast();
+  },
+  result(mid,winner,lp){
+    const m=this.matches.find(x=>x.mid===mid); if(!m||m.state==="done") return;
+    if(winner!==m.a&&winner!==m.b) return;
+    m.state="done"; m.winner=winner; const loser=winner===m.a?m.b:m.a;
+    const W=this.pl(winner), L=this.pl(loser);
+    if(W){ W.w=(W.w||0)+1; W.lp=(W.lp||0)+(+lp||0); } if(L){ L.l=(L.l||0)+1; L.out = this.format==="ko" ? this.round : L.out; }
+    this.checkRound(); this.broadcast();
+  },
+  failed(mid){
+    const m=this.matches.find(x=>x.mid===mid); if(!m||m.state!=="play") return;
+    m.tries++;
+    if(m.tries>=3){ this.result(mid, Math.random()<.5?m.a:m.b, 0); toast("Match konnte nicht verbunden werden – Münzwurf entscheidet"); return; }
+    m.state="wait"; this.launch();
+  },
+  checkRound(){
+    const cur=this.matches.filter(m=>m.round===this.round);
+    if(this.status!=="running" || !cur.length || cur.some(m=>m.state!=="done")) return;
+    if(this.format==="ko"){
+      const winners=cur.map(m=>m.winner).filter(Boolean);
+      if(winners.length<=1) return this.finish(winners[0]);
+      setTimeout(()=>this.koRound(winners),1500);
+    } else setTimeout(()=>this.nextRR(),1500);
+  },
+  ranking(champion){
+    let list;
+    if(this.format==="ko"){
+      const score=p=> p.id===champion ? 1e9 : (p.out||0);
+      list=[...this.players].sort((a,b)=>score(b)-score(a));
+      list.forEach(p=>p.place=1+list.filter(q=>score(q)>score(p)).length);
+    } else {
+      // Siege → direkter Vergleich unter Punktgleichen → übrige LP
+      const h2h=p=>this.matches.filter(m=>m.state==="done"&&m.winner===p.id&&!m.bye).filter(m=>{ const o=m.a===p.id?m.b:m.a, op=this.pl(o); return op&&(op.w||0)===(p.w||0); }).length;
+      const score=p=>(p.w||0)*1e9+h2h(p)*1e6+(p.lp||0);
+      list=[...this.players].sort((a,b)=>score(b)-score(a));
+      list.forEach(p=>p.place=1+list.filter(q=>score(q)>score(p)).length);
+    }
+    return list.map(p=>({id:p.id,name:p.name,side:p.side,place:p.place,w:p.w||0,l:p.l||0}));
+  },
+  finish(champion){
+    if(this.status==="done") return;
+    this.status="done"; this.finished=this.ranking(champion);
+    this.broadcast();
+    Object.values(this.conns).forEach(c=>Net.sendTo(c,{t:"t_end",ranking:this.finished,format:this.format,n:this.players.length}));
+    this.onData({t:"t_end",ranking:this.finished,format:this.format,n:this.players.length},null);
+  },
+  onMemberClose(c){
+    const id=c._tid; delete this.conns[id];
+    const p=this.pl(id);
+    if(this.status==="lobby"){ this.players=this.players.filter(x=>x.id!==id); }
+    else if(p){ p.online=false;
+      this.matches.filter(m=>m.state!=="done"&&(m.a===id||m.b===id)).forEach(m=>this.result(m.mid, m.a===id?m.b:m.a, 0)); }
+    if(p) toast(`${p.name} hat das Turnier verlassen`);
+    this.broadcast();
+  },
+
+  /* ---------------- Teilnehmer (auch die Zentrale spielt mit) ---------------- */
+  becomeMember(c,m){
+    this.reset(); this.member=true; this.hub=c; this.myId=m.you; this.format=m.format;
+    Net.conn=null; Net.role="tourmember";
+    Net.sendTo(c,{t:"t_hello",name:this.myName(),side:Lobby.side,v:window.APP_VERSION||"dev"});
+    UI.show("tour"); toast("Turnier-Raum von "+m.host+" beigetreten");
+  },
+  onHubClose(){
+    if(!this.member) return;
+    const done=this.view&&this.view.status==="done";
+    this.member=false; this.hub=null;
+    if(!done){ toast("Die Verbindung zum Turnier wurde getrennt"); if(UI.current==="tour") this.render(); }
+  },
+  onMatch(m){
+    clearTimeout(this._failT);
+    this.expect=m; this.myId=m.myId||this.myId;
+    const sideTxt = m.role==="host" ? FACTIONS[m.hostSide][0] : FACTIONS[OTHER[m.hostSide]][0];
+    if(UI.current!=="duel"){ UI.show("tour"); }
+    banner("MATCH!"); toast(`Dein Match: gegen ${m.oppName} – du spielst ${sideTxt}`);
+    this.render();
+    if(m.role==="client"){
+      setTimeout(()=>{ if(this.expect===m) Net.connectMatch(m.oppPeer, m.mid); }, 1800);
+    }
+    // kommt das Duell nicht zustande, der Zentrale melden
+    this._failT=setTimeout(()=>{ if(this.expect===m && UI.current!=="duel") this.matchFailed(); }, 25000);
+  },
+  matchFailed(){
+    const m=this.expect; if(!m) return; this.expect=null; clearTimeout(this._failT);
+    Net.endDuelConn();
+    this.report({t:"t_fail",mid:m.mid}); toast("Verbindung zum Gegner fehlgeschlagen – neuer Versuch …");
+  },
+  duelEnded(won, myLP, oppLP){
+    const m=this.expect; if(!m) return; this.expect=null; clearTimeout(this._failT);
+    this.report({t:"t_result",mid:m.mid,winner:won?m.myId:m.oppId,lp:won?myLP:oppLP});
+  },
+  report(msg){ if(this.hosting) this.onData(msg,null); else Net.sendTo(this.hub,msg); },
+
+  onData(m,c){
+    switch(m.t){
+      // --- Teilnehmer ---
+      case "t_welcome": this.becomeMember(c,m); break;
+      case "t_full": Lobby.error("Dieser Turnier-Raum ist voll (max. 8)."); break;
+      case "t_started": Lobby.error("Dieses Turnier hat schon begonnen."); break;
+      case "t_state": this.view=m.v; this.format=m.v.format; if(UI.current==="tour") this.render(); break;
+      case "t_match": this.onMatch(m); break;
+      case "t_end": this.onEnd(m); break;
+      // --- Zentrale ---
+      case "t_hello": { if(!this.hosting||!c) break; const id=c._tid; if(this.pl(id)) break;
+        this.players.push({id,name:(m.name||"Spieler").slice(0,16),side:FACTIONS[m.side]?m.side:"polizei",peer:c.peer,online:true});
+        toast(`${m.name} ist dem Turnier beigetreten`); this.broadcast(); break; }
+      case "t_result": if(this.hosting) this.result(m.mid,m.winner,m.lp); break;
+      case "t_fail": if(this.hosting) this.failed(m.mid); break;
+    }
+  },
+  onEnd(m){
+    if(this._rewarded===m.ranking) return; this._rewarded=m.ranking;
+    const me=m.ranking.find(r=>r.id===this.myId); if(!me) return;
+    const pr=TOUR_PRIZE[me.place]||{coins:50,xp:50,cup:""};
+    Prog.reward(me.side, pr.coins, pr.xp);
+    if(pr.cup){ (Player.trophies=Player.trophies||[]).push({place:me.place,n:m.n,format:m.format,date:Date.now()}); Player.save(); }
+    if(this.view) this.view.ranking=m.ranking, this.view.status="done";
+    setTimeout(()=>{ banner(me.place===1?"TURNIERSIEG!":`PLATZ ${me.place}!`); },UI.current==="duel"?2500:300);
+    if(UI.current==="tour") this.render();
+  },
+  async leave(){
+    if(this.view&&this.view.status==="running"&&!await UI.ask(this.hosting?"Turnier beenden? Alle Spieler werden getrennt.":"Turnier verlassen? Offene Matches zählen als verloren.")) return;
+    Net.close(); UI.show("online");
+  },
+  share(){ Lobby.share(); }, copy(){ Lobby.copyLink(); },
+
+  /* ---------------- Anzeige ---------------- */
+  render(){
+    const v=this.view; if(!v) { $("tStatus").textContent="Verbinde …"; return; }
+    const name=id=>{ const p=v.players.find(x=>x.id===id); return p?esc(p.name):"Freilos"; };
+    const me=this.myId;
+    $("tTitle").textContent = v.format==="ko"?"🏆 K.-o.-Turnier":"🏆 Jeder gegen jeden";
+    const st = v.status==="lobby" ? `Warte auf Spieler (${v.players.length}/${TOUR_MAX}) …` : v.status==="running" ? `Runde ${v.round}${v.format==="rr"&&this.rrRounds.length?" von "+this.rrRounds.length:""} läuft` : "Turnier beendet";
+    $("tStatus").textContent=st;
+    $("tCodeBox").style.display = this.hosting && v.status==="lobby" ? "" : "none";
+    $("tCode").textContent=v.code||"";
+    $("tStart").style.display = this.hosting && v.status==="lobby" ? "" : "none";
+    // Mein Status
+    const mine = this.expect ? `⚔️ Dein Match gegen <b>${esc(this.expect.oppName)}</b> – Verbindung wird aufgebaut …`
+      : v.status==="running" ? (v.matches.some(m=>m.round===v.round&&m.state!=="done"&&(m.a===me||m.b===me)) ? "⏳ Dein Match startet gleich …" : "⏳ Warte auf die anderen Matches dieser Runde …")
+      : v.status==="lobby" ? (this.hosting?"Teile den Code oder Link. Starte, sobald alle da sind.":"Warte, bis der Gastgeber das Turnier startet …") : "";
+    $("tMine").innerHTML=mine; $("tMine").style.display=mine?"":"none";
+    // Spieler / Tabelle
+    const rows=[...v.players];
+    if(v.format==="rr") rows.sort((a,b)=>(b.w-a.w)||(b.lp-a.lp));
+    $("tPlayers").innerHTML = (v.ranking ? v.ranking.map(r=>`<div class="tp ${r.id===me?"me":""}"><span class="pl">${TOUR_PRIZE[r.place]?TOUR_PRIZE[r.place].cup:r.place+"."}</span><span class="nm2">${FACTIONS[r.side][1]} ${esc(r.name)}</span><span class="sc">${r.w}:${r.l}</span></div>`)
+      : rows.map((p,i)=>`<div class="tp ${p.id===me?"me":""}"><span class="pl">${v.format==="rr"&&v.status!=="lobby"?(i+1)+".":(p.online?"🟢":"⚪")}</span><span class="nm2">${FACTIONS[p.side][1]} ${esc(p.name)}${p.id==="org"?" 👑":""}</span><span class="sc">${v.status==="lobby"?"":p.w+":"+p.l}</span></div>`)).join("");
+    // Matches nach Runden
+    const rounds=[...new Set(v.matches.map(m=>m.round))];
+    $("tMatches").innerHTML = rounds.map(r=>`<div class="tround"><b>${v.format==="ko"?this.koName(r,v):"Runde "+r}</b>${v.matches.filter(m=>m.round===r).map(m=>{
+      const cls=m.state==="done"?"done":m.state==="play"?"play":"";
+      const a=m.a?name(m.a):"Freilos", b=m.b?name(m.b):"Freilos";
+      return `<div class="tm ${cls} ${(m.a===me||m.b===me)?"mine":""}"><span class="${m.winner===m.a?"win":""}">${a}</span><i>${m.state==="play"?"⚔️":"vs"}</i><span class="${m.winner===m.b?"win":""}">${b}</span></div>`}).join("")}</div>`).join("") || `<p class="muted">Die Paarungen erscheinen, sobald das Turnier startet.</p>`;
+  },
+  koName(r,v){ const n=v.matches.filter(m=>m.round===r).length; return n===1?"Finale":n===2?"Halbfinale":n===4?"Viertelfinale":"Runde "+r; },
 };
 
 /* ---------- Duell-Erweiterungen für den Online-Modus ---------- */
@@ -2591,8 +2935,9 @@ Object.assign(Duel, {
   endClient(won){
     if(this.over && this._ended) return; this.over=true; this._ended=true; this.closeReveal(); this.render();
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
-      setTimeout(()=>{ Prog.reward(this.side, won?ONLINE_WIN:ONLINE_LOSS, won?150:60); if(UI.current!=="duel") return;
-        UI.modal(null,[["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },1300); },300);
+      setTimeout(()=>{ Prog.reward(this.side, won?ONLINE_WIN:ONLINE_LOSS, won?150:60); Tour.duelEnded(won, this.P&&this.P.lp, this.AI&&this.AI.lp); if(UI.current!=="duel") return;
+        UI.modal(null, Tour.active() ? [["🏆 Zum Turnier",()=>{Net.endDuelConn();UI.show("tour")},"red"]]
+          : [["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },1300); },300);
   },
   opponentLeft(){
     if(this.over) return;
@@ -2607,14 +2952,20 @@ const Lobby = {
     $("onName").value = Store.get("nick","") || "";
     $("onSide").innerHTML=Object.keys(FACTIONS).map(f=>`<span data-f="${f}" class="${f===this.side?"on":""}">${FACTIONS[f][1]} ${FACTIONS[f][0]}</span>`).join("");
     $("onSide").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.side=s.dataset.f;this.render()});
+    $("onFmt").innerHTML=[["ko","K.-o.-System"],["rr","Jeder gegen jeden"]].map(([k,l])=>`<span data-k="${k}" class="${k===this.fmt?"on":""}">${l}</span>`).join("");
+    $("onFmt").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.fmt=s.dataset.k;this.render()});
     $("onCodeBox").style.display="none"; this.status(Net.available()?"":"Online-Modus nicht verfügbar (Bibliothek fehlt).");
   },
   name(){ const n=($("onName").value||"").trim().slice(0,16); if(!n){ toast("Bitte gib zuerst deinen Spielernamen ein"); $("onName").focus(); return null; } Store.set("nick",n); return n; },
   create(){ const n=this.name(); if(!n) return; Duel._ended=false; Net.host(this.side,n); },
+  fmt:"ko",
+  createTour(){ Duel._ended=false; Tour.create(this.fmt); },
   join(){ const n=this.name(); if(!n) return; const code=($("onJoin").value||"").trim().toUpperCase(); if(code.length<5) return toast("Bitte den 5-stelligen Code eingeben"); Duel._ended=false; Net.join(code,n); },
   showCode(code){ $("onCodeBox").style.display=""; $("onCode").textContent=code; this.status("Warte auf deinen Gegner … Gib ihm den Code."); },
   inviteUrl(){ return `${window.APP_SITE||"https://totestierux.github.io/einsatz-duell"}/join.html?c=${Net.code}`; },
-  inviteText(){ const n=Store.get("nick","")||"Ich"; return `🚨 ${n} fordert dich zum Einsatz-Duell heraus! Tippe zum Beitreten: ${this.inviteUrl()} (Raumcode: ${Net.code})`; },
+  inviteText(){ const n=Store.get("nick","")||"Ich";
+    return Tour.hosting ? `🏆 ${n} lädt dich zu einem Einsatz-Duell-Turnier ein! Tippe zum Beitreten: ${this.inviteUrl()} (Code: ${Net.code})`
+                        : `🚨 ${n} fordert dich zum Einsatz-Duell heraus! Tippe zum Beitreten: ${this.inviteUrl()} (Raumcode: ${Net.code})`; },
   async share(){
     const text=this.inviteText();
     if(window.AndroidBridge && AndroidBridge.share){ AndroidBridge.share(text); return; }
@@ -2701,7 +3052,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, progress:Player.progress, prog:Player.prog, decks:Deck.lists, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], decks:Deck.lists, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -2719,10 +3070,10 @@ const Account = {
     if(!r.ok) throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status));
     const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
     const d = JSON.parse(raw);
-    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog;
+    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[];
     if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
     if(d.nick) Store.set("nick", d.nick);
-    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,progress:Player.progress,prog:Player.prog}); Deck.save();
+    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[]}); Deck.save();
     UI.coins(); UI.badges(); return "loaded";
   },
   /* nach jeder Änderung am Spielstand: verzögert hochladen */

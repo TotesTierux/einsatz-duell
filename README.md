@@ -1,4 +1,4 @@
-# Einsatz-Duell – Polizei gegen Verbrecher (v0.7)
+# Einsatz-Duell – Polizei gegen Verbrecher (v0.8)
 
 Comic-Kartenspiel ähnlich Yu-Gi-Oh mit Polizeibezug. Zwei Parteien: **Polizei** und **Verbrecher**. Statt Monstern gibt es **Charaktere**, statt Zauber und Fallen gibt es **Maßnahmen** und **Reaktionen** mit Rechtsgrundlage:
 
@@ -26,6 +26,7 @@ Comic-Kartenspiel ähnlich Yu-Gi-Oh mit Polizeibezug. Zwei Parteien: **Polizei**
 - **Kartennamen** werden immer vollständig angezeigt – Schriftgröße passt sich automatisch an, lange Namen brechen an Wortfugen um.
 - **Konto (neu in 0.7)**: Login per E-Mail + Passwort (Firebase Authentication), Nickname bei der Registrierung, „Passwort vergessen“. Spielstand (Münzen, Sammlung, Decks, Laufbahn, Nickname) wird automatisch in Cloud Firestore gesichert und beim Anmelden auf einem neuen Gerät geladen. Spielen ohne Konto bleibt möglich. Konfiguration: `firebase.json`, Sicherheitsregeln: `firestore.rules`.
 - **Laufbahn & Progression (neu in 0.6)**: Je Partei Level 1–60 mit Dienstgraden (Anwärter → Polizeipräsident) bzw. Rängen (Kleinganove → Phantom). XP aus jedem Duell, pro Level 1 Skillpunkt + Münzen. 8 Skills je Partei (Start-LP, ATK, Effektstärke, Münzen, XP, Booster-Glück, Extra-Startkarte, Zweite Chance) – wirken auch online. **Kartenstufen** 1–5 durch Sammeln: ab 3/6/10/15 Exemplaren +5 % ATK/DEF bzw. +10 % Effektwert pro Stufe. Nickname im Laufbahn-Bildschirm.
+- **Online-Turnier (neu in 0.8)**: Turnier-Raum für bis zu 8 Spieler, Format **K.-o.-System** oder **Jeder gegen jeden**. Beitritt per Code oder Einladungslink. Jeder wählt seine Seite (bei gleicher Seite entscheidet ein Münzwurf pro Match). Die Matches einer Runde laufen parallel, jeweils direkt zwischen den beiden Spielern. Platzierung: K.-o. nach Ausscheiderunde, Jeder gegen jeden nach Siegen → direkter Vergleich → übrige LP. Preise: 🥇 500 🪙 + 400 XP, 🥈 250 + 200, 🥉 120 + 120, sonst 50 + 50; Pokale erscheinen in der Laufbahn.
 - **Online-Duell (neu in 0.5)**: Raum erstellen → **Einladungslink** teilen (WhatsApp & Co.) oder 5-stelligen Code nennen → Gegner tritt bei. Der Link öffnet die App direkt (Android) oder das Spiel im Browser (iPhone/PC). Eigener Nickname, jeder spielt mit seinem eigenen Deck, Gastgeber wählt die Seite. Peer-to-Peer über PeerJS (WebRTC, kostenloser Vermittlungsserver), funktioniert zwischen Android-App, iPhone-Web-App und Browser. Sieg 🪙150, Niederlage 🪙30. Der Gastgeber berechnet das Duell, der Gast schickt seine Züge; Ansagen, Animationen und Reaktions-Abfragen erscheinen bei beiden.
 - **Duell gegen KI**: 4000 LP, 3 Charakter- und 3 Maßnahmen/Reaktions-Zonen, Ablösung ab Stufe 5 (1) bzw. 7 (2)
 - **Deck-Bau** je Partei: 20–40 Karten, max. 3 Kopien – nur Karten, die du besitzt

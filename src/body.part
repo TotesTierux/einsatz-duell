@@ -70,6 +70,23 @@
 .sk-tx b{font-family:var(--comic);letter-spacing:1px;font-weight:normal;font-size:18px;color:var(--yellow)}
 .sk-tx span{font-size:13px;opacity:.9}
 .pips{color:var(--yellow);letter-spacing:2px}
+/* Turnier */
+.tstatus{font-family:var(--comic);font-size:24px;letter-spacing:1px;color:var(--yellow)}
+.tmine{margin-top:10px;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:12px;padding:8px 10px;font-weight:600}
+.tp{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.28);border:3px solid var(--ink);border-radius:12px;padding:8px 10px;margin-bottom:6px}
+.tp.me{border-color:var(--yellow)}
+.tp .pl{width:34px;text-align:center;font-family:var(--comic);font-size:20px}
+.tp .nm2{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}
+.tp .sc{font-family:var(--comic);font-size:18px;color:var(--yellow)}
+.tround{margin-bottom:12px}
+.tround>b{font-family:var(--comic);letter-spacing:1px;font-weight:normal;font-size:18px;color:var(--blue)}
+.tm{display:grid;grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);align-items:center;gap:6px;background:rgba(0,0,0,.25);border:2px solid var(--ink);border-radius:10px;padding:6px 10px;margin-top:6px}
+.tm span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tm span:last-child{text-align:right}
+.tm i{font-style:normal;text-align:center;opacity:.7}
+.tm.play{border-color:var(--red)} .tm.mine{box-shadow:0 0 0 2px var(--yellow)}
+.tm .win{color:var(--green);font-weight:800}
+.tm.done span:not(.win){opacity:.55}
 /* Online */
 .roomcode{font-family:var(--comic);font-size:56px;letter-spacing:10px;color:var(--yellow);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);margin:4px 0 10px}
 .codein{text-transform:uppercase;letter-spacing:8px;font-size:28px;text-align:center;font-family:var(--comic)}
@@ -155,8 +172,8 @@
   <div class="topbar"><button class="small ghost" onclick="Lobby.leave()">◀</button><h2>Online-Duell</h2></div>
   <div class="panel">
     <label>Dein Spielername</label><input id="onName" maxlength="16" placeholder="z. B. Kommissar Tim">
-    <label>Deine Seite (als Gastgeber)</label><div class="tabs" id="onSide"></div>
-    <p class="muted" style="margin:0">Wer beitritt, spielt automatisch die andere Seite – mit seinem eigenen Deck.</p>
+    <label>Deine Seite</label><div class="tabs" id="onSide"></div>
+    <p class="muted" style="margin:0">Im Duell spielt, wer beitritt, automatisch die andere Seite – jeder mit seinem eigenen Deck. Im Turnier zählt die Seite, die du hier wählst.</p>
   </div>
   <div class="panel">
     <h3 style="color:var(--yellow)">Raum erstellen</h3>
@@ -173,7 +190,14 @@
     </div>
   </div>
   <div class="panel">
+    <h3 style="color:var(--yellow)">🏆 Turnier erstellen</h3>
+    <p class="muted">Bis zu 8 Spieler in einem Raum. Pokal, Münzen und XP für die Besten.</p>
+    <div class="tabs" id="onFmt"></div>
+    <button class="red" onclick="Lobby.createTour()" style="background:#a463ff">🏆 Turnier-Raum erstellen</button>
+  </div>
+  <div class="panel">
     <h3 style="color:var(--yellow)">Raum beitreten</h3>
+    <p class="muted" style="margin-top:0">Funktioniert für Duelle und Turniere.</p>
     <input id="onJoin" maxlength="5" placeholder="CODE" autocomplete="off" autocapitalize="characters" class="codein">
     <button class="blue" onclick="Lobby.join()" style="margin-top:10px;width:100%">Beitreten</button>
   </div>
@@ -225,7 +249,7 @@
     <div class="row" style="flex-wrap:nowrap"><input id="pfName" maxlength="16" placeholder="z. B. Kommissar Tim"><button class="small green" onclick="Prog.saveNick()">OK</button></div>
   </div>
   <div class="tabs" id="pfTabs"></div>
-  <div class="panel"><div class="pfhead" id="pfHead"></div><div class="pfstats" id="pfStats"></div></div>
+  <div class="panel"><div class="pfhead" id="pfHead"></div><div class="pfstats" id="pfStats"></div><p class="muted" id="pfCups" style="text-align:center;margin:10px 0 0"></p></div>
   <h3 style="color:var(--yellow);margin:6px 0 8px">Skills</h3>
   <div id="pfSkills"></div>
   <div class="panel" style="margin-top:12px">
@@ -237,6 +261,29 @@
     Pro Stufe: Charaktere +5 % ATK/DEF, Maßnahmen +10 % Effektwert. Der Fortschritt steht in der Sammlung unter jeder Karte.</p>
     <button class="small ghost" onclick="Prog.reset(Prog.tab)">♻ Skills dieser Partei zurücksetzen (🪙200)</button>
   </div>
+</section>
+
+<!-- ================= TURNIER ================= -->
+<section id="tour" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="Tour.leave()">◀</button><h2 id="tTitle">Turnier</h2></div>
+  <div class="panel" style="text-align:center">
+    <div class="tstatus" id="tStatus">Verbinde …</div>
+    <div id="tCodeBox" style="display:none">
+      <div class="muted">Turnier-Code</div>
+      <div class="roomcode" id="tCode"></div>
+      <div class="row" style="justify-content:center">
+        <button class="small green" onclick="Lobby.share()">📤 Einladung teilen</button>
+        <button class="small blue" onclick="Lobby.copyLink()">🔗 Link kopieren</button>
+      </div>
+    </div>
+    <div class="tmine" id="tMine"></div>
+    <button class="red" id="tStart" onclick="Tour.start()" style="margin-top:12px;display:none">▶ Turnier starten</button>
+  </div>
+  <h3 style="color:var(--yellow);margin:6px 0 8px">Spieler</h3>
+  <div id="tPlayers"></div>
+  <h3 style="color:var(--yellow);margin:14px 0 8px">Paarungen</h3>
+  <div id="tMatches"></div>
+  <button class="small ghost" onclick="Tour.leave()" style="margin-top:16px">Turnier verlassen</button>
 </section>
 
 <!-- ================= SHOP ================= -->
