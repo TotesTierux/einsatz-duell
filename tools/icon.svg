@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs><pattern id="dots" width="16" height="16" patternUnits="userSpaceOnUse"><circle cx="8" cy="8" r="2.4" fill="#000" opacity=".18"/></pattern></defs>
+  <rect width="512" height="512" fill="#2b6cd6"/>
+  <path d="M0 0H512L0 512Z" fill="#2b6cd6"/><path d="M512 0V512H0Z" fill="#d42a2a"/>
+  <rect width="512" height="512" fill="url(#dots)"/>
+  <!-- hintere Karte -->
+  <g transform="rotate(-14 256 256)"><rect x="118" y="96" width="210" height="300" rx="18" fill="#111"/><rect x="130" y="108" width="186" height="276" rx="12" fill="#3fa9ff"/></g>
+  <!-- vordere Karte -->
+  <g transform="rotate(9 256 256)"><rect x="186" y="110" width="210" height="300" rx="18" fill="#111"/><rect x="198" y="122" width="186" height="276" rx="12" fill="#ffd23f"/>
+    <path d="M300 150 L246 262 L286 262 L262 368 L338 236 L298 236 L322 150 Z" fill="#111"/>
+    <path d="M302 162 L258 254 L296 254 L276 340 L326 244 L288 244 L310 162 Z" fill="#ff3b3b"/></g>
+</svg>

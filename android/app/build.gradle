@@ -1,0 +1,36 @@
+plugins { id 'com.android.application' }
+
+// Version kommt vom GitHub-Workflow (-PvcCode=… -PvcName=…); lokal Standardwerte
+def vcCode = project.hasProperty('vcCode') ? project.property('vcCode').toInteger() : 4
+def vcName = project.hasProperty('vcName') ? project.property('vcName') : "0.4-dev"
+// Update-Adresse: version.json auf der GitHub-Seite
+def updateUrl = project.hasProperty('updateUrl') ? project.property('updateUrl') : "https://totestierux.github.io/einsatz-duell/version.json"
+
+android {
+    namespace 'de.kartenduell.app'
+    compileSdk 34
+    defaultConfig {
+        applicationId "de.kartenduell.app"
+        minSdk 26
+        targetSdk 34
+        versionCode vcCode
+        versionName vcName
+        buildConfigField "String", "UPDATE_URL", "\"${updateUrl}\""
+    }
+    buildFeatures { buildConfig true }
+    signingConfigs {
+        // Fester Schlüssel, damit Updates die alte App überschreiben (Spielstand bleibt erhalten).
+        // Im GitHub-Workflow kommt er aus einem Secret; lokal aus der Datei kartenduell.keystore.
+        game {
+            storeFile file(System.getenv("KS_FILE") ?: "kartenduell.keystore")
+            storePassword System.getenv("KS_PASS") ?: "kartenduell"
+            keyAlias System.getenv("KS_ALIAS") ?: "kartenduell"
+            keyPassword System.getenv("KS_PASS") ?: "kartenduell"
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.game }
+        debug { signingConfig signingConfigs.game }
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

@@ -1,0 +1,327 @@
+
+/* ---------- v0.3: Fusion, Münzen, Shop, Story ---------- */
+.card.fusion.f-polizei{background:linear-gradient(135deg,#2b6cd6,#7b3fc4)}
+.card.fusion.f-verbrecher{background:linear-gradient(135deg,#b3261e,#5b1a87)}
+.card .mat{font-family:var(--comic);letter-spacing:.3px;font-weight:normal;color:#5b1a87}
+.coins{font-family:var(--comic);font-size:20px;letter-spacing:1px;background:var(--yellow);color:var(--ink);border:3px solid var(--ink);border-radius:20px;padding:3px 12px;box-shadow:3px 3px 0 var(--ink);white-space:nowrap}
+.home-top{position:absolute;top:calc(env(safe-area-inset-top) + 12px);right:12px}
+.menu .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.menu .two button{font-size:20px;padding:12px 6px}
+.owned0{filter:grayscale(1) brightness(.55);opacity:.7}
+.ownwrap{position:relative}
+.ownwrap .cnt{position:absolute;top:-8px;right:-6px;background:var(--blue);color:var(--ink);border:2px solid var(--ink);border-radius:14px;
+  min-width:28px;height:26px;padding:0 5px;display:flex;align-items:center;justify-content:center;font-family:var(--comic);font-size:15px;z-index:2}
+.ownwrap .new{position:absolute;top:-10px;left:-6px;background:var(--red);color:#fff;border:2px solid var(--ink);border-radius:8px;padding:0 6px;font-family:var(--comic);font-size:15px;z-index:3;transform:rotate(-8deg)}
+.tabs{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.tabs span{flex:1;text-align:center;padding:8px;border:3px solid var(--ink);border-radius:10px;background:#fff;color:var(--ink);font-family:var(--comic);letter-spacing:1px;font-size:16px}
+.tabs span.on{background:var(--yellow)}
+/* Shop */
+.packs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.pack{border:3px solid var(--ink);border-radius:14px;padding:12px 10px;text-align:center;box-shadow:5px 5px 0 var(--ink);color:#fff;position:relative;overflow:hidden;
+  background:radial-gradient(circle at 1px 1px,rgba(255,255,255,.25) 1px,transparent 1.4px) 0 0/7px 7px,linear-gradient(160deg,var(--p1),var(--p2))}
+.pack .pi{font-size:54px;line-height:1.1;filter:drop-shadow(3px 3px 0 #000)}
+.pack h3{font-size:22px;-webkit-text-stroke:1px var(--ink);text-shadow:2px 2px 0 var(--ink);margin:4px 0}
+.pack p{font-size:12px;margin:0 0 8px;opacity:.95;min-height:30px}
+.pack button{width:100%}
+.opened{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin:10px 0 20px}
+.opened .card,.opened .cardback{--w:min(28vw,130px)}
+.flip{animation:flip .45s ease-out}
+@keyframes flip{0%{transform:rotateY(90deg) scale(.9)}100%{transform:rotateY(0) scale(1)}}
+.glow-SR{filter:drop-shadow(0 0 8px #ffd23f)}
+.glow-UR{filter:drop-shadow(0 0 12px #ff3bf0) drop-shadow(0 0 4px #fff)}
+/* Story */
+.chapter{display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.3);border:3px solid var(--ink);border-radius:14px;padding:10px 12px;margin-bottom:10px}
+.chapter .ce{font-size:38px;width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:var(--paper);border:3px solid var(--ink);border-radius:50%;flex-shrink:0}
+.chapter .ct{flex:1;min-width:0}
+.chapter .ct b{font-family:var(--comic);letter-spacing:1px;font-size:19px;font-weight:normal;color:var(--yellow);display:block}
+.chapter.locked{opacity:.45}
+.scene{display:none;position:fixed;inset:0;z-index:40;flex-direction:column;justify-content:flex-end;padding:20px 14px calc(env(safe-area-inset-bottom) + 20px);
+  background:radial-gradient(circle at 1px 1px,rgba(0,0,0,.35) 1.3px,transparent 1.6px) 0 0/9px 9px,linear-gradient(170deg,var(--s1,#3fa9ff),var(--s2,#1b1035))}
+.scene.show{display:flex}
+.scene .sc-title{position:absolute;top:calc(env(safe-area-inset-top) + 16px);left:14px;right:14px;text-align:center;font-family:var(--comic);font-size:30px;color:var(--yellow);
+  -webkit-text-stroke:1.5px var(--ink);text-shadow:4px 4px 0 var(--ink);transform:rotate(-2deg)}
+.scene .avatar{font-size:120px;line-height:1;text-align:center;filter:drop-shadow(6px 6px 0 rgba(0,0,0,.6));margin-bottom:10px;animation:bob 2s ease-in-out infinite}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.scene .who{display:inline-block;font-family:var(--comic);letter-spacing:1px;font-size:20px;background:var(--red);color:#fff;border:3px solid var(--ink);border-radius:8px;
+  padding:2px 12px;margin-left:14px;position:relative;z-index:2;transform:rotate(-2deg)}
+.scene .bubble{background:#fff;color:var(--ink);border:4px solid var(--ink);border-radius:18px;padding:18px 16px 16px;font-size:18px;font-weight:600;line-height:1.35;
+  box-shadow:6px 6px 0 var(--ink);margin-top:-8px;min-height:90px}
+.scene .next{margin-top:14px;align-self:flex-end}
+.scene .skip{position:absolute;top:calc(env(safe-area-inset-top) + 64px);right:14px}
+@media (prefers-reduced-motion:reduce){.scene .avatar,.flip,.card .art::after{animation:none}}
+/* Admin-Story-Editor */
+.story-row{display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.25);border:2px solid var(--ink);border-radius:10px;padding:8px;margin-bottom:8px}
+.story-row span{flex:1}
+.fusion-pick{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;max-height:60vh;overflow:auto;padding:6px}
+.fusion-pick .opt{display:flex;flex-direction:column;align-items:center;gap:6px}
+.fusion-pick .card{--w:120px}
+/* Gegner-Ansage */
+.reveal{position:fixed;inset:0;z-index:45;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:20px;background:rgba(10,5,25,.72)}
+.reveal.show{display:flex;animation:fadein .2s}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.reveal .card{--w:min(48vw,30vh,200px);animation:flip .4s ease-out}
+.reveal .rv-box{background:var(--paper);color:var(--ink);border:4px solid var(--ink);border-radius:16px;box-shadow:6px 6px 0 var(--ink);padding:12px 14px;max-width:360px;width:100%;text-align:center}
+.reveal .rv-head{font-family:var(--comic);letter-spacing:1px;font-size:22px;line-height:1.1;margin-bottom:6px}
+.reveal .rv-tag{display:inline-block;font-family:var(--comic);letter-spacing:1px;color:#fff;background:var(--ink);border-radius:6px;padding:1px 8px;margin-bottom:6px;font-size:15px}
+.reveal .rv-text{font-size:16px;font-weight:600;line-height:1.3}
+.reveal .rv-res{margin-top:8px;font-size:15px;font-weight:800;color:#b3261e}
+.reveal .rv-eff{font-family:var(--comic);letter-spacing:1px;font-size:17px;color:#5b1a87;margin-bottom:4px}
+.reveal button{min-width:200px}
+/* Animationen */
+#fx{position:fixed;inset:0;pointer-events:none;z-index:44;overflow:hidden}
+.fx-ghost{position:fixed;z-index:2;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 8px 10px rgba(0,0,0,.6))}
+.fx-ghost .card,.fx-ghost .cardback{--w:min(19vw,13vh,96px)}
+.fx-flash{position:fixed;inset:0;mix-blend-mode:screen;opacity:0}
+.fx-word{position:fixed;font-family:var(--comic);font-size:40px;white-space:nowrap;color:var(--yellow);-webkit-text-stroke:2px var(--ink);
+  text-shadow:4px 4px 0 var(--red),7px 7px 0 var(--ink);z-index:3}
+.fx-part{position:fixed;font-size:30px;z-index:3}
+.fx-num{position:fixed;font-family:var(--comic);font-size:30px;-webkit-text-stroke:1.5px var(--ink);z-index:4}
+.fx-stamp{position:fixed;left:50%;top:45%;font-family:var(--comic);font-size:38px;padding:4px 16px;border:5px solid currentColor;border-radius:10px;
+  color:#2f8f4e;background:rgba(255,255,255,.85);letter-spacing:2px;white-space:nowrap;z-index:3}
+.fx-stamp.SOG{color:#127a8a}.fx-stamp.Trick{color:#6b2fa3}
+.zone{position:relative}
+.zbadge{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:var(--paper);color:var(--ink);border:2px solid var(--ink);border-radius:10px;
+  font-size:11px;padding:0 4px;white-space:nowrap;z-index:2;pointer-events:none}
+.log{cursor:pointer;text-decoration:underline dotted rgba(255,255,255,.4)}
+.histlist{background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:12px;padding:10px 12px;max-height:60vh;overflow:auto;width:min(360px,90vw);font-size:14px;line-height:1.35}
+.histlist div{padding:4px 0;border-bottom:1px dashed #0003}
+.histlist .t{font-family:var(--comic);letter-spacing:.5px;color:#666;margin-right:6px}
+</style>
+</head>
+<body>
+
+<!-- ================= HOME ================= -->
+<section id="home" class="screen active">
+  <div class="home-top"><span class="coins" id="homeCoins">🪙 0</span></div>
+  <div class="logo">EINSATZ<small>DUELL!</small></div>
+  <div class="burst">👮 Polizei gegen Verbrecher 🦹</div>
+  <div class="menu">
+    <button class="red" onclick="UI.show('story')">📖 Story</button>
+    <button class="blue" onclick="UI.startDuel()">⚔️ Freies Duell</button>
+    <div class="two">
+      <button class="green" onclick="UI.show('shop')">🛒 Shop</button>
+      <button onclick="UI.show('deck')">🃏 Deck</button>
+    </div>
+    <div class="two">
+      <button class="ghost" onclick="UI.show('collection')">📚 Sammlung</button>
+      <button class="ghost" onclick="UI.openAdmin()">🔧 Admin</button>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:22px" id="appVer">Version</p>
+</section>
+
+<!-- ================= STORY ================= -->
+<section id="story" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Story</h2></div>
+  <div class="tabs" id="storyTabs"></div>
+  <p class="muted" id="storyDesc" style="margin-top:0"></p>
+  <div id="storyList"></div>
+</section>
+
+<!-- ================= SHOP ================= -->
+<section id="shop" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Shop</h2><span class="coins" id="shopCoins">🪙 0</span></div>
+  <div id="shopPacks" class="packs"></div>
+  <div class="panel" style="margin-top:16px"><p class="muted" style="margin:0">Münzen verdienst du im Duell (Sieg 🪙100, Niederlage 🪙25) und in der Story. Seltenheiten: N 70 %, R 20 %, SR 8 %, UR 2 %. In jedem Pack ist mindestens eine Karte R oder besser.</p></div>
+</section>
+<section id="opening" class="screen">
+  <div class="topbar"><h2 id="openTitle">Booster</h2><span class="coins" id="openCoins">🪙 0</span></div>
+  <p class="muted" style="text-align:center;margin:0">Tippe auf die Karten zum Aufdecken</p>
+  <div class="opened" id="openCards"></div>
+  <div class="row" style="justify-content:center">
+    <button class="blue" onclick="Shop.revealAll()">Alle aufdecken</button>
+    <button class="green" id="btnAgain" onclick="Shop.buy(Shop.last)">Nochmal</button>
+    <button class="ghost" onclick="UI.show('shop')">Zurück</button>
+  </div>
+</section>
+
+<!-- ================= COLLECTION ================= -->
+<section id="collection" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Sammlung</h2><span class="deckcount" id="colCount"></span></div>
+  <div class="filterbar"><input id="colSearch" placeholder="Suchen…" oninput="UI.renderCollection()">
+    <select id="colType" onchange="UI.renderCollection()"></select></div>
+  <div class="filterbar"><select id="colOwned" onchange="UI.renderCollection()" style="width:100%"><option value="">Alle Karten</option><option value="own">Nur meine</option><option value="miss">Fehlende</option></select></div>
+  <div id="colList" class="cardlist"></div>
+</section>
+
+<!-- ================= ADMIN ================= -->
+<section id="admin" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Admin</h2>
+    <button class="small green" id="admNew" onclick="Admin.newCard()">＋ Karte</button></div>
+  <div class="tabs" id="admTabs"><span data-t="cards" class="on">Karten</span><span data-t="story">Story</span><span data-t="player">Spieler & Daten</span></div>
+  <div id="admCards">
+    <div class="filterbar"><input id="admSearch" placeholder="Karte suchen…" oninput="Admin.renderList()">
+      <select id="admType" onchange="Admin.renderList()"></select></div>
+    <p class="muted" id="admCount"></p>
+    <div id="admList" class="cardlist"></div>
+  </div>
+  <div id="admStory" style="display:none"></div>
+  <div id="admPlayer" style="display:none">
+    <div class="panel">
+      <h3 style="color:var(--yellow)">Spieler</h3>
+      <p class="muted" id="admPlayerInfo"></p>
+      <div class="row">
+        <button class="small green" onclick="Admin.addCoins(1000)">+🪙1000</button>
+        <button class="small blue" onclick="Admin.unlockAll()">Alle Karten freischalten</button>
+        <button class="small ghost" onclick="Admin.resetCollection()">Sammlung zurücksetzen</button>
+        <button class="small ghost" onclick="Admin.resetStory()">Story-Fortschritt zurücksetzen</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--yellow)">App</h3>
+      <p class="muted" id="admVersion"></p>
+      <div class="row"><button class="small green" id="btnUpdate" onclick="Admin.checkUpdate()">🔄 Nach Updates suchen</button></div>
+    </div>
+    <div class="panel">
+      <h3 style="color:var(--yellow)">Daten</h3>
+      <p class="muted">Karten und Story als Datei sichern oder auf ein anderes Handy übertragen.</p>
+      <div class="row">
+        <button class="small blue" onclick="Admin.exportJSON()">⬇ Export</button>
+        <button class="small blue" onclick="document.getElementById('importFile').click()">⬆ Import</button>
+        <button class="small ghost" onclick="Admin.changePin()">🔑 PIN ändern</button>
+        <button class="small red" onclick="Admin.resetAll()">♻ Karten zurücksetzen</button>
+      </div>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none" onchange="Admin.importJSON(this)">
+    </div>
+  </div>
+</section>
+
+<!-- ================= KARTEN-EDITOR ================= -->
+<section id="editor" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="Admin.cancel()">◀</button><h2 id="edTitle">Karte</h2></div>
+  <div class="editor">
+    <div class="preview-wrap"><div id="edPreview"></div></div>
+    <div>
+      <div class="panel">
+        <label>Name</label><input id="f_name" maxlength="40" oninput="Admin.sync()">
+        <label>Partei</label><div class="chips" id="f_faction"></div>
+        <label>Kartentyp</label><div class="chips" id="f_type"></div>
+        <div id="lawFields">
+          <label>Rechtsgrundlage / Art</label><div class="chips" id="f_law"></div>
+          <label>Paragraf (z. B. „§ 127 StPO“ oder dein Landes-SOG)</label><input id="f_ref" maxlength="30" oninput="Admin.sync()">
+        </div>
+        <label>Seltenheit</label><div class="chips" id="f_rarity"></div>
+      </div>
+      <div class="panel" id="monsterFields">
+        <h3 style="color:var(--yellow)">Stats</h3>
+        <label>Rolle</label><div class="chips" id="f_attr"></div>
+        <div class="stats-row">
+          <div><label>Stufe ★</label><input id="f_level" type="number" min="1" max="12" oninput="Admin.sync()"></div>
+          <div><label>ATK</label><input id="f_atk" type="number" min="0" max="9999" step="50" oninput="Admin.sync()"></div>
+          <div><label>DEF</label><input id="f_def" type="number" min="0" max="9999" step="50" oninput="Admin.sync()"></div>
+        </div>
+        <p class="muted" id="levelHint">Ab Stufe 5 muss 1 eigener Charakter das Feld räumen (Ablösung), ab Stufe 7 zwei.</p>
+        <div id="fusionFields">
+          <label>Fusions-Material (Rollen der eigenen Partei)</label>
+          <div class="stats-row"><select id="f_m1" onchange="Admin.sync()"></select><select id="f_m2" onchange="Admin.sync()"></select><select id="f_m3" onchange="Admin.sync()"></select></div>
+          <p class="muted">Fusionen liegen im Fusionsdeck und werden mit einer Fusionskarte (z. B. „Gemeinsamer Einsatz“) aus Hand/Feld gebildet. Keine Ablösung nötig.</p>
+        </div>
+      </div>
+      <div class="panel">
+        <h3 style="color:var(--yellow)">Effekt</h3>
+        <label>Effekt-Art</label><select id="f_effect" onchange="Admin.sync()"></select>
+        <div id="effValWrap"><label>Wert</label><input id="f_effval" type="number" min="0" max="9999" step="100" oninput="Admin.sync()"></div>
+        <label>Kartentext (optional, sonst automatisch)</label><textarea id="f_text" rows="2" maxlength="160" oninput="Admin.sync()"></textarea>
+      </div>
+      <div class="panel">
+        <h3 style="color:var(--yellow)">Comic-Bild</h3>
+        <label>Eigenes Bild (Galerie / Kamera)</label>
+        <div class="row"><button class="small blue" onclick="document.getElementById('f_img').click()">📷 Bild wählen</button>
+          <button class="small ghost" onclick="Admin.clearImage()">✕ Bild entfernen</button></div>
+        <input type="file" id="f_img" accept="image/*" style="display:none" onchange="Admin.loadImage(this)">
+        <label>…oder Emoji</label><input id="f_emoji" maxlength="8" oninput="Admin.sync()">
+        <div class="emoji-pick" id="emojiPick"></div>
+        <div class="grid2"><div><label>Farbe 1</label><input id="f_c1" type="color" oninput="Admin.sync()" style="height:44px;padding:2px"></div>
+          <div><label>Farbe 2</label><input id="f_c2" type="color" oninput="Admin.sync()" style="height:44px;padding:2px"></div></div>
+      </div>
+      <div class="row" style="margin-bottom:30px">
+        <button class="green" onclick="Admin.save()">💾 Speichern</button>
+        <button class="ghost" onclick="Admin.duplicate()" id="btnDup">⧉ Kopieren</button>
+        <button class="red" onclick="Admin.remove()" id="btnDel">🗑 Löschen</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STORY-EDITOR ================= -->
+<section id="storyEditor" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="StoryEd.back()">◀</button><h2>Kapitel</h2></div>
+  <div class="panel">
+    <label>Titel</label><input id="s_title" maxlength="40">
+    <label>Einleitung – eine Zeile pro Sprechblase: <i>Name | Emoji | Text</i></label><textarea id="s_intro" rows="7"></textarea>
+    <label>Nach dem Sieg – gleiches Format</label><textarea id="s_outro" rows="4"></textarea>
+  </div>
+  <div class="panel">
+    <h3 style="color:var(--yellow)">Gegner</h3>
+    <div class="grid2"><div><label>Name</label><input id="s_oname" maxlength="30"></div><div><label>Emoji</label><input id="s_oemoji" maxlength="8"></div></div>
+    <div class="stats-row">
+      <div><label>LP</label><input id="s_lp" type="number" min="500" max="20000" step="500"></div>
+      <div><label>Max. Stufe</label><input id="s_maxlv" type="number" min="1" max="12"></div>
+      <div><label>Max. Selten.</label><select id="s_maxr"><option>N</option><option>R</option><option>SR</option><option>UR</option></select></div>
+    </div>
+    <label>Belohnung (Münzen, beim ersten Sieg)</label><input id="s_reward" type="number" min="0" max="10000" step="50">
+  </div>
+  <div class="row" style="margin-bottom:30px">
+    <button class="green" onclick="StoryEd.save()">💾 Speichern</button>
+    <button class="red" onclick="StoryEd.remove()">🗑 Kapitel löschen</button>
+  </div>
+</section>
+
+<!-- ================= DECK ================= -->
+<section id="deck" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Mein Deck</h2>
+    <span class="deckcount" id="deckCount">0/40</span></div>
+  <div class="tabs" id="deckFaction"></div>
+  <div class="panel"><p class="muted" style="margin:0" id="deckInfo"></p>
+    <div class="row" style="margin-top:8px"><button class="small blue" onclick="Deck.auto()">🎲 Automatisch</button><button class="small red" onclick="Deck.clear()">Leeren</button></div></div>
+  <div class="filterbar"><input id="deckSearch" placeholder="Suchen…" oninput="Deck.render()">
+    <select id="deckFilter" onchange="Deck.render()"><option value="">Meine Karten</option><option value="in">Im Deck</option><option value="fusion">Fusionsdeck</option></select></div>
+  <div id="deckList" class="cardlist"></div>
+</section>
+
+<!-- ================= DUEL ================= -->
+<section id="duel" class="screen">
+  <div class="lpbar"><span class="who" id="oppWho">🤖 Gegner</span><span class="pile" id="oppPile"></span><span class="lp" id="oppLP">4000</span></div>
+  <div class="opphand" id="oppHand"></div>
+  <div class="field">
+    <div class="zones" id="oppST"></div>
+    <div class="zones" id="oppMZ"></div>
+    <div class="divider"><span class="phase" id="phaseLbl">Main</span><button class="small red direct" id="btnDirect" onclick="Duel.directAttack()">💥 Direktangriff</button></div>
+    <div class="zones" id="myMZ"></div>
+    <div class="zones" id="myST"></div>
+  </div>
+  <div class="hand" id="myHand"></div>
+  <div class="duelctrl">
+    <button class="small ghost" onclick="Duel.quit()">✕</button>
+    <div class="log" id="log" onclick="Duel.showHistory()"></div>
+    <button class="small green" id="btnEnd" onclick="Duel.endTurn()">Zug ▶</button>
+  </div>
+  <div class="lpbar" style="margin-top:4px"><span class="who" id="myWho">😎 Du</span><span class="pile" id="myPile"></span><span class="lp" id="myLP">4000</span></div>
+</section>
+
+<div class="scene" id="scene" onclick="Scene.next()">
+  <div class="sc-title" id="scTitle"></div>
+  <button class="small ghost skip" onclick="event.stopPropagation();Scene.finish()">Überspringen ⏭</button>
+  <div class="avatar" id="scAvatar"></div>
+  <div><span class="who" id="scWho"></span></div>
+  <div class="bubble" id="scText"></div>
+  <button class="next" id="scNext">Weiter ▶</button>
+</div>
+<div class="modal" id="modal" onclick="if(event.target===this)UI.closeModal()"><div class="box"><div id="modalCard"></div><div class="acts" id="modalActs"></div></div></div>
+<div class="reveal" id="reveal">
+  <div id="rvCard"></div>
+  <div class="rv-box"><div class="rv-head" id="rvHead"></div><div class="rv-tag" id="rvTag"></div><div class="rv-eff" id="rvEff"></div><div class="rv-text" id="rvText"></div><div class="rv-res" id="rvRes"></div></div>
+  <button class="red" onclick="Duel.closeReveal()">Verstanden ▶</button>
+</div>
+<div id="fx"></div>
+<div class="banner" id="banner"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/*__CARDS__*/
+</script>
+<script>
+/*__GAME__*/
+</script>
+</body>
+</html>

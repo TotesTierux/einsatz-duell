@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1b1035">
+<title>Einsatz-Duell – Download</title>
+<link rel="icon" href="spiel/icon-192.png">
+<link rel="apple-touch-icon" href="spiel/icon-180.png">
+<style>
+@font-face{font-family:"Bangers";src:url(data:font/woff2;base64,__FONT__) format("woff2")}
+:root{--ink:#111;--paper:#fff8e7;--yellow:#ffd23f;--red:#ff3b3b;--blue:#3fa9ff;--green:#3ddc84;--comic:"Bangers",Impact,sans-serif}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--paper);font:17px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:radial-gradient(circle at 1px 1px,rgba(255,255,255,.08) 1.3px,transparent 1.6px) 0 0/10px 10px,linear-gradient(160deg,#2c1a57,#1b1035);
+  padding:calc(env(safe-area-inset-top) + 24px) 18px calc(env(safe-area-inset-bottom) + 30px)}
+main{max-width:560px;margin:0 auto;text-align:center}
+.icon{width:116px;height:116px;border-radius:26px;border:4px solid var(--ink);box-shadow:6px 6px 0 var(--ink);transform:rotate(-4deg)}
+h1{font-family:var(--comic);font-size:clamp(46px,13vw,68px);line-height:.95;margin:18px 0 6px;color:var(--yellow);-webkit-text-stroke:2px var(--ink);
+  text-shadow:5px 5px 0 var(--red),9px 9px 0 var(--ink);letter-spacing:2px}
+.sub{font-family:var(--comic);font-size:22px;letter-spacing:1px;display:inline-block;background:var(--red);color:#fff;border:3px solid var(--ink);padding:4px 14px;transform:rotate(2deg);box-shadow:4px 4px 0 var(--ink);margin-bottom:22px}
+.box{background:var(--paper);color:var(--ink);border:4px solid var(--ink);border-radius:18px;box-shadow:7px 7px 0 var(--ink);padding:18px;margin:22px 0;text-align:left}
+.box h2{font-family:var(--comic);letter-spacing:1px;font-size:28px;margin:0 0 6px}
+.btn{display:block;text-align:center;text-decoration:none;font-family:var(--comic);letter-spacing:1px;font-size:24px;color:var(--ink);background:var(--yellow);
+  border:3px solid var(--ink);border-radius:14px;box-shadow:5px 5px 0 var(--ink);padding:14px;margin:12px 0 8px;min-height:44px}
+.btn.green{background:var(--green)}.btn.blue{background:var(--blue)}
+.btn:active{transform:translate(3px,3px);box-shadow:2px 2px 0 var(--ink)}
+ol{margin:8px 0 0;padding-left:22px}li{margin:4px 0}
+small,.muted{opacity:.75;font-size:14px}
+.ver{font-family:var(--comic);letter-spacing:1px;font-size:18px;margin-top:6px}
+</style>
+</head>
+<body>
+<main>
+  <img class="icon" src="spiel/icon-512.png" alt="">
+  <h1>EINSATZ-DUELL</h1>
+  <div class="sub">👮 Polizei gegen Verbrecher 🦹</div>
+  <p>Comic-Kartenspiel mit über 240 Karten, StPO- und SOG-Maßnahmen, Fusionen, Boosterpacks und Story-Modus.</p>
+  <div class="ver" id="ver"></div>
+
+  <div class="box">
+    <h2>🤖 Android</h2>
+    <a class="btn green" id="apk" href="__REPO__/releases/latest/download/EinsatzDuell.apk">⬇ APK herunterladen</a>
+    <ol>
+      <li>APK öffnen und beim Hinweis <b>„Installation aus dieser Quelle erlauben“</b> zustimmen.</li>
+      <li>Updates kommen automatisch: Die App meldet sich beim Start, wenn es eine neue Version gibt.</li>
+    </ol>
+  </div>
+
+  <div class="box">
+    <h2>🍎 iPhone &amp; iPad</h2>
+    <a class="btn blue" href="spiel/">▶ Spiel öffnen</a>
+    <ol>
+      <li>Den Link in <b>Safari</b> öffnen.</li>
+      <li>Unten auf <b>Teilen</b> <span aria-hidden="true">⬆️</span> tippen → <b>„Zum Home-Bildschirm“</b>.</li>
+      <li>Jetzt startet Einsatz-Duell wie eine App im Vollbild, funktioniert offline und aktualisiert sich automatisch.</li>
+    </ol>
+  </div>
+
+  <div class="box">
+    <h2>💻 Im Browser</h2>
+    <a class="btn" href="spiel/">▶ Direkt spielen</a>
+    <small>Funktioniert in jedem aktuellen Browser auf PC, Tablet und Handy.</small>
+  </div>
+  <p class="muted">Spielstand und Sammlung werden auf dem jeweiligen Gerät gespeichert. Karten lassen sich im Admin-Bereich exportieren und importieren.</p>
+</main>
+<script>
+fetch("version.json",{cache:"no-store"}).then(r=>r.json()).then(v=>{document.getElementById("ver").textContent="Aktuelle Version "+v.versionName}).catch(()=>{});
+</script>
+</body>
+</html>

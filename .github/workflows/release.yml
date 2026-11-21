@@ -1,0 +1,86 @@
+name: APK & Webseite veröffentlichen
+
+# Läuft bei jedem Push auf main (und manuell über "Run workflow").
+# Ergebnis: neues GitHub-Release mit EinsatzDuell.apk + aktualisierte Webseite (iPhone/Browser) inkl. version.json für Auto-Updates.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Version festlegen
+        run: |
+          BASE=$(cat VERSION)
+          echo "VN=${BASE}.${{ github.run_number }}" >> $GITHUB_ENV
+          echo "VC=$((100 + ${{ github.run_number }}))" >> $GITHUB_ENV
+          { echo 'NOTES<<EOF'; git log -1 --pretty=%B; echo 'EOF'; } >> $GITHUB_ENV
+
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with: { gradle-version: "8.7" }
+
+      - name: Spiel und Webseite bauen
+        env:
+          APP_VERSION: ${{ env.VN }}
+          APP_VERSION_CODE: ${{ env.VC }}
+          APP_NOTES: ${{ env.NOTES }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: python3 build.py --web site
+
+      - name: Signaturschlüssel bereitstellen
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "KS_FILE=$RUNNER_TEMP/release.keystore" >> $GITHUB_ENV
+          elif [ -f android/app/kartenduell.keystore ]; then
+            echo "KS_FILE=$GITHUB_WORKSPACE/android/app/kartenduell.keystore" >> $GITHUB_ENV
+          else
+            echo "::error::Kein Signaturschlüssel: Secret KEYSTORE_B64 anlegen (siehe README)"; exit 1
+          fi
+
+      - name: APK bauen
+        working-directory: android
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASS || 'kartenduell' }}
+        run: |
+          OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          REPO_NAME="${{ github.event.repository.name }}"
+          gradle assembleRelease --no-daemon -PvcCode=$VC -PvcName=$VN -PupdateUrl=https://$OWNER_LC.github.io/$REPO_NAME/version.json
+          cp app/build/outputs/apk/release/app-release.apk ../EinsatzDuell.apk
+
+      - name: GitHub-Release erstellen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v$VN" EinsatzDuell.apk --title "Einsatz-Duell $VN" --notes "$NOTES" --latest
+
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+
+  pages:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
