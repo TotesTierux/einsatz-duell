@@ -425,6 +425,7 @@ const fitSoon=()=>{ if(_fitQueued) return; _fitQueued=true; requestAnimationFram
 new MutationObserver(fitSoon).observe(document.body,{childList:true,subtree:true});
 window.addEventListener("resize",()=>{ document.querySelectorAll(".card .nmt").forEach(t=>delete t.dataset.fitw); fitSoon(); });
 /* live = Feldzustand (z. B. veränderte ATK) */
+function flavorHTML(c){ const f=flavorOf(c); if(!f) return ""; const q=/^[„"«]/.test(f); return `<div class="flv">${q?"":"„"}${esc(f)}${q?"":"“"}</div>`; }
 function cardHTML(c, extra="", attrs="", live){
   const isM = isChar(c);
   const stars = isM ? "★".repeat(Math.min(c.level,12)) : "";
@@ -490,7 +491,7 @@ const UI = {
     return false;
   },
   modal(card, actions, live, onClose, closeLabel){
-    $("modalCard").innerHTML = card ? (card==="back" ? `<div class="cardback" style="--w:min(62vw,40vh,260px)"></div>` : cardHTML(card,"","",live)) : "";
+    $("modalCard").innerHTML = card ? (card==="back" ? `<div class="cardback" style="--w:min(62vw,40vh,260px)"></div>` : cardHTML(card,"","",live)+flavorHTML(card)) : "";
     const a = $("modalActs"); a.innerHTML="";
     (actions||[]).forEach(([label,fn,cls])=>{const b=document.createElement("button");b.textContent=label;b.className=cls||"";b.onclick=()=>{this._onClose=null;this.closeModal();fn&&fn()};a.appendChild(b)});
     const x=document.createElement("button");x.textContent=closeLabel||"Schließen";x.className="ghost";x.onclick=()=>this.closeModal();a.appendChild(x);
@@ -590,7 +591,7 @@ const Admin = {
     $("edTitle").textContent = isNew?"Neue Karte":"Bearbeiten";
     $("btnDel").style.display = $("btnDup").style.display = isNew?"none":"";
     $("f_name").value=card.name; $("f_level").value=card.level; $("f_atk").value=card.atk; $("f_def").value=card.def;
-    $("f_effval").value=card.val; $("f_ref").value=card.ref; $("f_text").value=card.text; $("f_emoji").value=card.art.emoji; $("f_c1").value=card.art.c1; $("f_c2").value=card.art.c2;
+    $("f_effval").value=card.val; $("f_ref").value=card.ref; $("f_text").value=card.text; $("f_flavor").value=flavorOf(card); $("f_emoji").value=card.art.emoji; $("f_c1").value=card.art.c1; $("f_c2").value=card.art.c2;
     $("emojiPick").innerHTML = EMOJIS.map(e=>`<span>${e}</span>`).join("");
     $("emojiPick").querySelectorAll("span").forEach(s=>s.onclick=()=>{$("f_emoji").value=s.textContent;this.draft.art.img="";this.sync()});
     this.renderChips(); this.fillEffects(); this.fillMaterials(); this.sync(); UI.show("editor");
@@ -630,7 +631,7 @@ const Admin = {
     d.level=Math.max(1,Math.min(12,+$("f_level").value||1));
     d.atk=Math.max(0,Math.min(9999,+$("f_atk").value||0));
     d.def=Math.max(0,Math.min(9999,+$("f_def").value||0));
-    d.effect=$("f_effect").value; d.val=Math.max(0,+$("f_effval").value||0); d.text=$("f_text").value.trim(); d.ref=$("f_ref").value.trim();
+    d.effect=$("f_effect").value; d.val=Math.max(0,+$("f_effval").value||0); d.text=$("f_text").value.trim(); d.ref=$("f_ref").value.trim(); d.flavor=$("f_flavor").value.trim();
     d.art.emoji=$("f_emoji").value||"❓"; d.art.c1=$("f_c1").value; d.art.c2=$("f_c2").value;
     if(d.type==="fusion") d.materials=["f_m1","f_m2","f_m3"].map(i=>$(i).value).filter(Boolean);
     $("effValWrap").style.display = EFFECTS[d.effect]&&EFFECTS[d.effect].val ? "" : "none";
@@ -994,7 +995,7 @@ const Duel = {
       const tag = isChar(card) ? `${card.type==="fusion"?"Fusion · ":""}${ROLES[card.faction][card.attr][0]} · ★${card.level} · ATK ${card.atk} / DEF ${card.def}`
                                : `${LAWS[card.law][2]} ${card.law}${card.ref&&card.ref!==card.law?" · "+card.ref:""} · ${card.law==="Trick"?TYPES[card.type]:LAWS[card.law][1]}`;
       const eff = EFFECTS[card.effect];
-      $("rvCard").innerHTML=cardHTML(card);
+      $("rvCard").innerHTML=cardHTML(card)+flavorHTML(card);
       $("rvHead").textContent=head; $("rvTag").textContent=tag;
       $("rvEff").textContent = eff && card.effect!=="none" ? `${eff.group}: ${eff.label}` : "";
       $("rvEff").style.display = eff && card.effect!=="none" ? "" : "none";

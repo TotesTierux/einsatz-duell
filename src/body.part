@@ -414,6 +414,7 @@
     <div>
       <div class="panel">
         <label>Name</label><input id="f_name" maxlength="40" oninput="Admin.sync()">
+        <label>Lustige Beschreibung</label><textarea id="f_flavor" maxlength="120" rows="2" placeholder="z. B. Hat schon 400 Falschparker verwarnt …" oninput="Admin.sync()"></textarea>
         <label>Partei</label><div class="chips" id="f_faction"></div>
         <label>Kartentyp</label><div class="chips" id="f_type"></div>
         <div id="lawFields">
