@@ -134,7 +134,10 @@
       <button class="ghost" onclick="UI.show('profile')" id="btnProfile">⭐ Laufbahn</button>
       <button class="ghost" onclick="UI.show('collection')">📚 Sammlung</button>
     </div>
-    <button class="ghost small" onclick="UI.openAdmin()" style="font-size:16px">🔧 Admin</button>
+    <div class="two">
+      <button class="ghost small" onclick="UI.show('account')" style="font-size:16px">👤 Konto</button>
+      <button class="ghost small" onclick="UI.openAdmin()" style="font-size:16px">🔧 Admin</button>
+    </div>
   </div>
   <p class="muted" style="margin-top:22px" id="appVer">Version</p>
 </section>
@@ -172,6 +175,42 @@
   </div>
   <p class="muted" id="onStatus" style="text-align:center"></p>
   <p class="muted" style="text-align:center">Sieg 🪙150 · Niederlage 🪙30 · Beide brauchen Internet.</p>
+</section>
+
+<!-- ================= KONTO ================= -->
+<section id="account" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Konto</h2></div>
+  <div class="panel" id="acOff"><p class="muted" style="margin:0">Konten sind noch nicht eingerichtet. Du kannst trotzdem ganz normal spielen.</p></div>
+  <div id="acForm">
+    <div class="tabs" id="acTabs"><span data-m="login" onclick="Account.setMode('login')">Anmelden</span><span data-m="register" onclick="Account.setMode('register')">Registrieren</span></div>
+    <div class="panel">
+      <label>E-Mail</label><input id="acMail" type="email" autocomplete="email" inputmode="email" placeholder="du@beispiel.de">
+      <label>Passwort</label><input id="acPw" type="password" autocomplete="current-password" placeholder="mindestens 6 Zeichen">
+      <div id="acPw2Row"><label>Passwort wiederholen</label><input id="acPw2" type="password" autocomplete="new-password"></div>
+      <div id="acNickRow"><label>Nickname (wird im Spiel und online angezeigt)</label><input id="acNickIn" maxlength="16" placeholder="z. B. Kommissar Tim"></div>
+      <button class="green" id="acGo" onclick="Account.submit()" style="width:100%;margin-top:14px">🔑 Anmelden</button>
+      <p class="muted" id="acMsg" style="min-height:1.2em"></p>
+      <div class="row" style="justify-content:space-between">
+        <button class="small ghost" onclick="Account.forgot()">Passwort vergessen?</button>
+        <button class="small ghost" onclick="Store.set('skipLogin',true);UI.show('home')">Ohne Konto spielen</button>
+      </div>
+    </div>
+    <p class="muted" style="text-align:center">Mit Konto werden Sammlung, Münzen, Decks und Laufbahn gesichert – auch auf einem neuen Handy.</p>
+  </div>
+  <div id="acIn">
+    <div class="panel">
+      <div class="muted">Angemeldet als</div>
+      <div style="font-family:var(--comic);font-size:26px;color:var(--yellow);letter-spacing:1px" id="acNick"></div>
+      <div id="acEmail" class="muted"></div>
+      <p class="muted" id="acSync"></p>
+      <div class="row">
+        <button class="small green" onclick="Account.syncNow()">☁️ Jetzt sichern</button>
+        <button class="small blue" onclick="Account.loadNow()">⬇ Vom Konto laden</button>
+        <button class="small red" onclick="Account.doLogout()">Abmelden</button>
+      </div>
+    </div>
+    <p class="muted" style="text-align:center">Dein Spielstand wird nach jeder Änderung automatisch gespeichert.</p>
+  </div>
 </section>
 
 <!-- ================= LAUFBAHN ================= -->
@@ -395,6 +434,9 @@
 <div class="banner" id="banner"></div>
 <div class="toast" id="toast"></div>
 
+<script>
+/*__FIREBASE__*/
+</script>
 <script>
 /*__PEERJS__*/
 </script>

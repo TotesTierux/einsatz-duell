@@ -11,6 +11,9 @@ repo=os.environ.get("REPO_URL","https://github.com/TotesTierux/einsatz-duell")
 font=base64.b64encode(open(os.path.join(root,'src/bangers-latin-400-normal.woff2'),'rb').read()).decode()
 
 html=(r('src/head.part')+r('src/body.part')).replace('__FONT__',font)
+fb_path=os.path.join(root,'firebase.json')
+fb=json.load(open(fb_path)) if os.path.exists(fb_path) else None
+html=html.replace('/*__FIREBASE__*/', 'window.FIREBASE_CONFIG='+json.dumps(fb)+';')
 html=html.replace('/*__PEERJS__*/', '/* PeerJS 1.5.5 – MIT-Lizenz, https://peerjs.com */\n'+r('src/vendor/peerjs.min.js'))
 html=html.replace('/*__CARDS__*/', f'window.APP_VERSION={json.dumps(version)};window.APP_REPO={json.dumps(repo)};\n'+r('src/cards.js')).replace('/*__GAME__*/',r('src/game.js'))
 

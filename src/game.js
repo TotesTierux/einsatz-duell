@@ -213,7 +213,7 @@ const Player = {
       DB.cards.filter(c=>c.starter).forEach(c=>this.owned[c.id]=2); this.save(); }
     else Object.assign(this, d);
   },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,progress:this.progress,prog:this.prog}); UI.coins(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,progress:this.progress,prog:this.prog}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1){ this.owned[id]=(this.owned[id]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -330,7 +330,7 @@ const Prog = {
         <button class="small ${full||locked||!p.sp?"ghost":"green"}" data-s="${s.id}" ${full||locked||!p.sp?"disabled":""}>${full?"MAX":"+1"}</button></div>`}).join("");
     $("pfSkills").querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>this.learn(f,b.dataset.s));
   },
-  saveNick(){ const n=($("pfName").value||"").trim().slice(0,16); if(!n) return toast("Bitte einen Nickname eingeben"); Store.set("nick",n); UI.badges(); toast("Nickname gespeichert: "+n); },
+  saveNick(){ const n=($("pfName").value||"").trim().slice(0,16); if(!n) return toast("Bitte einen Nickname eingeben"); Store.set("nick",n); UI.badges(); Account.scheduleSave(); toast("Nickname gespeichert: "+n); },
 };
 
 /* ============================ KARTEN-HTML ============================ */
@@ -417,12 +417,14 @@ const UI = {
     if(id==="story") Story.render();
     if(id==="online") Lobby.render();
     if(id==="profile") Prog.render();
+    if(id==="account") Account.render();
     if(id==="home") this.badges();
   },
   coins(){ ["homeCoins","shopCoins","openCoins"].forEach(i=>{const e=$(i); if(e) e.textContent="🪙 "+Player.coins}); },
   badges(){
     const nick=Store.get("nick","")||"Kein Nickname", pp=Prog.of("polizei"), pv=Prog.of("verbrecher"), sp=Prog.unspent();
-    const me=$("homeMe"); if(me) me.innerHTML=`👤 ${esc(nick)} · 👮${pp.lv} · 🦹${pv.lv}${sp?'<span class="dot"></span>':""}`;
+    const acc = typeof Account!=="undefined" && Account.enabled() ? (Account.loggedIn()?"☁️ ":"🔓 ") : "";
+    const me=$("homeMe"); if(me) me.innerHTML=`${acc}👤 ${esc(nick)} · 👮${pp.lv} · 🦹${pv.lv}${sp?'<span class="dot"></span>':""}`;
     const b=$("btnProfile"); if(b) b.innerHTML=`⭐ Laufbahn${sp?` (${sp})`:""}`;
   },
   back(){ // Android-Zurück-Taste
@@ -669,7 +671,7 @@ const Deck = {
   get list(){ return this.lists[this.faction]; },
   set list(v){ this.lists[this.faction]=v; },
   load(){ const l=Store.get("decks",{}); Object.keys(FACTIONS).forEach(f=>this.lists[f]=l[f]||[]); this.prune(); },
-  save(){ Store.set("decks",this.lists); },
+  save(){ Store.set("decks",this.lists); if(typeof Account!=="undefined") Account.scheduleSave(); },
   /* Karten entfernen, die gelöscht, falsch zugeordnet oder nicht (mehr) im Besitz sind */
   prune(){
     Object.keys(FACTIONS).forEach(f=>{ const cnt={};
@@ -1759,9 +1761,156 @@ const Lobby = {
   leave(){ Net.close(); UI.show("home"); },
 };
 
+/* ============================ KONTO (Firebase) ============================
+   Login per E-Mail + Passwort und Cloud-Spielstand über die REST-Schnittstellen von
+   Firebase Authentication und Cloud Firestore (keine große SDK nötig).
+   Gespeichert wird ein Dokument users/{uid} mit Nickname + komplettem Spielstand.
+   Die Firestore-Sicherheitsregeln erlauben nur dem eingeloggten Besitzer Zugriff.
+   ===================================================================== */
+const FIREBASE = window.FIREBASE_CONFIG || null;     // wird beim Build eingesetzt (build.py / firebase.json)
+
+const Account = {
+  user:null,        // {uid,email,idToken,refreshToken,exp}
+  _saveT:null, _syncing:false,
+  enabled(){ return !!(FIREBASE && FIREBASE.apiKey && FIREBASE.projectId); },
+  load(){ this.user = Store.get("auth", null); },
+  persist(){ Store.set("auth", this.user); },
+  loggedIn(){ return !!(this.user && this.user.refreshToken); },
+  errText(code){
+    return ({EMAIL_EXISTS:"Diese E-Mail ist schon registriert – bitte anmelden.", EMAIL_NOT_FOUND:"Kein Konto mit dieser E-Mail gefunden.",
+      INVALID_PASSWORD:"Falsches Passwort.", INVALID_LOGIN_CREDENTIALS:"E-Mail oder Passwort ist falsch.", INVALID_EMAIL:"Ungültige E-Mail-Adresse.",
+      MISSING_PASSWORD:"Bitte ein Passwort eingeben.", USER_DISABLED:"Dieses Konto ist gesperrt.", TOO_MANY_ATTEMPTS_TRY_LATER:"Zu viele Versuche – bitte später erneut.",
+      OPERATION_NOT_ALLOWED:"E-Mail-Login ist in Firebase noch nicht aktiviert.", PERMISSION_DENIED:"Keine Berechtigung (Firestore-Regeln prüfen).",
+      NETWORK:"Keine Internetverbindung."})[String(code).split(" ")[0].split(":")[0]] || ("Fehler: "+code);
+  },
+  async call(url, body){
+    let r; try{ r = await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); }catch(e){ throw new Error("NETWORK"); }
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error((j.error&&j.error.message)||("HTTP_"+r.status));
+    return j;
+  },
+  idt(){ return "https://identitytoolkit.googleapis.com/v1/accounts:"; },
+  setSession(j){
+    this.user = {uid:j.localId||j.user_id, email:j.email||(this.user&&this.user.email), idToken:j.idToken||j.id_token,
+      refreshToken:j.refreshToken||j.refresh_token, exp:Date.now()+((+(j.expiresIn||j.expires_in)||3600)-60)*1000};
+    this.persist();
+  },
+  async token(){
+    if(!this.loggedIn()) throw new Error("NOT_LOGGED_IN");
+    if(Date.now() < this.user.exp) return this.user.idToken;
+    let r; try{ r = await fetch(`https://securetoken.googleapis.com/v1/token?key=${FIREBASE.apiKey}`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},
+      body:`grant_type=refresh_token&refresh_token=${encodeURIComponent(this.user.refreshToken)}`}); }catch(e){ throw new Error("NETWORK"); }
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok){ if(r.status===400){ this.user=null; this.persist(); } throw new Error((j.error&&j.error.message)||"TOKEN"); }
+    this.setSession(j); return this.user.idToken;
+  },
+  async register(email, pw, nick){
+    const j = await this.call(this.idt()+"signUp?key="+FIREBASE.apiKey, {email, password:pw, returnSecureToken:true});
+    this.setSession(j); Store.set("nick", nick); await this.pushNow(); return true;
+  },
+  async login(email, pw){
+    const j = await this.call(this.idt()+"signInWithPassword?key="+FIREBASE.apiKey, {email, password:pw, returnSecureToken:true});
+    this.setSession(j); await this.pull(true); return true;
+  },
+  async resetPassword(email){ await this.call(this.idt()+"sendOobCode?key="+FIREBASE.apiKey, {requestType:"PASSWORD_RESET", email}); },
+  logout(){ this.user=null; this.persist(); UI.badges(); },
+
+  /* ---------- Cloud-Spielstand ---------- */
+  docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, progress:Player.progress, prog:Player.prog, decks:Deck.lists, nick:Store.get("nick","")}; },
+  async pushNow(){
+    if(!this.enabled()||!this.loggedIn()) return;
+    const t = await this.token(), data=this.snapshot(), now=Date.now();
+    const body = {fields:{ nick:{stringValue:data.nick||""}, data:{stringValue:JSON.stringify(data)}, updated:{integerValue:String(now)} }};
+    let r; try{ r = await fetch(this.docUrl(),{method:"PATCH",headers:{"Content-Type":"application/json","Authorization":"Bearer "+t},body:JSON.stringify(body)}); }catch(e){ throw new Error("NETWORK"); }
+    if(!r.ok){ const j=await r.json().catch(()=>({})); throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status)); }
+    Store.set("syncedAt", now);
+  },
+  /* Spielstand vom Konto laden. Beim Login: Cloud-Stand übernehmen, falls vorhanden – sonst lokalen hochladen */
+  async pull(atLogin){
+    const t = await this.token();
+    let r; try{ r = await fetch(this.docUrl(),{headers:{"Authorization":"Bearer "+t}}); }catch(e){ throw new Error("NETWORK"); }
+    if(r.status===404){ await this.pushNow(); return "uploaded"; }
+    const j = await r.json().catch(()=>({}));
+    if(!r.ok) throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status));
+    const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
+    const d = JSON.parse(raw);
+    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog;
+    if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
+    if(d.nick) Store.set("nick", d.nick);
+    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,progress:Player.progress,prog:Player.prog}); Deck.save();
+    UI.coins(); UI.badges(); return "loaded";
+  },
+  /* nach jeder Änderung am Spielstand: verzögert hochladen */
+  scheduleSave(){
+    if(!this.enabled()||!this.loggedIn()) return;
+    clearTimeout(this._saveT);
+    this._saveT=setTimeout(()=>this.pushNow().catch(e=>console.warn("Cloud-Speichern:",e.message)), 4000);
+  },
+
+  /* ---------- Bildschirm ---------- */
+  mode:"login",
+  render(){
+    const on=this.enabled(), li=this.loggedIn();
+    $("acOff").style.display = on?"none":"";
+    $("acForm").style.display = on&&!li?"":"none";
+    $("acIn").style.display = on&&li?"":"none";
+    if(li){ $("acEmail").textContent=this.user.email||""; $("acNick").textContent=Store.get("nick","")||"–";
+      const s=Store.get("syncedAt",0); $("acSync").textContent = s?("Zuletzt gespeichert: "+new Date(s).toLocaleString("de-DE")):"Noch nicht gespeichert"; }
+    $("acTabs").querySelectorAll("span").forEach(s=>s.classList.toggle("on",s.dataset.m===this.mode));
+    $("acNickRow").style.display = this.mode==="register"?"":"none";
+    $("acGo").textContent = this.mode==="register"?"✅ Konto erstellen":"🔑 Anmelden";
+    $("acPw2Row").style.display = this.mode==="register"?"":"none";
+  },
+  setMode(m){ this.mode=m; this.render(); },
+  async submit(){
+    const email=$("acMail").value.trim(), pw=$("acPw").value, nick=($("acNickIn").value||"").trim().slice(0,16);
+    if(!email||!pw) return toast("Bitte E-Mail und Passwort eingeben");
+    if(this.mode==="register"){
+      if(nick.length<3) return toast("Nickname: mindestens 3 Zeichen");
+      if(pw.length<6) return toast("Passwort: mindestens 6 Zeichen");
+      if(pw!==$("acPw2").value) return toast("Die Passwörter stimmen nicht überein");
+    }
+    $("acGo").disabled=true; $("acMsg").textContent="Bitte warten …";
+    try{
+      if(this.mode==="register"){ await this.register(email,pw,nick); toast("Willkommen, "+nick+"!"); }
+      else { const r=await this.login(email,pw); toast(r==="loaded"?"Angemeldet – Spielstand geladen":"Angemeldet – Spielstand gesichert"); }
+      $("acPw").value=""; $("acPw2").value=""; $("acMsg").textContent="";
+      UI.badges(); UI.show("home");
+    }catch(e){ $("acMsg").textContent="⚠️ "+this.errText(e.message); }
+    finally{ $("acGo").disabled=false; }
+  },
+  async forgot(){
+    const email=$("acMail").value.trim(); if(!email) return toast("Bitte zuerst deine E-Mail eingeben");
+    try{ await this.resetPassword(email); $("acMsg").textContent="📧 Wir haben dir eine E-Mail zum Zurücksetzen geschickt."; }
+    catch(e){ $("acMsg").textContent="⚠️ "+this.errText(e.message); }
+  },
+  async syncNow(){ try{ await this.pushNow(); toast("Spielstand gesichert"); this.render(); }catch(e){ toast(this.errText(e.message)); } },
+  async loadNow(){ if(!await UI.ask("Spielstand vom Konto laden? Der Stand auf diesem Gerät wird ersetzt.")) return;
+    try{ await this.pull(); toast("Spielstand geladen"); this.render(); }catch(e){ toast(this.errText(e.message)); } },
+  /* Beim Start: neuerer Stand gewinnt (anderes Gerät → laden, sonst hochladen) */
+  async syncOnStart(){
+    if(!this.enabled()||!this.loggedIn()) return;
+    try{
+      const t=await this.token(); const r=await fetch(this.docUrl(),{headers:{"Authorization":"Bearer "+t}});
+      if(r.status===404) return this.pushNow();
+      const j=await r.json(); const cloud=+(j.fields&&j.fields.updated&&j.fields.updated.integerValue||0), local=+Store.get("syncedAt",0);
+      if(cloud>local+1000){ await this.pull(); Store.set("syncedAt",cloud); toast("Spielstand vom Konto geladen"); if(UI.current==="home") UI.badges(); }
+      else await this.pushNow();
+    }catch(e){ console.warn("Sync:",e.message); }
+  },
+  async doLogout(){ if(!await UI.ask("Abmelden? Dein Spielstand bleibt im Konto gespeichert.")) return;
+    try{ await this.pushNow(); }catch(e){} this.logout(); this.render(); toast("Abgemeldet"); },
+};
+
 /* ============================ START ============================ */
 $("colType").innerHTML=filterOptions(); $("admType").innerHTML=filterOptions();
 $("admTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>Admin.tab(s.dataset.t));
-DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins(); Prog.data(); UI.badges();
+DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins(); Account.load(); Prog.data(); UI.badges();
+// Konto: beim ersten Start anmelden/registrieren anbieten, sonst Spielstand abgleichen
+if(Account.enabled()){
+  if(Account.loggedIn()) Account.syncOnStart();
+  else if(!Store.get("skipLogin",false)) setTimeout(()=>UI.show("account"),300);
+}
 $("appVer").textContent = "Version "+(window.APP_VERSION||"dev")+" · 69 Effekte";
 window.onAndroidBack = () => UI.back();   // von der Android-App aufgerufen
