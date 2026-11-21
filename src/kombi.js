@@ -261,16 +261,38 @@ const Kombi = {
   },
 
   /* ---------------- Kampf ---------------- */
+  /* Körperform einer Einheit aus Name, Emoji und Art (für Laufweg und 3D-Figur) */
+  body(c){
+    const t=(c.name+" "+((c.art&&c.art.emoji)||"")).toLowerCase();
+    if(/hubschrauber|heli|libelle|drohne|🚁|🛸/.test(t)) return "heli";
+    if(c.attr==="hunde"||/hund|🐕|🐶|🐺|🐩|🦮|🐕‍🦺/.test(t)) return "dog";
+    if(/wagen|fahrzeug|auto\b|transporter|bus\b|lkw|motorrad|roller|🚓|🚔|🚗|🏎|🚙|🚐|🚚|🛻|📹|🏍|🛵|🚑/.test(t)) return "car";
+    return "human";
+  },
+  /* Spielfeld: x links/rechts (−4,5…4,5), z von unten (−8, eigene Seite) nach oben (+8). Fluss bei |z|<0,6, Brücken bei x=±2,7 */
   fighters(p,side){
-    const tr=this.traits(p.board);
-    return p.board.map((u,slot)=>{ if(!u) return null; const s=this.stats(u,tr);
-      return Object.assign(s,{u,side,slot,maxhp:s.hp,cd:400+Math.random()*400,weak:0,weakT:0,pois:0,poisT:0,usedFirst:false,hit:0}); }).filter(Boolean);
+    const tr=this.traits(p.board), sg=side==="a"?-1:1;
+    return p.board.map((u,slot)=>{ if(!u) return null; const s=this.stats(u,tr), c=this.card(u), body=this.body(c);
+      const col=slot%3, row=slot<3?0:1;
+      return Object.assign(s,{u,side,slot,body,maxhp:s.hp,cd:200+Math.random()*500,weak:0,weakT:0,pois:0,poisT:0,usedFirst:false,hit:0,
+        x:-(col-1)*2.6+(Math.random()-.5)*.3, z:sg*(2.7+row*2), rad:body==="car"?.6:.42,
+        range:s.ranged?5:(body==="car"?1.25:1.0), speed:body==="dog"?2.4:body==="car"?2.0:body==="heli"?2.1:1.55, fly:body==="heli", tgt:null, moving:false}); }).filter(Boolean);
   },
   target(f,enemies){
+    if(f.tgt && f.tgt.hp>0) return f.tgt;
     const alive=enemies.filter(e=>e.hp>0); if(!alive.length) return null;
-    if(f.ranged) return alive.sort((a,b)=>a.hp-b.hp)[0];
-    const front=alive.filter(e=>e.slot<3), row=front.length?front:alive;
-    const col=f.slot%3; return row.sort((a,b)=>Math.abs(a.slot%3-col)-Math.abs(b.slot%3-col))[0];
+    const d=e=>Math.hypot(e.x-f.x,e.z-f.z)+(!f.fly&&!e.fly&&Math.sign(e.z)!==Math.sign(f.z)?Math.min(Math.abs(f.x-2.7),Math.abs(f.x+2.7)):0);
+    f.tgt=alive.sort((a,b)=>d(a)-d(b))[0]; return f.tgt;
+  },
+  /* nächster Wegpunkt: über eine Brücke, wenn das Ziel auf der anderen Flussseite liegt */
+  waypoint(f,g){
+    if(f.fly) return g;
+    const sf=Math.sign(f.z)||1, sg=Math.sign(g.z)||1, onRiver=Math.abs(f.z)<.6;
+    if(!onRiver && sf===sg) return g;
+    const bx = Math.abs(f.x-2.7)+Math.abs(g.x-2.7) < Math.abs(f.x+2.7)+Math.abs(g.x+2.7) ? 2.7 : -2.7;
+    if(onRiver) return {x:bx, z:sg*1.0};
+    if(Math.abs(f.x-bx)>.3) return {x:bx, z:sf*.95};
+    return {x:bx, z:-sf*1.0};
   },
   /* ein Simulationsschritt (dt ms); liefert Ereignisse für die Anzeige */
   step(B,dt){
@@ -280,12 +302,17 @@ const Kombi = {
     all.forEach(f=>{ if(f.hp<=0) return;
       if(f.poisT>0){ f.poisT-=dt; f.hp-=f.pois*dt/1000; if(f.hp<=0){ f.hp=0; ev.push({k:"die",f}); return; } }
       if(f.weakT>0) f.weakT-=dt;
-      // Nahkämpfer hinten greifen erst an, wenn die eigene vordere Reihe gefallen ist
-      const mine=f.side==="a"?B.a:B.b, foes=f.side==="a"?B.b:B.a;
-      if(!f.ranged && f.slot>=3 && mine.some(x=>x.hp>0&&x.slot<3)) return;
-      f.cd-=dt*sp; if(f.cd>0) return; f.cd+=f.as;
-      const t=this.target(f,foes); if(!t) return;
-      if(t.dodge && Math.random()<t.dodge){ ev.push({k:"miss",f:t}); return; }
+      f.cd=Math.max(0,f.cd-dt*sp);
+      const foes=f.side==="a"?B.b:B.a;
+      const t=this.target(f,foes); if(!t){ f.moving=false; return; }
+      const dist=Math.hypot(t.x-f.x,t.z-f.z);
+      if(dist>f.range+t.rad){
+        const w=this.waypoint(f,t), dx=w.x-f.x, dz=w.z-f.z, l=Math.hypot(dx,dz)||1, mv=Math.min(l,f.speed*dt/1000*sp);
+        f.x+=dx/l*mv; f.z+=dz/l*mv; f.dir=Math.atan2(dx,dz); f.moving=true; return;
+      }
+      f.moving=false; f.dir=Math.atan2(t.x-f.x,t.z-f.z);
+      if(f.cd>0) return; f.cd=f.as;
+      if(t.dodge && Math.random()<t.dodge){ ev.push({k:"miss",f:t,by:f}); return; }
       let d=f.dmg*(f.weakT>0?1-f.weak:1);
       if(f.first && !f.usedFirst){ d*=f.first; f.usedFirst=true; }
       d*=1-t.armor; d=Math.round(d);
@@ -296,6 +323,14 @@ const Kombi = {
       if(f.poison){ t.pois=f.poison; t.poisT=3000; }
       if(t.hp<=0){ t.hp=0; ev.push({k:"die",f:t}); }
     });
+    // nicht übereinander stehen; Fluss nur über Brücken
+    const live=all.filter(f=>f.hp>0);
+    for(let i=0;i<live.length;i++) for(let j=i+1;j<live.length;j++){
+      const a=live[i], b=live[j]; if(a.fly!==b.fly) continue;
+      const dx=b.x-a.x, dz=b.z-a.z, l=Math.hypot(dx,dz)||.01, min=a.rad+b.rad;
+      if(l<min){ const push=(min-l)/2, ux=dx/l, uz=dz/l; a.x-=ux*push; a.z-=uz*push; b.x+=ux*push; b.z+=uz*push; } }
+    live.forEach(f=>{ f.x=Math.max(-4.3,Math.min(4.3,f.x)); f.z=Math.max(-7.4,Math.min(7.4,f.z));
+      if(!f.fly && Math.abs(f.z)<.6){ const bx=f.x>0?2.7:-2.7; if(Math.abs(f.x-bx)>.62) f.z=(Math.sign(f.z)||(f.side==="a"?-1:1))*.6; } });
     const aAlive=B.a.some(f=>f.hp>0), bAlive=B.b.some(f=>f.hp>0);
     if(!aAlive||!bAlive||B.t>=KB.BATTLE_MS) B.done=true;
     return ev;
@@ -339,8 +374,13 @@ const Kombi = {
     },60);
   },
   skip(){ const A=this.anim; if(!A) return; while(!A.B.done) this.step(A.B,100); clearInterval(this._t); this.drawBattle([]); setTimeout(()=>this.afterBattle(),200); },
+  hud3d(){ const A=this.anim; if(!A||!$("kb3hud")) return; const B=A.B;
+    $("kb3hud").innerHTML=`<span style="white-space:nowrap">⚔️ gegen <b>${esc(B.pb.name.replace(/^KI /,""))}</b></span> ${B.frenzy?`<span class="frenzy">🚨 RASEREI</span>`:""}<span class="tm">${Math.max(0,Math.ceil((KB.BATTLE_MS-B.t)/1000))} s</span>`;
+    $("kb3spd").textContent=this.speed===1?"⏩ Schneller":"▶ Normal"; },
+  set3d(on){ Store.set("kb3d",on); this._3d=null; Arena.unmount(); if(this.anim) this.drawBattle([]); },
   afterBattle(){
     const A=this.anim; if(!A||A.over) return; A.over=true;
+    setTimeout(()=>{ if(!this.anim){ Arena.unmount(); this._3d=null; } },50);
     const g=this.g, me=this.me(), r=this.settle(A.B), opp=A.B.pb;
     let msg;
     if(r.win==="a") msg=`Sieg gegen ${opp.name}! ${opp.name} verliert ${r.dmg} LP.`;
@@ -379,7 +419,7 @@ const Kombi = {
   },
   async leave(){
     if(this.g && !await UI.ask("Kombi-Einsatz abbrechen? Das Spiel zählt dann als 4. Platz ohne Belohnung.")) return;
-    clearInterval(this._t); this.anim=null; this.g=null; UI.show("home");
+    clearInterval(this._t); this.anim=null; this.g=null; Arena.unmount(); this._3d=null; UI.show("home");
   },
 
   /* Hinweisfenster: Textzeilen + ein Knopf; jede Art des Schließens führt weiter */
@@ -434,6 +474,18 @@ const Kombi = {
   },
   drawBattle(ev){
     const A=this.anim; if(!A||UI.current!=="kombi") return; const B=A.B;
+    if(Arena.enabled()){
+      try{
+        if(this._3d!==B){ this._3d=B;
+          $("kbMain").innerHTML=`<div class="kb-vs" id="kb3hud"></div><div class="kb3d" id="kb3d"></div>
+            <div class="row" style="justify-content:center;margin-top:8px">
+              <button class="small ghost" id="kb3spd" onclick="Kombi.speed=Kombi.speed===1?3:1;Kombi.hud3d()"></button>
+              <button class="small ghost" onclick="Kombi.skip()">⏭ Ergebnis</button>
+              <button class="small ghost" onclick="Kombi.set3d(false)">2D</button></div>`;
+          Arena.mount($("kb3d"),B); }
+        this.hud3d(); Arena.onEvents(ev); return;
+      }catch(e){ console.error("3D:",e); Arena.ok=false; this._3d=null; }
+    }
     const hits={}; ev.forEach(e=>{ if(e.k==="hit") hits[e.t.u.u]=(hits[e.t.u.u]||0)+e.d; if(e.k==="miss") hits[e.f.u.u]="MISS"; });
     const cell=(list,slot)=>{ const f=list.find(x=>x.slot===slot); if(!f) return `<div class="kb-slot empty"></div>`;
       const pct=Math.max(0,f.hp/f.maxhp*100), dead=f.hp<=0, h=hits[f.u.u];
@@ -446,6 +498,6 @@ const Kombi = {
       <div class="kb-board mine">${[0,1,2,3,4,5].map(i=>cell(B.a,i)).join("")}</div>
       <div class="row" style="justify-content:center;margin-top:10px">
         <button class="small ghost" onclick="Kombi.speed=Kombi.speed===1?3:1;Kombi.drawBattle([])">${this.speed===1?"⏩ Schneller":"▶ Normal"}</button>
-        <button class="small ghost" onclick="Kombi.skip()">⏭ Ergebnis</button></div>`;
+        <button class="small ghost" onclick="Kombi.skip()">⏭ Ergebnis</button>${Arena.supported()?`<button class="small ghost" onclick="Kombi.set3d(true)">3D</button>`:""}</div>`;
   },
 };
