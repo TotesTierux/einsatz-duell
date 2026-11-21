@@ -79,9 +79,45 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 .side-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%}
 .side-pick button{font-size:22px;padding:18px 8px;display:flex;flex-direction:column;align-items:center;gap:6px}
 .side-pick button span{font-size:44px}
-.card.R{box-shadow:calc(var(--w)*.03) calc(var(--w)*.03) 0 var(--ink),0 0 0 2px #c0c0c0 inset}
-.card.UR .art::after,.card.SR .art::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.55) 45%,transparent 60%);
-  background-size:250% 100%;animation:shine 3s infinite linear;pointer-events:none}
+.card .rar .gem{display:inline-block;width:calc(var(--w)*.05);height:calc(var(--w)*.05);border-radius:50%;border:1px solid #000;margin-right:2px;vertical-align:middle}
+/* ===== Seltenheitsstufen (pro Exemplar, nur optisch) ===== */
+/* Rare: Silberfolie im Namensfeld */
+.card.p-R .nm,.card.p-SP .nm{background:linear-gradient(110deg,#d9dee4 0%,#fff 20%,#aeb7c2 38%,#fff 55%,#c9d0d8 75%,#fff 100%);background-size:220% 100%;animation:foil 4s linear infinite}
+@keyframes foil{from{background-position:0 0}to{background-position:-220% 0}}
+/* Special Rare: Holo-Glanz über dem Bild + Silberkante */
+.card.p-SP{box-shadow:calc(var(--w)*.03) calc(var(--w)*.03) 0 var(--ink),inset 0 0 0 calc(var(--w)*.012) #f2f2f2}
+.card.p-SP .art::after,.card.p-SE .art::before,.card.p-LG .art::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.65) 45%,transparent 60%);background-size:250% 100%;animation:shine 3s infinite linear}
+/* Secret Rare: Regenbogen-Prisma + Funkeln + Regenbogenschrift */
+.card.p-SE{box-shadow:calc(var(--w)*.03) calc(var(--w)*.03) 0 var(--ink),0 0 calc(var(--w)*.06) rgba(255,120,255,.7)}
+.card.p-SE .art::after{content:"";position:absolute;inset:0;pointer-events:none;mix-blend-mode:color-dodge;opacity:.75;
+  background:linear-gradient(125deg,#ff004c,#ffd300,#00ff95,#00c8ff,#b400ff,#ff004c);background-size:400% 400%;animation:prism 5s linear infinite}
+.card.p-SE .nm .nmt{background:linear-gradient(90deg,#e3001b,#ff8c00,#e6b800,#00a651,#0072ff,#7a00ff,#e3001b);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:foil 3s linear infinite}
+.card.p-SE .tx::after{content:"✦";position:absolute;right:4%;top:-6%;color:#fff;font-size:calc(var(--w)*.09);text-shadow:0 0 4px #ff6bff;animation:twinkle 1.6s ease-in-out infinite}
+.card .tx{position:relative}
+@keyframes prism{from{background-position:0% 50%}to{background-position:400% 50%}}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.6)}50%{opacity:1;transform:scale(1.2)}}
+/* Ghost Rare: geisterhaft, entsättigt, Nebel und kühles Leuchten */
+.card.p-GH{box-shadow:calc(var(--w)*.03) calc(var(--w)*.03) 0 var(--ink),0 0 calc(var(--w)*.1) rgba(200,230,255,.95);animation:ghostfloat 3.2s ease-in-out infinite}
+.card.p-GH .art{filter:grayscale(.9) brightness(1.3) contrast(.85)}
+.card.p-GH .art>*:not(.rar){opacity:.8}
+.card.p-GH .art::after{content:"";position:absolute;inset:-20%;pointer-events:none;background:radial-gradient(circle at 30% 40%,rgba(230,245,255,.75),transparent 45%),radial-gradient(circle at 70% 70%,rgba(200,225,255,.6),transparent 40%);animation:mist 6s ease-in-out infinite alternate}
+.card.p-GH .nm{background:#f4fbff;box-shadow:0 0 calc(var(--w)*.04) #cde8ff}
+.card.p-GH .nm .nmt{color:#2c4b66;text-shadow:0 0 calc(var(--w)*.03) #bfe3ff}
+@keyframes mist{from{transform:translate(-6%,-4%)}to{transform:translate(6%,5%)}}
+@keyframes ghostfloat{0%,100%{filter:drop-shadow(0 0 0 rgba(200,230,255,0))}50%{filter:drop-shadow(0 0 calc(var(--w)*.06) rgba(200,230,255,.9))}}
+/* Legendary: Goldrahmen, pulsierende Glut, aufsteigende Funken */
+.card.p-LG{background:linear-gradient(135deg,#7a4b00,#ffd76a 28%,#b8860b 48%,#fff2b0 68%,#8a5a00) !important;animation:lgglow 1.8s ease-in-out infinite alternate}
+@keyframes lgglow{from{box-shadow:calc(var(--w)*.03) calc(var(--w)*.03) 0 var(--ink),0 0 calc(var(--w)*.04) #ffb300}to{box-shadow:calc(var(--w)*.03) calc(var(--w)*.03) 0 var(--ink),0 0 calc(var(--w)*.14) #ff7a00}}
+.card.p-LG .nm{background:linear-gradient(110deg,#fff3c4,#ffd76a 30%,#fff8de 50%,#e0a92e 70%,#fff3c4);background-size:220% 100%;animation:foil 2.5s linear infinite}
+.card.p-LG .art::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle,#ffe08a 0 1.5px,transparent 2px) 10% 100%/22% 30%,radial-gradient(circle,#ff9d2e 0 1.2px,transparent 1.8px) 60% 100%/28% 34%,radial-gradient(circle,#fff3b0 0 1px,transparent 1.6px) 85% 100%/18% 26%;
+  animation:embers 2.2s linear infinite;mix-blend-mode:screen}
+.card.p-LG .rar::before{content:"👑";margin-right:1px}
+@keyframes embers{from{background-position:10% 110%,60% 120%,85% 105%}to{background-position:14% -30%,56% -40%,88% -35%}}
+.prname{font-family:var(--comic);letter-spacing:1px;font-size:14px;text-align:center;margin-top:4px}
+.pn-R{color:#d9dee4}.pn-SP{color:#fff}.pn-SE{background:linear-gradient(90deg,#ff5a7a,#ffd300,#00e08a,#3fa9ff,#c06bff);-webkit-background-clip:text;color:transparent}
+.pn-GH{color:#cfeaff;text-shadow:0 0 6px #9fd4ff}.pn-LG{color:#ffd23f;text-shadow:0 0 8px #ff8c2b}
 @keyframes shine{from{background-position:150% 0}to{background-position:-100% 0}}
 .cardback{--w:150px;width:var(--w);aspect-ratio:59/86;border:calc(var(--w)*.025) solid var(--ink);border-radius:calc(var(--w)*.06);flex-shrink:0;
   background:radial-gradient(circle,#ffd23f 0 18%,var(--ink) 19% 22%,transparent 23%),

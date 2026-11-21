@@ -204,18 +204,52 @@ const DB = {
   ofFaction(f){ return this.cards.filter(c=>c.faction===f); },
 };
 
+/* ============================ SELTENHEITSSTUFEN (pro Exemplar, nur optisch) ============================ */
+const PRINTS = [
+  {k:"C",  name:"Common",       short:"C",   w:62},
+  {k:"R",  name:"Rare",         short:"R",   w:24},
+  {k:"SP", name:"Special Rare", short:"SR",  w:9},
+  {k:"SE", name:"Secret Rare",  short:"ScR", w:3.5},
+  {k:"GH", name:"Ghost Rare",   short:"GR",  w:1.2},
+  {k:"LG", name:"Legendary",    short:"LG",  w:.3},
+];
+const PRINT = Object.fromEntries(PRINTS.map((p,i)=>[p.k,Object.assign({rank:i},p)]));
+/* Stufe auslosen; luck = Skill „Beziehungen/Kontakte“, min = Mindeststufe */
+function rollPrint(luck=0, min="C"){
+  const ws=PRINTS.map(p=>PRINT[p.k].rank>=2 ? p.w*(1+.25*luck) : p.w);
+  let r=Math.random()*ws.reduce((a,b)=>a+b,0), k="C";
+  for(let i=0;i<PRINTS.length;i++){ if((r-=ws[i])<0){ k=PRINTS[i].k; break; } }
+  return PRINT[k].rank<PRINT[min].rank ? min : k;
+}
+const RARITY_GEM = {N:"#b8b8b8",R:"#3fa9ff",SR:"#a463ff",UR:"#ffd23f"};
+
 /* ============================ SPIELER / SAMMLUNG ============================ */
 const Player = {
-  coins:0, owned:{}, progress:{}, seen:{},
+  coins:0, owned:{}, prints:{}, show:{}, progress:{}, seen:{},
   load(){
     const d = Store.get("player", null);
     if(!d){ this.coins=500; this.owned={}; this.progress={polizei:0,verbrecher:0};
       DB.cards.filter(c=>c.starter).forEach(c=>this.owned[c.id]=2); this.save(); }
     else Object.assign(this, d);
+    this.prints=this.prints||{}; this.show=this.show||{}; this.syncPrints();
   },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,progress:this.progress,prog:this.prog,trophies:this.trophies||[]}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  /* Stufen-Zähler mit der Anzahl abgleichen (alte Spielstände: alles Common) */
+  syncPrints(){
+    Object.keys(this.owned).forEach(id=>{ const n=this.owned[id]||0, p=this.prints[id]||(this.prints[id]={});
+      let sum=Object.values(p).reduce((a,b)=>a+b,0);
+      if(sum<n) p.C=(p.C||0)+(n-sum);
+      for(let i=0; sum>n && i<PRINTS.length; i++){ const k=PRINTS[i].k; while(sum>n && p[k]){ p[k]--; sum--; } if(!p[k]) delete p[k]; }
+      if(n<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } });
+    Object.keys(this.prints).forEach(id=>{ if(!this.owned[id]) delete this.prints[id]; });
+  },
+  printsOf(id){ return this.prints[id]||{}; },
+  bestPrint(id){ const p=this.printsOf(id); let b=null; PRINTS.forEach(x=>{ if(p[x.k]) b=x.k; }); return b; },
+  /* angezeigte Stufe: selbst gewählt, sonst die beste */
+  display(id){ const s=this.show[id]; return s&&this.printsOf(id)[s] ? s : this.bestPrint(id); },
+  remove(id,pr="C",n=1){ const p=this.prints[id]; if(!p||!(p[pr]>=n)) return false; p[pr]-=n; if(!p[pr]) delete p[pr]; this.owned[id]-=n; if(this.owned[id]<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } return true; },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[]}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
-  add(id,n=1){ this.owned[id]=(this.owned[id]||0)+n; },
+  add(id,n=1,pr="C"){ this.owned[id]=(this.owned[id]||0)+n; const p=this.prints[id]||(this.prints[id]={}); p[pr]=(p[pr]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
 };
 
@@ -303,7 +337,7 @@ const Prog = {
   nextAt(id){ const lv=this.cardLv(id); return lv<CARD_LV.length?CARD_LV[lv]:null; },
   /* Kopie einer Karte mit den Boni ihrer Kartenstufe */
   upgraded(c, lv){
-    if(!c) return c; lv = lv==null ? this.cardLv(c.id) : lv; const x=clone(c); x._lv=Math.max(1,lv);
+    if(!c) return c; lv = lv==null ? this.cardLv(c.id) : lv; const x=clone(c); x._lv=Math.max(1,lv); if(Player.has(c.id)) x._print=Player.display(c.id);
     const b=x._lv-1; if(!b) return x;
     if(isChar(x)){ x.atk=Math.round(x.atk*(1+.05*b)/50)*50; x.def=Math.round(x.def*(1+.05*b)/50)*50; }
     else if(x.val && EFFECTS[x.effect]&&EFFECTS[x.effect].val && !["draw","trap_draw","discard","mill","destroy_level"].includes(x.effect)) x.val=Math.round(x.val*(1+.1*b)/50)*50||x.val;
@@ -393,10 +427,10 @@ function cardHTML(c, extra="", attrs="", live){
   const mat = c.type==="fusion" ? `<span class="mat">${c.materials.map(m=>roleName(c.faction,m)).join(" + ")}:</span> ` : "";
   const frame = isM ? "f-"+c.faction : "l-"+c.law;
   const nf = nameFit(c.name);
-  return `<div class="card ${c.type} ${frame} ${c.rarity} ${extra}" ${attrs}>
+  return `<div class="card ${c.type} ${frame} r-${c.rarity} p-${c._print||"C"} ${extra}" ${attrs}>
     <div class="nm ${nf.two?"two":""}"><span class="nmt" style="font-size:${nf.fs}em">${esc(hyph(c.name))}</span><span class="at">${icon}</span></div>
     <div class="lv">${isM?stars:`<span class="lawtag">${c.law}${c.type==="trap"?" · Reaktion":""}</span>`}</div>
-    <div class="art" style="--c1:${c.art.c1};--c2:${c.art.c2}">${art}<span class="rar">${c.rarity}${c._lv>1?` · Lv${c._lv}`:""}</span></div>
+    <div class="art" style="--c1:${c.art.c1};--c2:${c.art.c2}">${art}<span class="rar"><i class="gem" style="background:${RARITY_GEM[c.rarity]||"#999"}"></i>${c._print&&c._print!=="C"?PRINT[c._print].short:""}${c._lv>1?` Lv${c._lv}`:""}</span></div>
     <div class="tx"><b>${typeLine}</b> ${mat}${esc(cardText(c))}</div>
     ${isM?`<div class="st"><span${atkStyle}>ATK ${atk}</span><span>DEF ${c.def}</span></div>`:`<div class="st"></div>`}
   </div>`;
@@ -420,6 +454,7 @@ const UI = {
     if(id==="online") Lobby.render();
     if(id==="profile") Prog.render();
     if(id==="tour") Tour.render();
+    if(id==="trade") Trade.render();
     if(id==="account") Account.render();
     if(id==="home") this.badges();
   },
@@ -439,6 +474,7 @@ const UI = {
     if(this.current==="duel"){Duel.quit();return true}
     if(this.current==="opening"){this.show("shop");return true}
     if(this.current==="tour"){Tour.leave();return true}
+    if(this.current==="trade"){Trade.leave();return true}
     if(this.current!=="home"){this.show("home");return true}
     return false;
   },
@@ -465,14 +501,23 @@ const UI = {
   closeModal(){$("modal").classList.remove("show"); const f=this._onClose; this._onClose=null; f&&f();},
   renderCollection(){
     const q=$("colSearch").value.toLowerCase(), t=$("colType").value, o=$("colOwned").value;
-    const list=DB.cards.filter(c=>matchFilter(c,t)&&c.name.toLowerCase().includes(q)&&(!o||(o==="own"?Player.has(c.id):!Player.has(c.id))));
+    const list=DB.cards.filter(c=>matchFilter(c,t)&&c.name.toLowerCase().includes(q)&&(!o||(o==="own"?Player.has(c.id):o==="fancy"?PRINT[Player.bestPrint(c.id)||"C"].rank>=3:!Player.has(c.id))));
     const ownedCount=DB.cards.filter(c=>Player.has(c.id)).length;
     $("colCount").textContent=`${ownedCount}/${DB.cards.length}`;
     $("colList").innerHTML = list.map(c=>{const n=Player.has(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id);
       return `<div class="ownwrap">${n?`<span class="cnt">×${n}</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
         ${n?`<div class="lvbar" title="Kartenstufe"><i style="width:${nx?Math.round(n/nx*100):100}%"></i><span>Lv${lv}${nx?` · ${n}/${nx}`:" MAX"}</span></div>`:""}</div>`}).join("") || `<p class="muted">Keine Karten gefunden.</p>`;
-    $("colList").querySelectorAll(".card").forEach(el=>el.onclick=()=>{ const c=DB.byId(el.dataset.id), n=Player.has(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id);
-      this.modal(n?Prog.upgraded(c,lv):c, [[n?`Kartenstufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} bei ${nx} Exemplaren (+${isChar(c)?"5 % ATK/DEF":"10 % Effekt"})`:" · Maximum erreicht"}`:"Noch nicht in deiner Sammlung",null,"ghost"]]); });
+    $("colList").querySelectorAll(".card").forEach(el=>el.onclick=()=>this.cardInfo(el.dataset.id));
+  },
+  /* Karte in der Sammlung: Kartenstufe, Seltenheitsstufen und Anzeige wählen */
+  cardInfo(id){
+    const c=DB.byId(id), n=Player.has(id), lv=Prog.cardLv(id), nx=Prog.nextAt(id);
+    if(!n) return this.modal(c,[["Noch nicht in deiner Sammlung",null,"ghost"]]);
+    const p=Player.printsOf(id), cur=Player.display(id);
+    const acts=[[`Kartenstufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} bei ${nx} Exemplaren`:" · Maximum"}`,null,"ghost"],
+      [`Exemplare: ${PRINTS.filter(x=>p[x.k]).map(x=>`${x.name} ×${p[x.k]}`).join(", ")}`,null,"ghost"]];
+    PRINTS.filter(x=>p[x.k]&&x.k!==cur).reverse().forEach(x=>acts.push([`✨ Als ${x.name} anzeigen`,()=>{ Player.show[id]=x.k; Player.save(); this.renderCollection(); setTimeout(()=>this.cardInfo(id),50); },"blue"]));
+    this.modal(Prog.upgraded(c,lv), acts);
   },
   async openAdmin(){
     const pin = Store.get("pin","1234");
@@ -523,9 +568,9 @@ const Admin = {
     fetch("../version.json",{cache:"no-store"}).then(r=>r.json()).then(v=>toast(v.versionName===window.APP_VERSION?"Du hast die neueste Version ("+v.versionName+")":"Neue Version "+v.versionName+" – Seite neu laden")).catch(()=>{});
   },
   addCoins(n){ Player.coins+=n; Player.save(); this.renderPlayer(); toast(`+🪙${n}`); },
-  async unlockAll(){ if(!await UI.ask("Alle Karten 3× in die Sammlung legen?")) return; DB.cards.forEach(c=>Player.owned[c.id]=Math.max(3,Player.has(c.id))); Player.save(); this.renderPlayer(); toast("Alles freigeschaltet"); },
+  async unlockAll(){ if(!await UI.ask("Alle Karten 3× in die Sammlung legen?")) return; DB.cards.forEach(c=>Player.owned[c.id]=Math.max(3,Player.has(c.id))); Player.syncPrints(); Player.save(); this.renderPlayer(); toast("Alles freigeschaltet"); },
   async resetCollection(){ if(!await UI.ask("Sammlung auf das Startset zurücksetzen?")) return;
-    Player.owned={}; DB.cards.filter(c=>c.starter).forEach(c=>Player.owned[c.id]=2); Player.save(); Deck.prune(); this.renderPlayer(); toast("Sammlung zurückgesetzt"); },
+    Player.owned={}; Player.prints={}; Player.show={}; DB.cards.filter(c=>c.starter).forEach(c=>Player.owned[c.id]=2); Player.syncPrints(); Player.save(); Deck.prune(); this.renderPlayer(); toast("Sammlung zurückgesetzt"); },
   async resetStory(){ if(!await UI.ask("Story-Fortschritt zurücksetzen?")) return; Player.progress={polizei:0,verbrecher:0}; Player.save(); this.renderPlayer(); },
   newCard(){ this.open(normalizeCard({name:"Neue Karte",faction:"polizei",type:"monster",level:4,atk:1500,def:1000,art:{emoji:"👮",c1:"#cfe3ff",c2:"#1d4fa8"}}), true); },
   edit(id){ this.open(clone(DB.byId(id)), false); },
@@ -607,7 +652,7 @@ const Admin = {
     const id=this.draft.id;
     DB.cards=DB.cards.filter(c=>c.id!==id); DB.save();
     if(START_CARDS.some(c=>c.id===id)){ const del=Store.get("deleted",[]); del.push(id); Store.set("deleted",del); }
-    delete Player.owned[id]; Player.save(); Deck.prune();
+    delete Player.owned[id]; Player.syncPrints(); Player.save(); Deck.prune();
     toast("Gelöscht"); UI.show("admin");
   },
   cancel(){ UI.show("admin"); },
@@ -778,18 +823,21 @@ const Shop = {
       if(last && p.premium && !out.some(c=>RANK[c.rarity]>=2)) min="SR";
       out.push(this.pickCard(pool.filter(c=>!p.fusion||c.type!=="fusion"), this.rollRarity(min,p.faction)));
     }
-    this.pulled=out.map(c=>({c, isNew:!Player.has(c.id)}));
-    out.forEach(c=>Player.add(c.id)); Player.save();
+    const luck = p.faction ? Prog.skill(p.faction,"luck") : Math.max(Prog.skill("polizei","luck"),Prog.skill("verbrecher","luck"));
+    const prs = out.map(()=>rollPrint(luck));
+    if(p.premium && !prs.some(k=>PRINT[k].rank>=2)) prs[prs.length-1]=rollPrint(luck,"SP");   // Gold-Akte: mind. 1× Special Rare
+    this.pulled=out.map((c,i)=>{ const x=clone(c); x._print=prs[i]; return {c:x, isNew:!Player.has(c.id), newPrint:Player.has(c.id)&&!Player.printsOf(c.id)[prs[i]]&&PRINT[prs[i]].rank>PRINT[Player.bestPrint(c.id)||"C"].rank}; });
+    out.forEach((c,i)=>Player.add(c.id,1,prs[i])); Player.save();
     this.last=id; this.revealed=out.map(()=>false);
     $("openTitle").textContent=p.icon+" "+p.name; $("btnAgain").textContent=`Nochmal (🪙${p.price})`;
     UI.show("opening"); this.renderOpen();
   },
   renderOpen(){
     $("openCards").innerHTML=this.pulled.map((x,i)=>this.revealed[i]
-      ? `<div class="ownwrap glow-${x.c.rarity}">${x.isNew?'<span class="new">NEU!</span>':""}${cardHTML(x.c,"flip",`data-i="${i}"`)}</div>`
+      ? `<div class="ownwrap">${x.isNew?'<span class="new">NEU!</span>':x.newPrint?'<span class="new">NEUE STUFE!</span>':""}${cardHTML(x.c,"flip",`data-i="${i}"`)}<div class="prname pn-${x.c._print}">${PRINT[x.c._print].name}</div></div>`
       : `<div class="cardback" data-i="${i}"></div>`).join("");
     $("openCards").querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>{const i=+el.dataset.i;
-      if(!this.revealed[i]){ this.revealed[i]=true; const r=this.pulled[i].c.rarity; if(RANK[r]>=2) banner(r==="UR"?"ULTRA RAR!":"SUPER RAR!"); this.renderOpen(); }
+      if(!this.revealed[i]){ this.revealed[i]=true; const pr=this.pulled[i].c._print; if(PRINT[pr].rank>=2) banner(PRINT[pr].name.toUpperCase()+"!"); this.renderOpen(); }
       else UI.modal(this.pulled[i].c); });
   },
   revealAll(){ this.revealed=this.revealed.map(()=>true); this.renderOpen(); },
@@ -1601,6 +1649,7 @@ const Net = {
     const k=c.metadata&&c.metadata.kind;
     if(k==="match") return this.acceptMatch(c);
     if(Tour.hosting) return Tour.addMember(c);
+    if(this.role==="tradehost") return Trade.accept(c);
     if(this.role==="host") return this.acceptDuel(c);
     try{ c.close(); }catch(e){}
   },
@@ -1638,11 +1687,12 @@ const Net = {
   ask(kind,data){ return new Promise(res=>{ const id=++this.rid; this.pend[id]=res; this.send({t:"ask",id,kind,data}); }); },
   /* nur die Duell-Verbindung beenden (Turnier-Verbindung bleibt bestehen) */
   endDuelConn(){ const c=this.conn; this.conn=null; this.pend={}; try{ c&&c.close(); }catch(e){} },
-  close(){ this.closing=true; try{ this.conn&&this.conn.close(); }catch(e){} Tour.reset(); try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
+  close(){ this.closing=true; try{ this.conn&&this.conn.close(); }catch(e){} try{ Trade.conn&&Trade.conn.close(); }catch(e){} Tour.reset(); Trade.reset(); try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
   onConnClose(c){
     if(this.closing) return;
     if(Tour.hub===c) return Tour.onHubClose();
     if(c._tid) return Tour.onMemberClose(c);
+    if(c._trade) return Trade.onClose();
     if(c!==this.conn) return;
     this.conn=null;
     if(UI.current==="duel" && Duel.online && !Duel.over){ toast("Verbindung zum Gegner verloren"); Duel.opponentLeft(); }
@@ -1656,6 +1706,7 @@ const Net = {
   },
   onData(m,c){
     if(m && typeof m.t==="string" && m.t.startsWith("t_")) return Tour.onData(m,c);
+    if(m && typeof m.t==="string" && m.t.startsWith("tr_")) return Trade.onData(m,c);
     switch(m.t){
       // ---- beim Gast ----
       case "welcome": {
@@ -1954,6 +2005,138 @@ const Tour = {
   koName(r,v){ const n=v.matches.filter(m=>m.round===r).length; return n===1?"Finale":n===2?"Halbfinale":n===4?"Viertelfinale":"Runde "+r; },
 };
 
+/* ============================ TAUSCHEN (live) ============================
+   Tausch-Raum per Code/Einladungslink. Beide legen Karten (mit Seltenheitsstufe) und
+   Münzen in ihr Angebot. Jede Änderung hebt die Bestätigungen auf. Erst wenn beide das
+   identische Gesamtpaket bestätigt haben, führt jedes Gerät den Tausch für sich aus.
+   ===================================================================== */
+const Trade = {
+  active:false, conn:null, host:false, oppName:"", mine:{items:[],coins:0}, theirs:{items:[],coins:0}, cards:{},
+  meReady:false, themReady:false, done:false,
+  reset(){ Object.assign(this,{active:false,conn:null,host:false,oppName:"",mine:{items:[],coins:0},theirs:{items:[],coins:0},cards:{},meReady:false,themReady:false,done:false}); },
+  /* Gastgeber: Raum öffnen */
+  create(){
+    const n=Lobby.name(); if(!n) return;
+    Net.close(); this.reset(); this.host=true;
+    Net.role="tradehost"; Net.name=n; Net.code=Net.newCode();
+    Lobby.status("Tausch-Raum wird erstellt …");
+    const open=()=>Net.openPeer(Net.pid(Net.code), ()=>{ this.active=true; UI.show("trade"); },
+      e=>{ if(e.type==="unavailable-id"){ Net.code=Net.newCode(); return open(); } Lobby.error(e); });
+    open();
+  },
+  accept(c){
+    if(this.conn) return Net.reject(c,"busy");
+    this.conn=c; c._trade=true;
+    c.on("open",()=>{ Net.wire(c); Net.sendTo(c,{t:"tr_welcome",name:Net.name}); });
+  },
+  /* Gast: über Beitreten gelandet */
+  becomeGuest(c,m){
+    this.reset(); this.active=true; this.conn=c; c._trade=true; this.oppName=m.name;
+    Net.conn=null; Net.role="tradeguest";
+    Net.sendTo(c,{t:"tr_hello",name:Lobby.name()||"Spieler"});
+    UI.show("trade"); toast("Tausch-Raum von "+m.name+" beigetreten");
+  },
+  onClose(){
+    if(!this.active) return;
+    const wasDone=this.done; this.conn=null; this.meReady=this.themReady=false;
+    if(!wasDone){ toast("Tauschpartner hat den Raum verlassen"); } this.render();
+  },
+  send(m){ Net.sendTo(this.conn,m); },
+  /* Gesamtpaket als Text – beide Seiten müssen exakt dasselbe bestätigen */
+  sig(){ const f=o=>JSON.stringify([o.items.map(i=>i.id+":"+i.p+":"+i.n).sort(),o.coins]);
+    return this.host ? f(this.mine)+"|"+f(this.theirs) : f(this.theirs)+"|"+f(this.mine); },
+  changed(){ this.meReady=false; this.themReady=false;
+    const cards={}; this.mine.items.forEach(i=>{ const c=DB.byId(i.id); if(c) cards[i.id]=c; });
+    this.send({t:"tr_offer",offer:this.mine,cards}); this.render(); },
+  have(id,p){ return (Player.printsOf(id)[p]||0) - this.mine.items.filter(i=>i.id===id&&i.p===p).reduce((a,i)=>a+i.n,0); },
+  addItem(id,p){
+    if(this.done) return;
+    if(this.have(id,p)<1) return toast("Davon hast du keine weiteren Exemplare");
+    if(this.mine.items.length>=12 && !this.mine.items.find(i=>i.id===id&&i.p===p)) return toast("Maximal 12 verschiedene Karten pro Tausch");
+    const it=this.mine.items.find(i=>i.id===id&&i.p===p); if(it) it.n++; else this.mine.items.push({id,p,n:1});
+    this.changed();
+  },
+  removeItem(idx){ const it=this.mine.items[idx]; if(!it) return; it.n--; if(it.n<=0) this.mine.items.splice(idx,1); this.changed(); },
+  setCoins(v){ v=Math.max(0,Math.min(Player.coins,Math.floor(+v||0))); $("trCoins").value=v; if(v!==this.mine.coins){ this.mine.coins=v; this.changed(); } },
+  toggleReady(){
+    if(!this.conn) return toast("Noch kein Tauschpartner da");
+    if(!this.mine.items.length && !this.mine.coins && !this.theirs.items.length && !this.theirs.coins) return toast("Legt zuerst etwas in eure Angebote");
+    this.meReady=!this.meReady; this.send({t:"tr_ready",ready:this.meReady,sig:this.sig()}); this.render(); this.tryExecute();
+  },
+  tryExecute(){
+    if(!(this.meReady && this.themReady && this._theirSig===this.sig()) || this.done) return;
+    // eigenes Angebot prüfen
+    for(const i of this.mine.items){ if((Player.printsOf(i.id)[i.p]||0)<i.n){ toast("Du besitzt nicht mehr alle angebotenen Karten"); this.meReady=false; this.send({t:"tr_ready",ready:false}); return this.render(); } }
+    if(Player.coins<this.mine.coins){ toast("Nicht genug Münzen"); this.meReady=false; this.send({t:"tr_ready",ready:false}); return this.render(); }
+    this.mine.items.forEach(i=>Player.remove(i.id,i.p,i.n));
+    this.theirs.items.forEach(i=>{
+      if(!DB.byId(i.id) && this.cards[i.id]){ DB.cards.push(normalizeCard(this.cards[i.id])); DB.save(); }   // unbekannte (selbst erstellte) Karte übernehmen
+      if(DB.byId(i.id)) Player.add(i.id,i.n,PRINT[i.p]?i.p:"C");
+    });
+    Player.coins += this.theirs.coins - this.mine.coins;
+    Player.save(); Deck.prune(); this.done=true;
+    this.send({t:"tr_done"});
+    banner("GETAUSCHT!"); toast(`Tausch mit ${this.oppName} abgeschlossen`);
+    this.render();
+  },
+  onData(m,c){
+    switch(m.t){
+      case "tr_welcome": this.becomeGuest(c,m); break;
+      case "tr_hello": this.oppName=(m.name||"Spieler").slice(0,16); toast(this.oppName+" ist im Tausch-Raum"); this.changed(); break;
+      case "tr_offer": if(this.done){ this.done=false; this.mine={items:[],coins:0}; }
+        this.theirs={items:(m.offer.items||[]).slice(0,12),coins:Math.max(0,+m.offer.coins||0)}; Object.assign(this.cards,m.cards||{});
+        this.meReady=false; this.themReady=false; this.render(); break;
+      case "tr_ready": this.themReady=!!m.ready; this._theirSig=m.sig; this.render(); this.tryExecute(); break;
+      case "tr_done": break;
+    }
+  },
+  leave(){ Net.close(); this.reset(); UI.show("online"); },
+  newTrade(){ this.mine={items:[],coins:0}; this.theirs={items:[],coins:0}; this.done=false; this.meReady=this.themReady=false; if(this.conn) this.changed(); this.render(); },
+
+  /* ---------- Anzeige ---------- */
+  itemHTML(i,mine,idx){
+    const c = DB.byId(i.id) || this.cards[i.id]; if(!c) return "";
+    const x=clone(c); x._print=i.p;
+    return `<div class="tritem">${cardHTML(x,"",`data-ti="${idx}" data-mine="${mine?1:0}"`)}<div class="trn">${i.n>1?"×"+i.n+" · ":""}${PRINT[i.p]?PRINT[i.p].name:""}</div></div>`;
+  },
+  render(){
+    if(UI.current!=="trade") return;
+    $("trCodeBox").style.display = this.host && !this.conn ? "" : "none";
+    $("trCode").textContent=Net.code;
+    $("trStatus").textContent = this.done ? "✅ Tausch abgeschlossen!" : !this.conn ? (this.host?"Warte auf deinen Tauschpartner …":"Verbindung getrennt") : `Tausch mit ${this.oppName}`;
+    $("trOppTitle").textContent = this.oppName ? `Angebot von ${this.oppName}` : "Angebot deines Partners";
+    $("trMine").innerHTML = this.mine.items.map((i,k)=>this.itemHTML(i,true,k)).join("") || `<p class="muted">Noch nichts angeboten.</p>`;
+    $("trTheirs").innerHTML = this.theirs.items.map((i,k)=>this.itemHTML(i,false,k)).join("") || `<p class="muted">Noch nichts angeboten.</p>`;
+    $("trMyCoins").textContent = this.mine.coins ? `+ 🪙 ${this.mine.coins}` : "";
+    $("trTheirCoins").textContent = this.theirs.coins ? `+ 🪙 ${this.theirs.coins}` : "";
+    $("trCoins").value=this.mine.coins; $("trCoins").max=Player.coins;
+    $("trMine").querySelectorAll(".card").forEach(el=>el.onclick=()=>{ if(!this.done) this.removeItem(+el.dataset.ti); });
+    $("trTheirs").querySelectorAll(".card").forEach(el=>el.onclick=()=>{ const i=this.theirs.items[+el.dataset.ti]; const c=clone(DB.byId(i.id)||this.cards[i.id]); c._print=i.p; UI.modal(c); });
+    $("trReadyMe").textContent = this.meReady ? "✅ Du hast bestätigt" : "⏳ Du hast noch nicht bestätigt";
+    $("trReadyThem").textContent = this.themReady ? `✅ ${this.oppName||"Partner"} hat bestätigt` : `⏳ ${this.oppName||"Partner"} hat noch nicht bestätigt`;
+    $("trGo").textContent = this.meReady ? "↩ Bestätigung zurücknehmen" : "🤝 Tausch bestätigen";
+    $("trGo").style.display = this.done ? "none" : "";
+    $("trAgain").style.display = this.done && this.conn ? "" : "none";
+    $("trAdd").disabled = this.done;
+  },
+  /* Karte aus der Sammlung auswählen */
+  pick(){
+    const own=DB.cards.filter(c=>Player.has(c.id));
+    const draw=(q="")=>{
+      const list=own.filter(c=>c.name.toLowerCase().includes(q.toLowerCase()));
+      $("modalCard").innerHTML=`<h2 style="color:var(--yellow);text-align:center;margin-bottom:8px">Karte anbieten</h2>
+        <input id="trSearch" placeholder="Suchen …" value="${esc(q)}" style="margin-bottom:8px">
+        <div class="fusion-pick">${list.slice(0,60).map(c=>{ const p=Player.printsOf(c.id);
+          return PRINTS.filter(x=>p[x.k]).map(x=>{ const y=Prog.upgraded(c); y._print=x.k; const left=this.have(c.id,x.k);
+            return `<div class="opt">${cardHTML(y,"",`style="--w:100px"`)}<button class="small ${left>0?"green":"ghost"}" data-id="${c.id}" data-p="${x.k}" ${left>0?"":"disabled"}>${x.name} · ${left}×</button></div>`; }).join(""); }).join("")}</div>`;
+      $("modalCard").querySelectorAll("[data-id]").forEach(b=>b.onclick=()=>{ this.addItem(b.dataset.id,b.dataset.p); draw($("trSearch").value); });
+      const s=$("trSearch"); s.oninput=()=>{ const v=s.value; clearTimeout(this._st); this._st=setTimeout(()=>{ draw(v); const n=$("trSearch"); n.focus(); n.setSelectionRange(v.length,v.length); },250); };
+    };
+    draw(); $("modalActs").innerHTML=""; const x=document.createElement("button"); x.textContent="Fertig"; x.className="ghost"; x.onclick=()=>UI.closeModal(); $("modalActs").appendChild(x);
+    UI._onClose=null; $("modal").classList.add("show");
+  },
+};
+
 /* ---------- Duell-Erweiterungen für den Online-Modus ---------- */
 Object.assign(Duel, {
   /* Spielstand aus Sicht des Gastes (verdeckte Karten des Gastgebers bleiben geheim) */
@@ -2054,6 +2237,7 @@ const Lobby = {
   showCode(code){ $("onCodeBox").style.display=""; $("onCode").textContent=code; this.status("Warte auf deinen Gegner … Gib ihm den Code."); },
   inviteUrl(){ return `${window.APP_SITE||"https://totestierux.github.io/einsatz-duell"}/join.html?c=${Net.code}`; },
   inviteText(){ const n=Store.get("nick","")||"Ich";
+    if(Net.role==="tradehost") return `🔁 ${n} möchte Karten mit dir tauschen! Tippe zum Beitreten: ${this.inviteUrl()} (Code: ${Net.code})`;
     return Tour.hosting ? `🏆 ${n} lädt dich zu einem Einsatz-Duell-Turnier ein! Tippe zum Beitreten: ${this.inviteUrl()} (Code: ${Net.code})`
                         : `🚨 ${n} fordert dich zum Einsatz-Duell heraus! Tippe zum Beitreten: ${this.inviteUrl()} (Raumcode: ${Net.code})`; },
   async share(){
@@ -2142,7 +2326,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], decks:Deck.lists, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], decks:Deck.lists, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -2160,10 +2344,10 @@ const Account = {
     if(!r.ok) throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status));
     const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
     const d = JSON.parse(raw);
-    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[];
+    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.syncPrints();
     if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
     if(d.nick) Store.set("nick", d.nick);
-    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[]}); Deck.save();
+    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[]}); Deck.save();
     UI.coins(); UI.badges(); return "loaded";
   },
   /* nach jeder Änderung am Spielstand: verzögert hochladen */

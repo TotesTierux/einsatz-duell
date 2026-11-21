@@ -48,7 +48,7 @@
   box-shadow:6px 6px 0 var(--ink);margin-top:-8px;min-height:90px}
 .scene .next{margin-top:14px;align-self:flex-end}
 .scene .skip{position:absolute;top:calc(env(safe-area-inset-top) + 64px);right:14px}
-@media (prefers-reduced-motion:reduce){.scene .avatar,.flip,.card .art::after{animation:none}}
+@media (prefers-reduced-motion:reduce){.scene .avatar,.flip,.card,.card *,.card .art::after,.card .art::before,.card .tx::after{animation:none !important}}
 /* Laufbahn */
 .home-me{position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:12px;font-family:var(--comic);letter-spacing:.5px;font-size:15px;
   background:rgba(0,0,0,.35);border:3px solid var(--ink);border-radius:20px;padding:3px 12px;max-width:58vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -87,6 +87,10 @@
 .tm.play{border-color:var(--red)} .tm.mine{box-shadow:0 0 0 2px var(--yellow)}
 .tm .win{color:var(--green);font-weight:800}
 .tm.done span:not(.win){opacity:.55}
+/* Tausch */
+.trlist{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;min-height:40px}
+.tritem .card{--w:96px}
+.trn{font-family:var(--comic);letter-spacing:.5px;font-size:13px;text-align:center;margin-top:3px}
 /* Online */
 .roomcode{font-family:var(--comic);font-size:56px;letter-spacing:10px;color:var(--yellow);-webkit-text-stroke:2px var(--ink);text-shadow:4px 4px 0 var(--ink);margin:4px 0 10px}
 .codein{text-transform:uppercase;letter-spacing:8px;font-size:28px;text-align:center;font-family:var(--comic)}
@@ -196,8 +200,13 @@
     <button class="red" onclick="Lobby.createTour()" style="background:#a463ff">🏆 Turnier-Raum erstellen</button>
   </div>
   <div class="panel">
+    <h3 style="color:var(--yellow)">🔁 Karten tauschen</h3>
+    <p class="muted">Tausch-Raum öffnen, Link schicken – ihr legt Karten und Münzen rein und bestätigt beide.</p>
+    <button class="blue" onclick="Trade.create()">🔁 Tausch-Raum erstellen</button>
+  </div>
+  <div class="panel">
     <h3 style="color:var(--yellow)">Raum beitreten</h3>
-    <p class="muted" style="margin-top:0">Funktioniert für Duelle und Turniere.</p>
+    <p class="muted" style="margin-top:0">Funktioniert für Duelle, Turniere und Tausch-Räume.</p>
     <input id="onJoin" maxlength="5" placeholder="CODE" autocomplete="off" autocapitalize="characters" class="codein">
     <button class="blue" onclick="Lobby.join()" style="margin-top:10px;width:100%">Beitreten</button>
   </div>
@@ -286,11 +295,46 @@
   <button class="small ghost" onclick="Tour.leave()" style="margin-top:16px">Turnier verlassen</button>
 </section>
 
+<!-- ================= TAUSCH ================= -->
+<section id="trade" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="Trade.leave()">◀</button><h2>Tauschen</h2></div>
+  <div class="panel" style="text-align:center">
+    <div class="tstatus" id="trStatus"></div>
+    <div id="trCodeBox" style="display:none">
+      <div class="muted">Tausch-Code</div>
+      <div class="roomcode" id="trCode"></div>
+      <div class="row" style="justify-content:center">
+        <button class="small green" onclick="Lobby.share()">📤 Einladung teilen</button>
+        <button class="small blue" onclick="Lobby.copyLink()">🔗 Link kopieren</button>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <h3 style="color:var(--yellow)">Dein Angebot <span id="trMyCoins" style="color:#fff"></span></h3>
+    <div class="trlist" id="trMine"></div>
+    <div class="row" style="margin-top:10px;align-items:center;flex-wrap:nowrap">
+      <button class="small green" id="trAdd" onclick="Trade.pick()">＋ Karte</button>
+      <span style="white-space:nowrap">🪙</span><input id="trCoins" type="number" min="0" step="50" value="0" onchange="Trade.setCoins(this.value)" style="max-width:120px">
+    </div>
+    <p class="muted" style="margin:6px 0 0">Tippe auf eine deiner Karten, um sie wieder herauszunehmen.</p>
+  </div>
+  <div class="panel">
+    <h3 style="color:var(--yellow)"><span id="trOppTitle">Angebot deines Partners</span> <span id="trTheirCoins" style="color:#fff"></span></h3>
+    <div class="trlist" id="trTheirs"></div>
+  </div>
+  <div class="panel" style="text-align:center">
+    <div id="trReadyMe"></div><div id="trReadyThem" style="margin-bottom:10px"></div>
+    <button class="red" id="trGo" onclick="Trade.toggleReady()">🤝 Tausch bestätigen</button>
+    <button class="blue" id="trAgain" onclick="Trade.newTrade()" style="display:none">🔁 Noch ein Tausch</button>
+    <p class="muted">Der Tausch passiert erst, wenn beide genau dieses Paket bestätigt haben. Jede Änderung hebt die Bestätigungen auf.</p>
+  </div>
+</section>
+
 <!-- ================= SHOP ================= -->
 <section id="shop" class="screen">
   <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Shop</h2><span class="coins" id="shopCoins">🪙 0</span></div>
   <div id="shopPacks" class="packs"></div>
-  <div class="panel" style="margin-top:16px"><p class="muted" style="margin:0">Münzen verdienst du im Duell (Sieg 🪙100, Niederlage 🪙25) und in der Story. Seltenheiten: N 70 %, R 20 %, SR 8 %, UR 2 %. In jedem Pack ist mindestens eine Karte R oder besser.</p></div>
+  <div class="panel" style="margin-top:16px"><p class="muted" style="margin:0">Münzen verdienst du im Duell (Sieg 🪙100, Niederlage 🪙25) und in der Story. Jede gezogene Karte hat eine <b>Seltenheitsstufe</b> (nur optisch): Common 62 % · Rare 24 % · Special Rare 9 % · Secret Rare 3,5 % · Ghost Rare 1,2 % · Legendary 0,3 %. Die Ermittlerakte Gold enthält mindestens ein Special Rare. Der Skill „Beziehungen/Kontakte“ erhöht die Chancen.</p></div>
 </section>
 <section id="opening" class="screen">
   <div class="topbar"><h2 id="openTitle">Booster</h2><span class="coins" id="openCoins">🪙 0</span></div>
@@ -308,7 +352,7 @@
   <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Sammlung</h2><span class="deckcount" id="colCount"></span></div>
   <div class="filterbar"><input id="colSearch" placeholder="Suchen…" oninput="UI.renderCollection()">
     <select id="colType" onchange="UI.renderCollection()"></select></div>
-  <div class="filterbar"><select id="colOwned" onchange="UI.renderCollection()" style="width:100%"><option value="">Alle Karten</option><option value="own">Nur meine</option><option value="miss">Fehlende</option></select></div>
+  <div class="filterbar"><select id="colOwned" onchange="UI.renderCollection()" style="width:100%"><option value="">Alle Karten</option><option value="own">Nur meine</option><option value="fancy">Secret Rare und besser</option><option value="miss">Fehlende</option></select></div>
   <div id="colList" class="cardlist"></div>
 </section>
 
