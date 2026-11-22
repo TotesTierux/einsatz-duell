@@ -682,10 +682,18 @@ function fitNames(root){
       while(!fits() && fs>.4){ fs-=.04; t.style.fontSize=fs+"em"; } }
   });
 }
+/* Kartentext: Schrift verkleinern, bis der ganze Text ins Textfeld passt (kein Abschneiden) */
+function fitTexts(root){
+  (root||document).querySelectorAll(".card .tx").forEach(t=>{
+    const w=t.clientWidth; if(!w || t.dataset.fitw==w) return; t.dataset.fitw=w;
+    let fs=1; t.style.fontSize="";
+    while(t.scrollHeight>t.clientHeight+1 && fs>.58){ fs-=.05; t.style.fontSize=`calc(var(--w)*${(.06*fs).toFixed(4)})`; }
+  });
+}
 let _fitQueued=false;
-const fitSoon=()=>{ if(_fitQueued) return; _fitQueued=true; requestAnimationFrame(()=>{ _fitQueued=false; fitNames(); }); };
+const fitSoon=()=>{ if(_fitQueued) return; _fitQueued=true; requestAnimationFrame(()=>{ _fitQueued=false; fitNames(); fitTexts(); }); };
 new MutationObserver(fitSoon).observe(document.body,{childList:true,subtree:true});
-window.addEventListener("resize",()=>{ document.querySelectorAll(".card .nmt").forEach(t=>delete t.dataset.fitw); fitSoon(); });
+window.addEventListener("resize",()=>{ document.querySelectorAll(".card .nmt,.card .tx").forEach(t=>delete t.dataset.fitw); fitSoon(); });
 /* live = Feldzustand (z. B. veränderte ATK) */
 function flavorHTML(c){ const f=flavorOf(c); if(!f) return ""; const q=/^[„"«]/.test(f); return `<div class="flv">${q?"":"„"}${esc(f)}${q?"":"“"}</div>`; }
 function cardHTML(c, extra="", attrs="", live){

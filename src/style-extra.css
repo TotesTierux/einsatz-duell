@@ -1,3 +1,15 @@
+/* ---------- Spruch unter der Karte, Story-Reiter, Trainings-Hinweis ---------- */
+.flv{max-width:min(300px,82vw);margin:16px auto 0;background:var(--paper);color:var(--ink);border:3px solid var(--ink);border-radius:14px;
+  padding:8px 12px;font-style:italic;font-weight:600;font-size:15px;line-height:1.35;text-align:center;box-shadow:3px 3px 0 var(--ink);position:relative}
+.flv::before{content:"";position:absolute;top:-11px;left:50%;margin-left:-9px;border:9px solid transparent;border-top:0;border-bottom:10px solid var(--ink)}
+#storyTabs span.lk{opacity:.55}
+#storyTabs span small{font-size:.8em;color:var(--yellow);letter-spacing:-1px}
+.ownwrap .upg{position:absolute;top:-6px;left:-6px;z-index:3;background:var(--green);color:var(--ink);border:2px solid var(--ink);border-radius:50%;width:24px;height:24px;
+  display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:2px 2px 0 var(--ink);animation:upPulse 1.6s infinite}
+@keyframes upPulse{50%{box-shadow:0 0 14px 3px var(--green),3px 3px 0 var(--ink)}}
+.card .rar .plus{color:#7dff8a;font-weight:normal}
+/* Umlaut-Punkte (Ä, Ö, Ü) im zweizeiligen Namen nicht über den Rahmen ragen lassen */
+.card .nm.two .nmt{line-height:1.04;padding-top:.06em}
 /* ---------- Celestial-Karten ---------- */
 .card.r-CE{border:3px solid transparent!important;
   background:radial-gradient(circle at 20% 15%,rgba(255,255,255,.9) 0 1px,transparent 2px) padding-box,radial-gradient(circle at 70% 30%,rgba(255,255,255,.8) 0 1px,transparent 2px) padding-box,
