@@ -625,6 +625,7 @@ const UI = {
   show(id){
     document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
     $(id).classList.add("active"); this.current=id; window.scrollTo(0,0); this.coins(); fitSoon();
+    Sound.music(id==="duel"||id==="kombi"?"battle":"menu"); Sound.renderButtons();
     if(id==="collection") this.renderCollection();
     if(id==="admin") Admin.tab(Admin.curTab);
     if(id==="deck") Deck.render();
@@ -1022,6 +1023,7 @@ const Shop = {
     if(!free && Player.coins<p.price) return toast("Nicht genug Münzen – gewinne Duelle!");
     const pool=DB.cards.filter(c=>!p.faction||c.faction===p.faction);
     if(!pool.length) return toast("Keine Karten für diesen Booster");
+    Sound.play("coin");
     if(free){ Player.packs[id]--; if(!Player.packs[id]) delete Player.packs[id]; }
     else { Player.coins-=p.price; Quests.track("coins_spent",p.price); }
     Quests.track("booster");
@@ -1049,7 +1051,8 @@ const Shop = {
       ? `<div class="ownwrap">${x.isNew?'<span class="new">NEU!</span>':x.newPrint?'<span class="new">NEUE STUFE!</span>':""}${cardHTML(x.c,"flip",`data-i="${i}"`)}<div class="prname pn-${x.c._print}">${PRINT[x.c._print].name}</div></div>`
       : `<div class="cardback" data-i="${i}"></div>`).join("");
     $("openCards").querySelectorAll("[data-i]").forEach(el=>el.onclick=()=>{const i=+el.dataset.i;
-      if(!this.revealed[i]){ this.revealed[i]=true; const pr=this.pulled[i].c._print; if(PRINT[pr].rank>=2) banner(PRINT[pr].name.toUpperCase()+"!"); this.renderOpen(); }
+      if(!this.revealed[i]){ this.revealed[i]=true; const pr=this.pulled[i].c._print; if(PRINT[pr].rank>=2) banner(PRINT[pr].name.toUpperCase()+"!");
+        Sound.play(this.pulled[i].c.rarity==="CE"?"celestial":PRINT[pr].rank>=2||RANK[this.pulled[i].c.rarity]>=2?"rare":"reveal"); this.renderOpen(); }
       else UI.modal(this.pulled[i].c); });
   },
   revealAll(){ this.revealed=this.revealed.map(()=>true); this.renderOpen(); },
@@ -1251,19 +1254,20 @@ const Duel = {
     p.hand.push(p.deck.pop()); return true;
   },
   damage(p, n, src){
-    if(n<=0||this.over) return; if(p===this.AI) Quests.track("damage",Math.min(n,p.lp)); p.lp=Math.max(0,p.lp-n);
+    if(n<=0||this.over) return; if(p===this.AI) Quests.track("damage",Math.min(n,p.lp)); p.lp=Math.max(0,p.lp-n); Sound.play("damage");
     const el = p===this.P?$("myLP"):$("oppLP"); el.parentElement.classList.remove("shake"); void el.offsetWidth; el.parentElement.classList.add("shake");
     this.floatText(el, `−${n}`, "#ff3b3b");
     this.log(`${this.me(p,"Du verlierst","verliert")} ${n} LP${src?" ("+src+")":""}`);
     if(p.lp<=0 && p.secondChance){ p.secondChance=false; p.lp=500; this.bn(p.skills&&p.skills.second?"ZWEITE CHANCE!":"ZWEITE CHANCE!"); this.log(`${p.name}: Zweite Chance – weiter mit 500 LP!`); return; }
     if(p.lp<=0) this.win(this.opp(p));
   },
-  heal(p,n){ if(n<=0) return; p.lp+=n; this.floatText(p===this.P?$("myLP"):$("oppLP"), `+${n}`, "#3ddc84"); this.log(`${this.me(p,"Du erhältst","erhält")} ${n} LP`); },
+  heal(p,n){ if(n<=0) return; p.lp+=n; Sound.play("heal"); this.floatText(p===this.P?$("myLP"):$("oppLP"), `+${n}`, "#3ddc84"); this.log(`${this.me(p,"Du erhältst","erhält")} ${n} LP`); },
   win(p){
     if(this.over) return; this.over=true; this.render(); this.closeReveal();
     if(this.host) Net.send({t:"end", w: p===this.P?"h":"g"});
     if(this.liveMid){ this._loser = p===this.P?"g":"h"; Spectate._lastPub=0; Spectate.publish(); setTimeout(()=>{ this.liveMid=null; },3000); }
     const won = p===(this.realP||this.P);
+    setTimeout(()=>Sound.play(won?"win":"lose"),300);
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
       setTimeout(async()=>{
         const onEnd=this.opts.onEnd; this.opts.onEnd=null;
@@ -1292,7 +1296,7 @@ const Duel = {
         x.atk=Math.max(0,x.atk-400); this.log(`Sprengfalle! ${x.card.name} −400 ATK`); if(x.atk<=0) this.destroy(o,z); } } });
     if(this.over) return;
     $("phaseLbl").textContent = p===this.P ? `Dein Zug ${Math.ceil(this.turn/2)}` : `${this.AI.name} am Zug`;
-    banner(p===this.P?"DEIN ZUG!":"GEGNER!");
+    banner(p===this.P?"DEIN ZUG!":"GEGNER!"); Sound.play("turn");
     this.mode=null; this.ready=true; this.render();
     if(p===this.AI && this.host) return;   // Gast ist am Zug – Aktionen kommen über Net
     if(p===this.P && this.autoP){ this.busy=true; await sleep(300); try{ await AI.playAs(p); }catch(e){ console.error(e); } await this.idle(); this.busy=false; if(!this.over) this.endTurn(true); return; }
@@ -1405,6 +1409,7 @@ const Duel = {
     if(this.freeZone(p.mz)<0) return false;
     p.hand.splice(handIdx,1); p.summoned=true; this.place(p,c,pos);
     if(p===this.P){ Quests.track("summon"); if(c.rarity==="CE") Quests.track("celestial"); }
+    Sound.play(c.rarity==="CE"&&pos==="atk"?"celestial":pos==="atk"?"summon":"set");
     if(pos==="atk"){ this.log(`${this.me(p,"Du schickst","schickt")} ${c.name} ins Feld!`);
       this.triggerSummon(p,c,`${p.name} schickt einen Charakter ins Feld!`, tributes.length?`Dafür räumen ${tributes.length} Charakter(e) das Feld.`:""); }
     else this.log(`${this.me(p,"Du setzt","setzt")} einen Charakter verdeckt.`);
@@ -1526,7 +1531,7 @@ const Duel = {
     if(p===this.P){ Quests.track("spell"); if(c.rarity==="CE") Quests.track("celestial"); }
     await this.announce(p,c,`${p.name} setzt ${c.law==="Trick"?"einen Trick":"eine "+c.law+"-Maßnahme"} ein!`,this.spellPreview(p,c,targetZ));
     if(this.over) return false;
-    this.bn(c.law==="Trick"?c.name+"!":c.law+"!"); this.fxStamp(c);
+    this.bn(c.law==="Trick"?c.name+"!":c.law+"!"); this.fxStamp(c); Sound.play(c.rarity==="CE"?"celestial":c.law==="Trick"?"trick":"stamp");
     this.log(`${this.who(p)}: ${c.name}${c.ref&&c.ref!==c.law?" ("+c.ref+")":""}`);
     const n=this.monsterCount(p);
     switch(c.effect){
@@ -1587,7 +1592,7 @@ const Duel = {
       ti = r>=0 && r<traps.length ? traps[r] : -1;
     } else ti=AI.pickTrap(traps, attacker.mz[fromZ], d);
     if(ti<0) return false;
-    const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t);
+    const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t); Sound.play("alarm");
     const a=attacker.mz[fromZ];
     await this.announce(d,t,`${d.name} reagiert auf deinen Angriff!`,`Gegen: ${a?a.card.name:"deinen Angreifer"}`);
     if(this.over) return true;
@@ -1652,6 +1657,7 @@ const Duel = {
   /* ---------- Animationen ---------- */
   zoneEl(p,z){ const el=(p===this.P?$("myMZ"):$("oppMZ")); return el&&el.children[z]; },
   async fxAttack(p, fromZ, toZ){
+    Sound.play("attack"); setTimeout(()=>Sound.play("hit"),380);
     if(this.host) Net.send({t:"fx",k:"atk",s:p===this.P?"h":"g",from:fromZ,to:toZ});
     const src=this.zoneEl(p,fromZ), a=p.mz[fromZ];
     const dst = toZ==null ? (p===this.P?$("oppLP"):$("myLP")).parentElement : this.zoneEl(this.opp(p),toZ);
@@ -1691,6 +1697,7 @@ const Duel = {
     const field=$("duel"); field.classList.remove("shake"); void field.offsetWidth; field.classList.add("shake");
   },
   fxPoof(p,z){
+    Sound.play("boom");
     if(this.host) Net.send({t:"fx",k:"poof",s:p===this.P?"h":"g",z});
     const el=this.zoneEl(p,z); if(!el||UI.current!=="duel") return;
     const r=el.getBoundingClientRect(), s=document.createElement("div"); s.className="fx-part"; s.textContent="💨";
@@ -1797,6 +1804,7 @@ const Duel = {
   },
   render(){
     this._lastRender=Date.now();
+    if(this.P&&this.AI) Sound.setIntense(UI.current==="duel" && Math.min(this.P.lp,this.AI.lp)<=1000);
     const P=this.P, A=this.AI; if(!P) return;
     if(this.host) Net.queueState();
     $("myLP").textContent=P.lp; $("oppLP").textContent=A.lp;
@@ -2782,6 +2790,7 @@ Object.assign(Duel, {
     if(m.k==="poof") this.fxPoof(side(m.s), m.z);
     if(m.k==="stamp" && Net.table[m.c]) this.fxStamp(Net.table[m.c]);
     if(m.k==="banner") banner(m.text);
+    if(m.k==="stamp") Sound.play("stamp");
   },
   /* Gastgeber fragt: Willst du eine Reaktion einsetzen? */
   async clientAsk(m){

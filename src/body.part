@@ -137,7 +137,7 @@
 
 <!-- ================= HOME ================= -->
 <section id="home" class="screen active">
-  <div class="home-top"><span class="coins" id="homeCoins">🪙 0</span></div>
+  <div class="home-top"><button class="sndbtn" data-snd="music" onclick="Sound.toggle('music')">🎵</button><button class="sndbtn" data-snd="sfx" onclick="Sound.toggle('sfx')">🔊</button><span class="coins" id="homeCoins">🪙 0</span></div>
   <div class="home-me" id="homeMe" onclick="UI.show('profile')"></div>
   <div class="logo">EINSATZ<small>DUELL!</small></div>
   <div class="burst">👮 Polizei gegen Verbrecher 🦹</div>

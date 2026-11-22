@@ -144,7 +144,7 @@ const Kombi = {
     const wouldMerge=[...p.board,...p.bench].filter(u=>u&&u.id===id&&u.star===1).length>=1;
     if(free<0 && !wouldMerge){ if(!p.ai) toast("Deine Bank ist voll – verkaufe oder platziere erst eine Einheit"); return false; }
     if(!this.take(id)){ if(!p.ai) toast("Diese Einheit ist ausverkauft"); return false; }
-    p.el-=cost; p.shop[i]=null;
+    p.el-=cost; p.shop[i]=null; if(!p.ai) Sound.play("coin");
     const u=this.unit(id,1);
     if(free>=0) p.bench[free]=u; else p.bench[this.benchSize(p)]=u;   // Zwischenplatz nur zum Kombinieren
     this.merge(p);
@@ -175,7 +175,7 @@ const Kombi = {
     if(n){ const bonus=(this.g.mod.id==="kombi"?2:1)+(p.ruler==="pate"?1:0); p.el=Math.min(KB.MAXEL,p.el+n*bonus); p.merges+=n;
       if(!p.ai) toast(`Kombiniert! +${n*bonus} Einsatzmittel`); }
   },
-  mergeFx(u){ this._fx=u.u; setTimeout(()=>{ if(this._fx===u.u) this._fx=null; },900); banner(`${"★".repeat(u.star)} KOMBI!`); },
+  mergeFx(u){ Sound.play("merge"); this._fx=u.u; setTimeout(()=>{ if(this._fx===u.u) this._fx=null; },900); banner(`${"★".repeat(u.star)} KOMBI!`); },
 
   /* ---------------- Platzieren ---------------- */
   tap(where,i){
@@ -349,7 +349,7 @@ const Kombi = {
   fight(){
     const g=this.g; if(g.phase!=="deploy") return;
     const me=this.me(); if(!me.board.some(Boolean)) return toast("Stelle mindestens eine Einheit auf das Feld");
-    g.phase="battle"; this.sel=null;
+    g.phase="battle"; this.sel=null; Sound.play("siren");
     // Paarungen: zufällig unter den Lebenden; bei ungerader Zahl kämpft einer gegen eine Kopie (zählt für die Kopie nicht)
     const alive=shuffle(this.alive()); const pairs=[];
     while(alive.length>=2) pairs.push([alive.pop(),alive.pop()]);
@@ -396,7 +396,7 @@ const Kombi = {
       if(left.length===1) left[0].place=1;
       return this.finish(msg);
     }
-    banner(r.win==="a"?"SIEG!":r.win==="b"?"NIEDERLAGE":"UNENTSCHIEDEN");
+    banner(r.win==="a"?"SIEG!":r.win==="b"?"NIEDERLAGE":"UNENTSCHIEDEN"); Sound.play(r.win==="a"?"win":"lose");
     g.phase="result"; g.summary=[msg,...others,...out.filter(p=>p!==me).map(p=>`❌ ${p.name} ist ausgeschieden`)];
     this.dialog(g.summary,"Nächste Runde ▶",()=>this.weiter());
     this.draw();
@@ -486,6 +486,7 @@ const Kombi = {
         this.hud3d(); Arena.onEvents(ev); return;
       }catch(e){ console.error("3D:",e); Arena.ok=false; this._3d=null; }
     }
+    ev.forEach(e=>{ if(e.k==="hit") Sound.play(e.f.ranged?"shot":"hit"); if(e.k==="die") Sound.play("boom"); });
     const hits={}; ev.forEach(e=>{ if(e.k==="hit") hits[e.t.u.u]=(hits[e.t.u.u]||0)+e.d; if(e.k==="miss") hits[e.f.u.u]="MISS"; });
     const cell=(list,slot)=>{ const f=list.find(x=>x.slot===slot); if(!f) return `<div class="kb-slot empty"></div>`;
       const pct=Math.max(0,f.hp/f.maxhp*100), dead=f.hp<=0, h=hits[f.u.u];

@@ -303,6 +303,7 @@ const Arena = {
 
   /* ---------------- Ereignisse aus der Simulation ---------------- */
   onEvents(ev){
+    ev.forEach(e=>{ if(e.k==="hit") Sound.play(e.f.ranged?"shot":"hit"); if(e.k==="die") Sound.play("boom"); });
     ev.forEach(e=>{
       if(e.k==="hit"){ const A=this.units.get(e.f), Tg=this.units.get(e.t); if(!A||!Tg) return;
         A.atk=0;
