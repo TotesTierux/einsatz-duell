@@ -273,6 +273,19 @@ Straßengang|bande|5|2100|1600|N|pierce|0|👥|bande+any
 """
 
 # v0.4: neue Effekte thematisch auf bestehende Karten verteilt (Name -> (Effekt, Wert))
+# Feinabstimmung nach der Balance-Simulation (überschreibt Werte einzelner Karten)
+BUFF_VER = 200
+BALANCE = {
+    "p041": {"atk":1700},                 # SEK-Rammbock-Trupp: zu stark für Stufe 4
+    "p002": {"atk":1500},                 # Polizeikommissarin Lea
+    "p545": {"val":1800},                 # Ingewahrsamnahme: übernimmt nur noch Charaktere bis 1800 ATK
+    "v521": {"val":1800},                 # Bestechungsversuch: dito
+    "v021": {"val":1300, "atk":1300},     # Falscher Polizeibeamter: übernimmt nur bis 1300 ATK
+    "p525": {"val":5},                    # Vermögensarrest: 5 statt 3 Karten
+    "p519": {"val":400},                  # DNA-Identitätsfeststellung: 400 je Charakter
+    "v057": {"atk":1500},                 # Dealerin Zucker
+    "v044": {"atk":1500},                 # Darknet-Händler Null: Karte ziehen + hohe ATK war zu stark
+}
 OVERRIDES = {
   # Polizei – Charaktere
   "Polizeimeisteranwärter Ben":("growth",200), "Polizeihauptmeister Otto":("turn_heal",200), "Fahrradstreife Nils":("direct",0),
@@ -387,6 +400,13 @@ def build():
     names=[c["name"] for c in cards]; dup={n for n in names if names.count(n)>1}; assert not dup, dup
     for c in cards:
         if "def_" in c: c["def"]=c.pop("def_")
+    # ---------- BALANCE (aus der Simulation KI gegen KI, siehe tools/balance.md) ----------
+    for c in cards:
+        bal=BALANCE.get(c["id"])
+        if bal: c.update(bal)
+        # Verbrecher-Charaktere bis Stufe 5 waren im Schnitt schwächer als die Polizei → +BUFF_VER ATK
+        if c["faction"]=="verbrecher" and c["type"]=="monster" and c["rarity"]!="CE" and c["level"]<=5 and c["id"] not in BALANCE:
+            c["atk"]+=BUFF_VER
     return cards
 
 if __name__=="__main__":

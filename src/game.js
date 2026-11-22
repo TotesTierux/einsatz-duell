@@ -42,7 +42,7 @@ const EFFECTS = {
   summon_mill:       {types:CH, group:"Beim Ausspielen", label:"Deck lichten",                  text:"Beim Ausspielen: Der Gegner legt die obersten {v} Karten seines Decks ab.", val:true},
   summon_flip_all:   {types:CH, group:"Beim Ausspielen", label:"Alles aufdecken",               text:"Beim Ausspielen: Alle verdeckten gegnerischen Charaktere werden aufgedeckt.", val:false},
   summon_lock:       {types:CH, group:"Beim Ausspielen", label:"Stärksten Gegner festhalten",   text:"Beim Ausspielen: Der stärkste gegnerische Charakter kann im nächsten Zug nicht angreifen.", val:false},
-  summon_steal:      {types:CH, group:"Beim Ausspielen", label:"Gegner überlaufen lassen",      text:"Beim Ausspielen: Übernimm den schwächsten gegnerischen Charakter.", val:false},
+  summon_steal:      {types:CH, group:"Beim Ausspielen", label:"Gegner überlaufen lassen",      text:"Beim Ausspielen: Übernimm den schwächsten gegnerischen Charakter (höchstens {v} ATK).", val:true},
   // ---------- Charaktere: dauerhaft ----------
   pierce:            {types:CH, group:"Dauerhaft", label:"Durchschlag",                        text:"Besiegt er einen Charakter in VER, verliert der Gegner die Differenz als LP.", val:false},
   double_attack:     {types:CH, group:"Dauerhaft", label:"Doppelangriff",                      text:"Kann zweimal pro Zug angreifen.", val:false},
@@ -74,7 +74,7 @@ const EFFECTS = {
   destroy_all_st:{types:["spell"], group:"Maßnahme", label:"Alle verdeckten Karten entfernen", text:"Entferne alle verdeckten Karten des Gegners.", val:false},
   destroy_all:   {types:["spell"], group:"Maßnahme", label:"Alle Charaktere ausschalten",    text:"Alle Charaktere auf dem Spielfeld scheiden aus.", val:false},
   bounce:        {types:["spell"], group:"Maßnahme", label:"Gegner vom Feld verweisen",      text:"Der stärkste gegnerische Charakter muss das Feld verlassen (zurück auf die Hand).", val:false},
-  steal:         {types:["spell"], group:"Maßnahme", label:"Gegner übernehmen",              text:"Übernimm den schwächsten gegnerischen Charakter.", val:false},
+  steal:         {types:["spell"], group:"Maßnahme", label:"Gegner übernehmen",              text:"Übernimm den schwächsten gegnerischen Charakter (höchstens {v} ATK).", val:true},
   lock_all:      {types:["spell"], group:"Maßnahme", label:"Alle festhalten",                text:"Gegnerische Charaktere können im nächsten Zug nicht angreifen.", val:false},
   def_mode:      {types:["spell"], group:"Maßnahme", label:"Hände hoch! (alle in VER)",      text:"Alle gegnerischen Charaktere werden offen in Verteidigungsposition gezwungen.", val:false},
   reset_atk:     {types:["spell"], group:"Maßnahme", label:"Lage beruhigen (ATK zurücksetzen)", text:"Alle Charaktere auf dem Feld erhalten ihre ursprüngliche ATK zurück.", val:false},
@@ -1158,7 +1158,7 @@ const Duel = {
   P:null, AI:null, history:[], turn:0, online:false, host:false, client:false, waiting:false, active:null, busy:false, over:false, ready:false, opts:{},
   mode:null,       // null | {type:"attack",from} | {type:"tribute",handIdx,need,picked:[],pos} | {type:"boost",handIdx}
   start(side, opts={}){
-    this.side=side; this.opts=opts; Store.set("lastSide",side);
+    this.side=side; this.opts=opts; Store.set("lastSide",side); this.spectate=false;
     const other = OTHER[side];
     if(!DB.ofFaction(other).length) return toast("Die Gegenpartei hat keine Karten");
     let myDeck = Deck.validFor(side) ? Deck.lists[side] : Deck.autoOwned(side);
@@ -1167,10 +1167,12 @@ const Duel = {
     const od = opts.oppDeck || Deck.genDeck(other,{});
     const on = opts.online;   // {myName, guestName, guestDeck, guestExtra}
     this.online=!!on; this.host=!!on; this.client=false; this.waiting=false;
-    this.P = makePlayer(on?on.myName:(Store.get("nick","")||"Du"), Prog.deckCopies(myDeck), Prog.deckCopies(Deck.fusionDeck(side)));
-    if(!on) this.P.name="Du";
+    this.P = opts.pDeck ? makePlayer("KI-Polizei", opts.pDeck.main, opts.pDeck.extra)
+           : makePlayer(on?on.myName:(Store.get("nick","")||"Du"), Prog.deckCopies(myDeck), Prog.deckCopies(Deck.fusionDeck(side)));
+    if(!on && !opts.pDeck) this.P.name="Du";
+    this.autoP=!!opts.autoP; this.realP=this.P;
     this.AI = on ? makePlayer(on.guestName, on.guestDeck, on.guestExtra) : makePlayer(opts.oppName||FACTIONS[other][0], od.main, od.extra, opts.oppLP);
-    Prog.apply(this.P, Prog.skillsOf(side));
+    if(!opts.pDeck) Prog.apply(this.P, Prog.skillsOf(side));
     this.AI.handSize=HAND; if(on) Prog.apply(this.AI, on.guestSkills); else if(opts.oppSkills) Prog.apply(this.AI, opts.oppSkills);
     // jede Kartenkopie bekommt einen eindeutigen Schlüssel (für die Online-Übertragung)
     [[this.P,"h"],[this.AI,"g"]].forEach(([pl,pre])=>[...pl.deck,...pl.extra].forEach((c,i)=>c._k=pre+i));
@@ -1184,6 +1186,21 @@ const Duel = {
     this.log(side==="polizei"?"Einsatz beginnt – schnappt die Verbrecher!":"Die Polizei ist dir auf den Fersen!"); banner("EINSATZ!");
     this.active = Math.random()<.5 ? this.P : this.AI;
     setTimeout(()=>this.beginTurn(), 900);
+    clearInterval(this._wd); this._wd=setInterval(()=>this.watchdog(),3000); this._stuck=0;
+  },
+  /* Sicherheitsnetz: Hängt ein Zug (z. B. „Zug beenden“ bleibt ausgegraut), wird er nach einigen Sekunden freigegeben */
+  watchdog(){
+    if(this.spectate) return;
+    if(UI.current!=="duel" || this.over){ if(this.over||UI.current!=="duel") clearInterval(this._wd); return; }
+    const overlay=$("reveal").classList.contains("show")||$("modal").classList.contains("show")||$("scene").classList.contains("show");
+    if(overlay){ this._stuck=0; return; }
+    if(this._revealDone){ this._revealDone(); }                 // unsichtbare, offene Ansage auflösen
+    const mine=this.active===this.P, idle=Date.now()-(this._lastRender||0);
+    if(mine && !this.myTurn() && idle>9000){                   // eigener Zug hängt
+      console.warn("Watchdog: Zug freigegeben"); this.busy=false; this.waiting=false; this.ready=true; this._ann=null; this.render();
+    } else if(!mine && !this.online && idle>15000){            // KI-Zug hängt
+      console.warn("Watchdog: KI-Zug beendet"); this.busy=false; this._ann=null; this.endTurn(true);
+    }
   },
   opp(p){ return p===this.P?this.AI:this.P; },
   me(p,du,er){ return p===this.P&&!this.online?du:`${p.name} ${er}`; },
@@ -1205,6 +1222,7 @@ const Duel = {
   announce(p, card, head, result){
     if(this.host && p===this.P && !this.over){ Net.send({t:"ann", c:card._k, head, result}); return this._ann||Promise.resolve(); }
     if(p!==this.AI || this.over) return this._ann||Promise.resolve();
+    if(this.host){ this.showReveal(card, head, result); return Promise.resolve(); }   // Gast soll nicht warten, bis der Gastgeber „Verstanden“ tippt
     return this.showReveal(card, head, result);
   },
   showReveal(card, head, result){
@@ -1244,7 +1262,8 @@ const Duel = {
   win(p){
     if(this.over) return; this.over=true; this.render(); this.closeReveal();
     if(this.host) Net.send({t:"end", w: p===this.P?"h":"g"});
-    const won = p===this.P;
+    if(this.liveMid){ this._loser = p===this.P?"g":"h"; Spectate._lastPub=0; Spectate.publish(); setTimeout(()=>{ this.liveMid=null; },3000); }
+    const won = p===(this.realP||this.P);
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
       setTimeout(async()=>{
         const onEnd=this.opts.onEnd; this.opts.onEnd=null;
@@ -1276,6 +1295,7 @@ const Duel = {
     banner(p===this.P?"DEIN ZUG!":"GEGNER!");
     this.mode=null; this.ready=true; this.render();
     if(p===this.AI && this.host) return;   // Gast ist am Zug – Aktionen kommen über Net
+    if(p===this.P && this.autoP){ this.busy=true; await sleep(300); try{ await AI.playAs(p); }catch(e){ console.error(e); } await this.idle(); this.busy=false; if(!this.over) this.endTurn(true); return; }
     if(p===this.AI){ this.busy=true; await sleep(1100); try{ await AI.play(); }catch(e){ console.error(e); } await this.idle(); this.busy=false; if(!this.over) this.endTurn(true); }
   },
   endTurn(fromAI){
@@ -1286,7 +1306,7 @@ const Duel = {
     setTimeout(()=>this.beginTurn(), 400);
   },
   canBattle(){ return this.turn>1; },
-  tributesNeeded(c){ return c.type==="fusion"?0:c.level>=7?2:c.level>=5?1:0; },
+  tributesNeeded(c){ return c.type==="fusion"?0:c.rarity==="CE"?1:c.level>=7?2:c.level>=5?1:0; },   // Celestial: immer nur 1 Ablösung
   freeZone(arr){ return arr.findIndex(x=>!x); },
   monsterCount(p){ return p.mz.filter(Boolean).length; },
   setCount(p){ return p.st.filter(Boolean).length; },
@@ -1358,7 +1378,7 @@ const Duel = {
       case "summon_mill": this.mill(o,v||1); break;
       case "summon_flip_all": o.mz.forEach(m=>{ if(m&&m.faceDown){ m.faceDown=false; } }); this.log("Alle verdeckten Charaktere werden aufgedeckt!"); break;
       case "summon_lock": { const z=this.target(o,"strong"); if(z>=0){ o.mz[z].lockedUntil=this.turn+1; this.log(`${o.mz[z].card.name} wird festgehalten!`); } break; }
-      case "summon_steal": { const z=this.target(o,"weak"); if(z>=0) this.takeControl(o,z,p); break; }
+      case "summon_steal": { const z=this.target(o,"weak"); if(z>=0 && (!v||o.mz[z].atk<=v)) this.takeControl(o,z,p); else this.log("Niemand lässt sich überreden …"); break; }
       // Celestial
       case "cel_supernova": { const me=p.mz.find(m=>m&&m.card===c), a=me?me.atk:c.atk; this.bn("GROSSFAHNDUNG!");
         o.mz.forEach((m,i)=>{ if(m&&!this.isImmune(m)&&m.atk<a) this.destroy(o,i); }); break; }
@@ -1453,7 +1473,7 @@ const Duel = {
     switch(c.effect){
       case "boost": case "boost_all": case "heal_per_monster": case "burn_per_monster": case "scapegoat": return this.monsterCount(p)>0;
       case "destroy_best": case "weaken": case "bounce": case "destroy_weak": return this.target(o,"strong")>=0;
-      case "steal": return this.target(o,"weak")>=0 && this.freeZone(p.mz)>=0;
+      case "steal": { const z=this.target(o,"weak"); return z>=0 && this.freeZone(p.mz)>=0 && (!c.val||o.mz[z].atk<=c.val); }
       case "weaken_all": case "lock_all": case "def_mode": return this.monsterCount(o)>0;
       case "destroy_level": return o.mz.some(m=>m&&!this.isImmune(m)&&m.card.level<=c.val);
       case "destroy_st": case "destroy_all_st": return this.setCount(o)>0;
@@ -1555,7 +1575,7 @@ const Duel = {
     const traps=d.st.map((s,i)=>s&&s.card.type==="trap"?i:-1).filter(i=>i>=0);
     if(!traps.length||this.over) return false;
     let ti=-1;
-    if(d===this.P){
+    if(d===this.P && !this.autoP){
       for(const i of traps){
         const att=attacker.mz[fromZ]; if(!att) return false;
         const use = await new Promise(res=>UI.modal(d.st[i].card,[[`Reaktion gegen ${att.card.name} einsetzen`,()=>res(true),"red"]],null,()=>res(false),"Nicht einsetzen"));
@@ -1565,7 +1585,7 @@ const Duel = {
     } else if(this.host){
       const r = await Net.ask("trap",{traps:traps.map(i=>d.st[i].card._k), att:attacker.mz[fromZ]?attacker.mz[fromZ].card.name:"?"});
       ti = r>=0 && r<traps.length ? traps[r] : -1;
-    } else ti=AI.pickTrap(traps, attacker.mz[fromZ]);
+    } else ti=AI.pickTrap(traps, attacker.mz[fromZ], d);
     if(ti<0) return false;
     const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t);
     const a=attacker.mz[fromZ];
@@ -1692,8 +1712,9 @@ const Duel = {
   },
 
   /* ---------- Spieler-Interaktion ---------- */
-  myTurn(){ return this.active===this.P && this.ready && !this.busy && !this.over && !(this.client && this.waiting); },
+  myTurn(){ return !this.spectate && this.active===this.P && this.ready && !this.busy && !this.over && !(this.client && this.waiting); },
   tapHand(i){
+    if(this.spectate) return;
     const c=this.P.hand[i]; if(!c) return;
     if(!this.myTurn()) return UI.modal(c);
     this.mode=null; this.render();
@@ -1743,7 +1764,8 @@ const Duel = {
   },
   directAttack(){ if(this.mode&&this.mode.type==="attack"){ const f=this.mode.from; this.mode=null; this.attack(this.P,f,null); } },
   tapMyST(z){ const s=this.P.st[z]; if(s) UI.modal(s.card,[["Wird automatisch bei einem Angriff angeboten",null,"ghost"]]); },
-  async quit(){ if(this.over||await UI.ask("Einsatz abbrechen? (zählt als Niederlage)")){
+  async quit(){ if(this.spectate) return Spectate.leave();
+    if(this.over||await UI.ask("Einsatz abbrechen? (zählt als Niederlage)")){
     if(this.online && !this.over) Net.send({t:"quit"});
     const inTour = this.online && Tour.active();
     if(inTour && !this.over) Tour.duelEnded(false, 0, 1);
@@ -1774,6 +1796,7 @@ const Duel = {
     if(mine) el.querySelectorAll(".zone").forEach(z=>z.onclick=()=>this.tapMyST(+z.dataset.z));
   },
   render(){
+    this._lastRender=Date.now();
     const P=this.P, A=this.AI; if(!P) return;
     if(this.host) Net.queueState();
     $("myLP").textContent=P.lp; $("oppLP").textContent=A.lp;
@@ -1793,13 +1816,15 @@ const Duel = {
     const am = this.mode&&this.mode.type==="attack" ? P.mz[this.mode.from] : null;
     $("btnDirect").classList.toggle("show", !!(am && this.canDirect(P,am)));
     $("btnEnd").disabled=!my;
+    $("btnEnd").style.visibility=this.spectate?"hidden":"";
+    if(this.spectate) $("myHand").innerHTML=P.hand.map(()=>`<div class="cardback"></div>`).join("");
   },
 };
 
 /* ============================ KI ============================ */
 const AI = {
-  pickTrap(traps, a){
-    const D=Duel, me=D.AI;
+  pickTrap(traps, a, me=Duel.AI){
+    const D=Duel;
     if(!a) return traps[0];
     // starke Angreifer lieber ausschalten/übernehmen, schwache nur abwehren
     const prio = a.atk>=2000 ? ["cel_moon_mirror","cel_wormhole","trap_steal","mirror","trap_destroy_all_atk","trap_bounce","trap_lock","counter_burn","trap_weaken","trap_weaken_all","negate","trap_heal","trap_draw"]
@@ -1848,6 +1873,8 @@ const AI = {
     D.summon(me,bi,pos,trib); await D.idle(); await sleep(600);
     return true;
   },
+  /* KI für eine beliebige Seite spielen lassen (Simulation KI gegen KI) */
+  async playAs(p){ const D=Duel; if(p===D.AI) return this.play(); [D.P,D.AI]=[D.AI,D.P]; try{ await this.play(); } finally { [D.P,D.AI]=[D.AI,D.P]; } },
   async play(){
     const D=Duel, me=D.AI, op=D.P;
     // 1) Fusion, wenn lohnend
@@ -1977,10 +2004,11 @@ const Net = {
     else if(UI.current==="online") Lobby.error("Verbindung getrennt");
   },
   onClose(){ this.onConnClose(this.conn); },
-  queueState(){ if(this._sq) return; this._sq=true; Promise.resolve().then(()=>{ this._sq=false; this.send({t:"state",s:Duel.snap()}); }); },
+  queueState(){ if(this._sq) return; this._sq=true; Promise.resolve().then(()=>{ this._sq=false; this.send({t:"state",s:Duel.snap()}); if(Duel.liveMid) Spectate.publish(); }); },
   sendStart(){
     const table={}; [Duel.P,Duel.AI].forEach(pl=>[...pl.deck,...pl.extra,...pl.hand].forEach(c=>table[c._k]=c));
     this.send({t:"start", table, hostName:Duel.P.name, guestName:Duel.AI.name, hostSide:Duel.side});
+    Duel.liveMid = Tour.vc && Tour.expect ? Tour.expect.mid : null; Spectate.publishStart();
   },
   onData(m,c){
     if(m && typeof m.t==="string" && m.t.startsWith("t_")) return Tour.onData(m,c);
@@ -2165,7 +2193,7 @@ const Cloud = {
     if(m.t==="t_ping") return;
     if(Tour.hosting){
       let c=Tour.conns[from];
-      if(!c && m.t==="t_join"){ c=new MailConn(from); return Tour.addMember(c,from); }
+      if(!c && m.t==="t_join"){ c=new MailConn(from); return Tour.addMember(c,from,!!m.spec); }
       if(!c) return;
       if(m.t==="t_bye") return c.close();
       return c.emit("data",m);
@@ -2206,7 +2234,7 @@ const Tour = {
   players:[], matches:[], format:"ko", status:"lobby", round:0, rrRounds:[], view:null, expect:null, _failT:null, finished:null,
   active(){ return this.hosting||this.member; },
   myName(){ return Store.get("nick","")||"Spieler"; },
-  reset(){ clearTimeout(this._failT); this.vc=null; this._buf=[]; Object.assign(this,{hosting:false,member:false,hub:null,conns:{},seq:0,myId:null,players:[],matches:[],status:"lobby",round:0,rrRounds:[],view:null,expect:null,finished:null}); },
+  reset(){ clearTimeout(this._failT); this.vc=null; this._buf=[]; Object.assign(this,{spectator:false,watchers:[],hosting:false,member:false,hub:null,conns:{},seq:0,myId:null,players:[],matches:[],status:"lobby",round:0,rrRounds:[],view:null,expect:null,finished:null}); },
   isMemberConn(c){ return !!(c&&c._tid); },
 
   /* ---------------- Zentrale (Gastgeber) ---------------- */
@@ -2229,9 +2257,9 @@ const Tour = {
       e=>{ if(e.type==="unavailable-id"){ Net.code=Net.newCode(); this.players[0].peer=Net.pid(Net.code); return open(); } Lobby.error(e); this.reset(); });
     open();
   },
-  addMember(c,fixedId){
-    if(this.status!=="lobby") return Net.reject(c,"t_started");
-    if(this.players.length>=TOUR_MAX) return Net.reject(c,"t_full");
+  addMember(c,fixedId,spec){
+    if(!spec && this.status!=="lobby") return Net.reject(c,"t_started");
+    if(!spec && this.players.length>=TOUR_MAX) return Net.reject(c,"t_full");
     const id=fixedId||"m"+(++this.seq); if(fixedId) Cloud.last[id]=Date.now(); c._tid=id; this.conns[id]=c;
     c.on("open",()=>{ Net.wire(c); Net.sendTo(c,{t:"t_welcome",you:id,format:this.format,host:this.players[0].name}); });
   },
@@ -2245,7 +2273,7 @@ const Tour = {
     return {format:this.format, status:this.status, round:this.round, code:Net.code, host:this.players[0]&&this.players[0].name,
       players:this.players.map(p=>({id:p.id,name:p.name,side:p.side,online:p.online,w:p.w||0,l:p.l||0,lp:p.lp||0})),
       matches:this.matches.map(m=>({mid:m.mid,round:m.round,a:m.a,b:m.b,winner:m.winner||null,state:m.state})),
-      ranking:this.finished};
+      ranking:this.finished, watchers:(this.watchers||[]).map(w=>w.name)};
   },
   start(){
     if(!this.hosting||this.status!=="lobby") return;
@@ -2341,6 +2369,7 @@ const Tour = {
   onMemberClose(c){
     const id=c._tid; delete this.conns[id];
     const p=this.pl(id);
+    if((this.watchers||[]).some(w=>w.id===id)){ this.watchers=this.watchers.filter(w=>w.id!==id); delete this.conns[id]; this.broadcast(); return; }
     if(this.status==="lobby"){ this.players=this.players.filter(x=>x.id!==id); }
     else if(p){ p.online=false;
       this.matches.filter(m=>m.state!=="done"&&(m.a===id||m.b===id)).forEach(m=>{ if(m.state==="play") this.relayDeliver(m.mid,id,{t:"quit"}); this.result(m.mid, m.a===id?m.b:m.a, 0); }); }
@@ -2350,23 +2379,24 @@ const Tour = {
 
   /* ---------------- Teilnehmer (auch die Zentrale spielt mit) ---------------- */
   /* Beitritt über den Server: gibt false zurück, wenn es keinen Turnier-Raum mit diesem Code gibt */
-  async tryJoinCloud(code,name){
+  async tryJoinCloud(code,name,spec){
+    this._joinSpec=!!spec;
     if(!Cloud.enabled()) return false;
     let meta=null; try{ meta=await Cloud.req(`rooms/${code}/meta`); }catch(e){ console.warn("Cloud:",e); return false; }
     if(!meta) return false;
     Net.close(); this.reset(); Net.role="tourjoin"; Net.code=code; Net.name=name;
     const me="m"+Math.random().toString(36).slice(2,10), hub=new MailConn("org");
     Cloud.open(code,me); Cloud.hubConn=hub; Cloud.last.org=Date.now(); Net.wire(hub);
-    hub.send({t:"t_join"});
+    hub.send({t:"t_join",spec:!!spec});
     Lobby.status(`Verbinde mit dem Turnier von ${meta.host||"Gastgeber"} …`);
     setTimeout(()=>{ if(Cloud.hubConn===hub && !this.member && Net.role==="tourjoin"){ Cloud.close(true); Lobby.error("Der Turnier-Raum antwortet nicht. Ist der Gastgeber noch online?"); } },20000);
     return true;
   },
   becomeMember(c,m){
-    this.reset(); this.member=true; this.hub=c; this.myId=m.you; this.format=m.format;
+    const spec=!!this._joinSpec; this.reset(); this.member=true; this.spectator=spec; this.hub=c; this.myId=m.you; this.format=m.format;
     Net.conn=null; Net.role="tourmember";
-    Net.sendTo(c,{t:"t_hello",name:this.myName(),side:Lobby.side,v:window.APP_VERSION||"dev"});
-    UI.show("tour"); toast("Turnier-Raum von "+m.host+" beigetreten");
+    Net.sendTo(c,{t:"t_hello",name:this.myName(),side:Lobby.side,v:window.APP_VERSION||"dev",spec});
+    UI.show("tour"); toast((spec?"👁 Du schaust beim Turnier von ":"Turnier-Raum von ")+m.host+(spec?" zu":" beigetreten"));
   },
   onHubClose(){
     if(!this.member) return;
@@ -2375,7 +2405,7 @@ const Tour = {
     if(!done){ toast("Die Verbindung zum Turnier wurde getrennt"); if(UI.current==="tour") this.render(); }
   },
   onMatch(m){
-    clearTimeout(this._failT);
+    clearTimeout(this._failT); if(Spectate.mid) Spectate.stop();
     this.expect=m; this.myId=m.myId||this.myId;
     // Duell-Verbindung über die Zentrale aufbauen (funktioniert immer, wenn man im Turnier-Raum ist)
     try{ Net.conn && Net.conn!==this.vc && Net.endDuelConn(); }catch(e){}
@@ -2429,6 +2459,7 @@ const Tour = {
       case "t_end": this.onEnd(m); break;
       // --- Zentrale ---
       case "t_hello": { if(!this.hosting||!c) break; const id=c._tid; if(this.pl(id)) break;
+        if(m.spec){ this.watchers=(this.watchers||[]).filter(x=>x.id!==id); this.watchers.push({id,name:(m.name||"Zuschauer").slice(0,16)}); toast(`👁 ${m.name} schaut zu`); this.broadcast(); break; }
         this.players.push({id,name:(m.name||"Spieler").slice(0,16),side:FACTIONS[m.side]?m.side:"polizei",peer:c.peer,online:true});
         toast(`${m.name} ist dem Turnier beigetreten`); this.broadcast(); break; }
       case "t_result": if(this.hosting) this.result(m.mid,m.winner,m.lp); break;
@@ -2464,9 +2495,10 @@ const Tour = {
     $("tCode").textContent=v.code||"";
     $("tStart").style.display = this.hosting && v.status==="lobby" ? "" : "none";
     // Mein Status
-    const mine = this.expect ? `⚔️ Dein Match gegen <b>${esc(this.expect.oppName)}</b> – Verbindung wird aufgebaut …`
+    const mine = this.spectator && v.status==="running" ? "👁 Du bist Zuschauer – tippe bei einem laufenden Match auf 👁."
+      : this.expect ? `⚔️ Dein Match gegen <b>${esc(this.expect.oppName)}</b> – Verbindung wird aufgebaut …`
       : v.status==="running" ? (v.matches.some(m=>m.round===v.round&&m.state!=="done"&&(m.a===me||m.b===me)) ? "⏳ Dein Match startet gleich …" : "⏳ Warte auf die anderen Matches dieser Runde …")
-      : v.status==="lobby" ? (this.hosting?"Teile den Code oder Link. Starte, sobald alle da sind.":"Warte, bis der Gastgeber das Turnier startet …") : "";
+      : v.status==="lobby" ? (this.hosting?"Teile den Code oder Link. Starte, sobald alle da sind.":this.spectator?"👁 Du bist Zuschauer. Sobald Matches laufen, tippe auf 👁, um zuzusehen.":"Warte, bis der Gastgeber das Turnier startet …") : "";
     $("tMine").innerHTML=mine; $("tMine").style.display=mine?"":"none";
     // Spieler / Tabelle
     const rows=[...v.players];
@@ -2478,9 +2510,54 @@ const Tour = {
     $("tMatches").innerHTML = rounds.map(r=>`<div class="tround"><b>${v.format==="ko"?this.koName(r,v):"Runde "+r}</b>${v.matches.filter(m=>m.round===r).map(m=>{
       const cls=m.state==="done"?"done":m.state==="play"?"play":"";
       const a=m.a?name(m.a):"Freilos", b=m.b?name(m.b):"Freilos";
-      return `<div class="tm ${cls} ${(m.a===me||m.b===me)?"mine":""}"><span class="${m.winner===m.a?"win":""}">${a}</span><i>${m.state==="play"?"⚔️":"vs"}</i><span class="${m.winner===m.b?"win":""}">${b}</span></div>`}).join("")}</div>`).join("") || `<p class="muted">Die Paarungen erscheinen, sobald das Turnier startet.</p>`;
+      const canWatch = m.state==="play" && m.a!==me && m.b!==me && Cloud.room;
+      return `<div class="tm ${cls} ${(m.a===me||m.b===me)?"mine":""}"><span class="${m.winner===m.a?"win":""}">${a}</span><i>${m.state==="play"?"⚔️":"vs"}</i><span class="${m.winner===m.b?"win":""}">${b}</span>${canWatch?`<button class="small ghost tw" data-watch="${m.mid}">👁</button>`:""}</div>`}).join("")}</div>`).join("") || `<p class="muted">Die Paarungen erscheinen, sobald das Turnier startet.</p>`;
+    $("tMatches").querySelectorAll("[data-watch]").forEach(b=>b.onclick=()=>Spectate.watch(b.dataset.watch));
+    const ws=v.watchers||[]; if(ws.length) $("tPlayers").innerHTML+=`<div class="tp"><span class="pl">👁</span><span class="nm2">Zuschauer: ${ws.map(esc).join(", ")}</span><span class="sc"></span></div>`;
   },
   koName(r,v){ const n=v.matches.filter(m=>m.round===r).length; return n===1?"Finale":n===2?"Halbfinale":n===4?"Viertelfinale":"Runde "+r; },
+};
+
+/* ============================ ZUSCHAUEN (Turnier) ============================
+   Der Gastgeber eines Turnier-Matches legt den Spielstand (ohne Handkarten) laufend unter
+   rooms/{CODE}/live/{MATCH} auf dem Server ab. Zuschauer lesen ihn per EventSource mit.
+   ======================================================================== */
+const Spectate = {
+  mid:null, es:null, _t:0, _pend:null, _lastPub:0, started:false, shownOver:false,
+  /* ---------- Gastgeber eines Matches: veröffentlichen ---------- */
+  pubPath(){ return Duel.liveMid && Cloud.room ? `rooms/${Cloud.room}/live/${Duel.liveMid}` : null; },
+  publishStart(){
+    const p=this.pubPath(); if(!p) return;
+    const table={}; [Duel.P,Duel.AI].forEach(pl=>[...pl.deck,...pl.extra,...pl.hand,...pl.grave].forEach(c=>{ if(c&&c._k) table[c._k]=c; }));
+    Cloud.req(p,"PUT",{start:{table:JSON.stringify(table),h:Duel.P.name,g:Duel.AI.name,hs:Duel.side}}).catch(()=>{});
+    this._lastPub=0; this.publish();
+  },
+  publish(){
+    const p=this.pubPath(); if(!p) return;
+    const now=Date.now(), wait=Math.max(0,700-(now-this._lastPub));
+    if(this._pend) return; this._pend=setTimeout(()=>{ this._pend=null; this._lastPub=Date.now();
+      const path=this.pubPath(); if(!path) return;
+      Cloud.req(path+"/s","PUT",{d:JSON.stringify(Duel.snapSpec())}).catch(()=>{}); },wait);
+  },
+  /* ---------- Zuschauer ---------- */
+  async watch(mid){
+    if(!Cloud.room) return toast("Zuschauen geht nur bei Turnieren über den Server");
+    this.stop(); this.mid=mid; this.started=false; this.shownOver=false;
+    let t; try{ t=await Cloud.token(); }catch(e){ return toast("Zuschauen gerade nicht möglich"); }
+    if(this.mid!==mid) return;
+    const es=new EventSource(`${Cloud.url()}/rooms/${Cloud.room}/live/${mid}.json?auth=${encodeURIComponent(t)}`); this.es=es;
+    const on=e=>{ try{ const d=JSON.parse(e.data); if(!d) return;
+      if(d.path==="/"&&d.data){ if(d.data.start) this.onStart(d.data.start); if(d.data.s) this.onState(d.data.s); }
+      else if(d.path==="/start"&&d.data) this.onStart(d.data);
+      else if(d.path==="/s"&&d.data) this.onState(d.data); }catch(err){ console.error(err); } };
+    es.addEventListener("put",on); es.addEventListener("patch",on);
+    toast("👁 Verbinde mit dem Match …");
+    setTimeout(()=>{ if(this.mid===mid && !this.started){ toast("Das Match hat noch nicht begonnen – gleich nochmal versuchen"); this.stop(); } },12000);
+  },
+  onStart(st){ if(this.started) return; this.started=true; Duel.startSpectate(st); },
+  onState(s){ if(!this.started) return; try{ Duel.applySpec(JSON.parse(s.d)); }catch(e){ console.error(e); } },
+  stop(){ try{ this.es&&this.es.close(); }catch(e){} this.es=null; this.mid=null; this.started=false; if(Duel.spectate){ Duel.spectate=false; Duel.over=true; } },
+  leave(){ this.stop(); UI.show(Tour.active()?"tour":"online"); },
 };
 
 /* ============================ TAUSCHEN (live) ============================
@@ -2629,8 +2706,43 @@ Object.assign(Duel, {
       st: p.st.map(x=>x&&{k: own?K(x.card):null})});
     return {turn:this.turn, active:this.active===this.AI?"me":"opp", ready:this.ready, over:this.over, me:pl(this.AI,true), opp:pl(this.P,false)};
   },
+  /* Spielstand für Zuschauer: keine Handkarten, verdeckte Karten bleiben verdeckt */
+  snapSpec(){
+    const K=c=>c._k;
+    const pl=p=>({name:p.name, lp:p.lp, hand:p.hand.length, deck:p.deck.length, extra:p.extra.length, grave:p.grave.map(K),
+      mz:p.mz.map(m=>m&&{k:m.faceDown?null:K(m.card), pos:m.pos, faceDown:m.faceDown, atk:m.atk}), st:p.st.map(x=>x&&{k:null})});
+    return {turn:this.turn, active:this.active===this.P?"h":"g", over:this.over, win:this.over?(this.P.lp<=0||this._loser==="h"?"g":"h"):null,
+      h:pl(this.P), g:pl(this.AI), log:this.history.slice(-6).map(x=>x.msg)};
+  },
+  startSpectate(st){
+    this.online=true; this.client=true; this.host=false; this.spectate=true; this.waiting=false; this.over=false; this.mode=null; this.busy=false;
+    this.side=OTHER[st.hs]; this.opts={}; this.history=[]; this._ann=null; this._lastTurn=-1; this.turn=0; this._specLog=[];
+    try{ Net.table=JSON.parse(st.table); }catch(e){ Net.table={}; }
+    this._specNames=st;
+    $("reveal").classList.remove("show"); $("fx").innerHTML="";
+    $("oppWho").textContent=`${FACTIONS[st.hs][1]} ${st.h}`;
+    $("myWho").textContent=`${FACTIONS[OTHER[st.hs]][1]} ${st.g}`;
+    UI.show("duel"); banner("👁 ZUSCHAUER");
+    this.log(`Du schaust zu: ${st.h} gegen ${st.g}`,"opp");
+  },
+  applySpec(s){
+    const T=Net.table, card=k=>k==null?HIDDEN:(T[k]||HIDDEN);
+    const mk=d=>({name:d.name, lp:d.lp, summoned:false, hand:Array(d.hand).fill(HIDDEN), deck:Array(d.deck).fill(HIDDEN), extra:Array(d.extra).fill(HIDDEN),
+      grave:d.grave.map(card), mz:d.mz.map(m=>m&&Object.assign({},m,{card:card(m.k)})), st:d.st.map(x=>x&&{faceDown:true,card:HIDDEN})});
+    const oldG=this.P&&this.P.lp, oldH=this.AI&&this.AI.lp;
+    this.AI=mk(s.h); this.P=mk(s.g);                       // oben: Gastgeber · unten: Gast
+    this.active = s.active==="h" ? this.AI : this.P; this.ready=false; this.turn=s.turn;
+    if(s.turn!==this._lastTurn){ this._lastTurn=s.turn; banner(`${this.active.name.toUpperCase().slice(0,14)}!`); }
+    $("phaseLbl").textContent=`👁 ${this.active.name} am Zug`;
+    (s.log||[]).forEach(l=>{ if(!this._specLog.includes(l)){ this._specLog.push(l); if(this._specLog.length>40) this._specLog.shift(); $("log").textContent=l; this.history.push({t:Math.ceil(s.turn/2)||1,who:"opp",msg:l}); } });
+    if(oldG!=null && s.g.lp!==oldG) this.floatText($("myLP"),(s.g.lp<oldG?"−":"+")+Math.abs(s.g.lp-oldG),s.g.lp<oldG?"#ff3b3b":"#3ddc84");
+    if(oldH!=null && s.h.lp!==oldH) this.floatText($("oppLP"),(s.h.lp<oldH?"−":"+")+Math.abs(s.h.lp-oldH),s.h.lp<oldH?"#ff3b3b":"#3ddc84");
+    this.render();
+    if(s.over && !Spectate.shownOver){ Spectate.shownOver=true; const w=s.win==="h"?s.h.name:s.g.name;
+      setTimeout(()=>{ banner(`${w.toUpperCase().slice(0,14)} GEWINNT!`); setTimeout(()=>UI.modal(null,[["🏆 Zurück zum Turnier",()=>Spectate.leave(),"red"]]),1500); },500); }
+  },
   startClient(m){
-    this.online=true; this.client=true; this.host=false; this.waiting=false; this.over=false; this.mode=null; this.busy=false;
+    this.online=true; this.client=true; this.host=false; this.spectate=false; this.waiting=false; this.over=false; this.mode=null; this.busy=false;
     this.side=OTHER[m.hostSide]; this.opts={}; this.history=[]; this._ann=null; this._lastTurn=-1; this.turn=0;
     Net.table=m.table;
     $("reveal").classList.remove("show"); $("fx").innerHTML="";
@@ -2711,8 +2823,9 @@ const Lobby = {
   create(){ const n=this.name(); if(!n) return; Duel._ended=false; Net.host(this.side,n); },
   fmt:"ko",
   createTour(){ Duel._ended=false; Tour.create(this.fmt); },
-  async join(){ const n=this.name(); if(!n) return; const code=($("onJoin").value||"").trim().toUpperCase(); if(code.length<5) return toast("Bitte den 5-stelligen Code eingeben"); Duel._ended=false;
-    this.status("Suche Raum "+code+" …"); if(await Tour.tryJoinCloud(code,n)) return; Net.join(code,n); },
+  async join(spec){ const n=this.name(); if(!n) return; const code=($("onJoin").value||"").trim().toUpperCase(); if(code.length<5) return toast("Bitte den 5-stelligen Code eingeben"); Duel._ended=false;
+    this.status("Suche Raum "+code+" …"); if(await Tour.tryJoinCloud(code,n,spec)) return;
+    if(spec) return this.error("Zuschauen geht nur bei Turnieren (über den Server)."); Net.join(code,n); },
   showCode(code){ $("onCodeBox").style.display=""; $("onCode").textContent=code; this.status("Warte auf deinen Gegner … Gib ihm den Code."); },
   inviteUrl(){ return `${window.APP_SITE||"https://totestierux.github.io/einsatz-duell"}/join.html?c=${Net.code}`; },
   inviteText(){ const n=Store.get("nick","")||"Ich";

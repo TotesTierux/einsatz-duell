@@ -223,7 +223,7 @@
     <h3 style="color:var(--yellow)">Raum beitreten</h3>
     <p class="muted" style="margin-top:0">Funktioniert für Duelle, Turniere und Tausch-Räume.</p>
     <input id="onJoin" maxlength="5" placeholder="CODE" autocomplete="off" autocapitalize="characters" class="codein">
-    <button class="blue" onclick="Lobby.join()" style="margin-top:10px;width:100%">Beitreten</button>
+    <div class="two" style="margin-top:10px"><button class="blue" onclick="Lobby.join()">Beitreten</button><button class="ghost" onclick="Lobby.join(true)">👁 Zuschauen</button></div>
   </div>
   <p class="muted" id="onStatus" style="text-align:center"></p>
   <p class="muted" style="text-align:center">Sieg 🪙150 · Niederlage 🪙30 · Beide brauchen Internet.</p>
