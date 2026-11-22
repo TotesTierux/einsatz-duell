@@ -344,29 +344,29 @@ def build():
     chars(POL_CHARS,"polizei","p"); acts(POL_ACTS,"polizei","p",501)
     chars(VER_CHARS,"verbrecher","v"); acts(VER_ACTS,"verbrecher","v",501)
     fus(POL_FUS,"polizei","pf"); fus(VER_FUS,"verbrecher","vf")
-    # ---------- Celestial: 20 besonders seltene Karten mit einzigartigen Effekten (max. 1× pro Deck) ----------
+    # ---------- Celestial: 20 legendäre Polizei-/Unterwelt-Karten mit einzigartigen Effekten (max. 1× pro Deck) ----------
     CEL = [
       # id,  Name,                              Fraktion,    Typ,      Art/Gesetz, Stufe, ATK,  DEF,  Effekt,              Emoji, Paragraf
-      ("pc01","Sonnenwache Sol",                "polizei",   "monster","streife",  7, 2500, 2400, "cel_sun",           "☀️", ""),
-      ("pc02","Polarstern-Kommissarin Aurora",  "polizei",   "monster","kripo",    8, 2800, 2400, "cel_supernova",     "🌟", ""),
-      ("pc03","Sternbild-Einsatzleiter Orion",  "polizei",   "monster","sek",      8, 2900, 2300, "cel_constellation", "🌌", ""),
-      ("pc04","Schutzengel Seraphina",          "polizei",   "monster","bepo",     7, 2000, 3000, "cel_guardian",      "😇", ""),
-      ("pc05","Mondhund Luna",                  "polizei",   "monster","hunde",    7, 2600, 2200, "cel_gravity",       "🌙", ""),
-      ("pc06","Kometenstreife Nova",            "polizei",   "monster","verkehr",  7, 2700, 1800, "cel_comet",         "☄️", ""),
-      ("pc07","Sternenschild-Hüter Atlas",      "polizei",   "monster","bepo",     9, 2400, 3200, "cel_starshield",    "🛡️", ""),
-      ("pc08","Himmlische Razzia",              "polizei",   "spell",  "StPO",     0, 0,    0,    "cel_heaven_raid",   "🌠", "§ 102 StPO"),
-      ("pc09","Spiegel des Mondes",             "polizei",   "trap",   "SOG",      0, 0,    0,    "cel_moon_mirror",   "🪞", "SOG"),
-      ("pc10","Sternenkarte",                   "polizei",   "spell",  "SOG",      0, 0,    0,    "cel_starmap",       "🗺️", "SOG"),
-      ("vc01","Schwarzes Loch Vanta",           "verbrecher","monster","betrug",   9, 3000, 2000, "cel_blackhole",     "🕳️", ""),
-      ("vc02","Finsternis-Diebin Eclipsa",      "verbrecher","monster","dieb",     8, 2400, 2000, "cel_eclipse",       "🌑", ""),
-      ("vc03","Meteoritenboss Krater",          "verbrecher","monster","bande",    8, 2700, 2300, "cel_meteor",        "🌋", ""),
-      ("vc04","Orbit-Räuber Saturnino",         "verbrecher","monster","raub",     7, 2600, 2000, "cel_orbit",         "🪐", ""),
-      ("vc05","Zeitdieb Chronos",               "verbrecher","monster","dieb",     7, 2300, 1900, "cel_timeloop",      "⏳", ""),
-      ("vc06","Nebelgestalt Nebula",            "verbrecher","monster","drogen",   7, 2500, 2100, "cel_nebula",        "🌫️", ""),
-      ("vc07","Ereignishorizont",               "verbrecher","spell",  "Trick",    0, 0,    0,    "cel_event_horizon", "🌀", ""),
-      ("vc08","Sternschnuppen-Coup",            "verbrecher","spell",  "Trick",    0, 0,    0,    "cel_shooting_star", "💫", ""),
-      ("vc09","Mondfinsternis",                 "verbrecher","spell",  "Trick",    0, 0,    0,    "cel_lp_swap",       "🌘", ""),
-      ("vc10","Wurmloch",                       "verbrecher","trap",   "Trick",    0, 0,    0,    "cel_wormhole",      "🌌", ""),
+      ("pc01","Revierleiter Sonnenschein",      "polizei",   "monster","streife",  7, 2500, 2400, "cel_sun",           "👨‍✈️", ""),
+      ("pc02","Generalfahnderin Aurora",        "polizei",   "monster","kripo",    8, 2800, 2400, "cel_supernova",     "🚨", ""),
+      ("pc03","Hundertschaftsführer Orion",     "polizei",   "monster","sek",      8, 2900, 2300, "cel_constellation", "📣", ""),
+      ("pc04","Polizeiärztin Dr. Engel",        "polizei",   "monster","bepo",     7, 2000, 3000, "cel_guardian",      "🩺", ""),
+      ("pc05","Personenschützer Fels",          "polizei",   "monster","bepo",     7, 2600, 2200, "cel_gravity",       "🕴️", ""),
+      ("pc06","Autobahnpolizistin Turbo-Tina",  "polizei",   "monster","verkehr",  7, 2700, 1800, "cel_comet",         "🏎️", ""),
+      ("pc07","SEK-Schildträger Atlas",         "polizei",   "monster","sek",      9, 2400, 3200, "cel_starshield",    "🛡️", ""),
+      ("pc08","Bundesweite Großrazzia",         "polizei",   "spell",  "StPO",     0, 0,    0,    "cel_heaven_raid",   "🚔", "§ 102 StPO"),
+      ("pc09","Notwehr",                        "polizei",   "trap",   "SOG",      0, 0,    0,    "cel_moon_mirror",   "⚖️", "§ 32 StGB"),
+      ("pc10","Lagezentrum",                    "polizei",   "spell",  "SOG",      0, 0,    0,    "cel_starmap",       "🖥️", "SOG"),
+      ("vc01","Clanchef Abgrund",               "verbrecher","monster","bande",    9, 3000, 2000, "cel_blackhole",     "🦍", ""),
+      ("vc02","Bestechungskönigin Eclipsa",     "verbrecher","monster","betrug",   8, 2400, 2000, "cel_eclipse",       "💵", ""),
+      ("vc03","Sprengmeister Krater",           "verbrecher","monster","raub",     8, 2700, 2300, "cel_meteor",        "💣", ""),
+      ("vc04","Ausbrecherkönig Phönix",         "verbrecher","monster","raub",     7, 2600, 2000, "cel_orbit",         "🔓", ""),
+      ("vc05","Serieneinbrecher Chronos",       "verbrecher","monster","dieb",     7, 2300, 1900, "cel_timeloop",      "🧤", ""),
+      ("vc06","Phantom ohne Gesicht",           "verbrecher","monster","drogen",   7, 2500, 2100, "cel_nebula",        "👤", ""),
+      ("vc07","Aktenvernichtung",               "verbrecher","spell",  "Trick",    0, 0,    0,    "cel_event_horizon", "🔥", ""),
+      ("vc08","Meisterlicher Taschenzug",       "verbrecher","spell",  "Trick",    0, 0,    0,    "cel_shooting_star", "👛", ""),
+      ("vc09","Identitätstausch",               "verbrecher","spell",  "Trick",    0, 0,    0,    "cel_lp_swap",       "🎭", ""),
+      ("vc10","Geheimer Fluchttunnel",          "verbrecher","trap",   "Trick",    0, 0,    0,    "cel_wormhole",      "🚇", ""),
     ]
     for cid,name,fac,typ,ar,lv,atk,df,eff,emo,ref in CEL:
         art=dict(emoji=emo,c1="#f5e9ff" if fac=="polizei" else "#ffe9f6",c2="#1b1446" if fac=="polizei" else "#2a0c33")

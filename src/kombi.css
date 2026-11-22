@@ -118,26 +118,35 @@
 .cos b{font-size:12px;line-height:1.15}
 .cos small{font-size:11px;opacity:.85}
 .bprev{width:56px;height:82px;border:3px solid var(--ink);border-radius:8px;background:#2c1a57}
-.cb-blau .cardback{background:radial-gradient(circle,#fff 0 12%,#2b6cd6 13% 18%,transparent 19%),repeating-linear-gradient(45deg,#1d4fa3 0 10px,#2b6cd6 10px 20px,#ff3b3b 20px 26px,#2b6cd6 26px 36px)}
-.cos .cardback.cb-prev-blau{background:radial-gradient(circle,#fff 0 12%,#2b6cd6 13% 18%,transparent 19%),repeating-linear-gradient(45deg,#1d4fa3 0 10px,#2b6cd6 10px 20px,#ff3b3b 20px 26px,#2b6cd6 26px 36px)}
-.cb-unter .cardback{background:radial-gradient(circle,#ff3b3b 0 16%,#111 17% 21%,transparent 22%),repeating-conic-gradient(#3a0a0a 0 15deg,#160404 15deg 30deg)}
-.cos .cardback.cb-prev-unter{background:radial-gradient(circle,#ff3b3b 0 16%,#111 17% 21%,transparent 22%),repeating-conic-gradient(#3a0a0a 0 15deg,#160404 15deg 30deg)}
-.cb-akte .cardback{background:linear-gradient(#0000 46%,#b3262b 46% 54%,#0000 54%),repeating-linear-gradient(0deg,#e9d8a6 0 6px,#d9c48c 6px 7px)}
-.cos .cardback.cb-prev-akte{background:linear-gradient(#0000 46%,#b3262b 46% 54%,#0000 54%),repeating-linear-gradient(0deg,#e9d8a6 0 6px,#d9c48c 6px 7px)}
-.cb-neon .cardback{background:radial-gradient(circle at 50% 50%,#ff3bd4 0 10%,transparent 11%),repeating-linear-gradient(90deg,#0b0b2a 0 8px,#1a1a4a 8px 9px),linear-gradient(135deg,#00f0ff55,#ff3bd455)}
-.cos .cardback.cb-prev-neon{background:radial-gradient(circle at 50% 50%,#ff3bd4 0 10%,transparent 11%),repeating-linear-gradient(90deg,#0b0b2a 0 8px,#1a1a4a 8px 9px),linear-gradient(135deg,#00f0ff55,#ff3bd455)}
-.cb-gold .cardback{background:radial-gradient(circle,#fff6c9 0 14%,#a87b00 15% 19%,transparent 20%),repeating-conic-gradient(#ffd23f 0 10deg,#c99a00 10deg 20deg)}
-.cos .cardback.cb-prev-gold{background:radial-gradient(circle,#fff6c9 0 14%,#a87b00 15% 19%,transparent 20%),repeating-conic-gradient(#ffd23f 0 10deg,#c99a00 10deg 20deg)}
-.cb-stern .cardback{background:radial-gradient(circle at 20% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 70% 35%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 40% 75%,#fff 0 1px,transparent 2px),radial-gradient(circle at 80% 80%,#fff 0 1px,transparent 2px),radial-gradient(circle,#fff27a 0 10%,transparent 11%),linear-gradient(160deg,#1b1446,#3a1a6e,#0d4a6b)}
-.cos .cardback.cb-prev-stern{background:radial-gradient(circle at 20% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 70% 35%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 40% 75%,#fff 0 1px,transparent 2px),radial-gradient(circle at 80% 80%,#fff 0 1px,transparent 2px),radial-gradient(circle,#fff27a 0 10%,transparent 11%),linear-gradient(160deg,#1b1446,#3a1a6e,#0d4a6b)}
+
+.cb-blau .cardback{background:radial-gradient(circle at 50% 18%,#4fb4ff 0 7%,#0000 8%),linear-gradient(180deg,#0000 40%,#1d4fa3 40% 52%,#e8edf3 52% 56%,#1d4fa3 56% 68%,#0000 68%),linear-gradient(160deg,#f4f6f9,#c9d1db)}
+.cos .cardback.cb-prev-blau{background:radial-gradient(circle at 50% 18%,#4fb4ff 0 7%,#0000 8%),linear-gradient(180deg,#0000 40%,#1d4fa3 40% 52%,#e8edf3 52% 56%,#1d4fa3 56% 68%,#0000 68%),linear-gradient(160deg,#f4f6f9,#c9d1db)}
+.cb-neon .cardback{background:repeating-linear-gradient(-45deg,#ffd23f 0 12%,#111 12% 24%)}
+.cos .cardback.cb-prev-neon{background:repeating-linear-gradient(-45deg,#ffd23f 0 12%,#111 12% 24%)}
+.cb-neon .cardback,.cos .cardback.cb-prev-neon{position:relative;overflow:hidden}
+.cb-neon .cardback::after,.cos .cardback.cb-prev-neon::after{content:"POLIZEI";position:absolute;left:0;right:0;top:44%;text-align:center;font-family:var(--comic);font-size:calc(var(--w)*.17);letter-spacing:1px;color:#ffd23f;background:#111;transform:rotate(-12deg);line-height:1.2}
+.cb-akte .cardback{background:linear-gradient(#0000 0 0) padding-box,radial-gradient(circle at 50% 45%,#7a5a3a 0 22%,#0000 23%),repeating-linear-gradient(0deg,#e9d8a6 0 5px,#e2cf98 5px 6px)}
+.cos .cardback.cb-prev-akte{background:linear-gradient(#0000 0 0) padding-box,radial-gradient(circle at 50% 45%,#7a5a3a 0 22%,#0000 23%),repeating-linear-gradient(0deg,#e9d8a6 0 5px,#e2cf98 5px 6px)}
+.cb-akte .cardback,.cos .cardback.cb-prev-akte{position:relative;overflow:hidden}
+.cb-akte .cardback::after,.cos .cardback.cb-prev-akte::after{content:"GESUCHT";position:absolute;left:0;right:0;top:10%;text-align:center;font-family:var(--comic);font-size:calc(var(--w)*.17);letter-spacing:1px;color:#7a1a1d;line-height:1.2}
+.cb-unter .cardback{background:linear-gradient(180deg,#0000 0 14%,#d0262b 14% 20%,#0000 20%),repeating-linear-gradient(90deg,#ffffff22 0 6px,#0000 6px 12px),linear-gradient(160deg,#cfe7ff,#8fb8e0)}
+.cos .cardback.cb-prev-unter{background:linear-gradient(180deg,#0000 0 14%,#d0262b 14% 20%,#0000 20%),repeating-linear-gradient(90deg,#ffffff22 0 6px,#0000 6px 12px),linear-gradient(160deg,#cfe7ff,#8fb8e0)}
+.cb-unter .cardback,.cos .cardback.cb-prev-unter{position:relative;overflow:hidden}
+.cb-unter .cardback::after,.cos .cardback.cb-prev-unter::after{content:"ASSERVAT";position:absolute;left:0;right:0;top:44%;text-align:center;font-family:var(--comic);font-size:calc(var(--w)*.17);letter-spacing:1px;color:#7a1a1d;line-height:1.2}
+.cb-gold .cardback{background:radial-gradient(circle,#fff6c9 0 9%,#c99a00 10% 14%,#ffd23f 15% 26%,#a87b00 27% 30%,#0000 31%),repeating-conic-gradient(#1d2f5e 0 10deg,#16264d 10deg 20deg)}
+.cos .cardback.cb-prev-gold{background:radial-gradient(circle,#fff6c9 0 9%,#c99a00 10% 14%,#ffd23f 15% 26%,#a87b00 27% 30%,#0000 31%),repeating-conic-gradient(#1d2f5e 0 10deg,#16264d 10deg 20deg)}
+.cb-gold .cardback,.cos .cardback.cb-prev-gold{position:relative;overflow:hidden}
+.cb-gold .cardback::after,.cos .cardback.cb-prev-gold::after{content:"★";position:absolute;left:0;right:0;top:44%;text-align:center;font-family:var(--comic);font-size:calc(var(--w)*.3);letter-spacing:1px;color:#ffd23f;line-height:1.2}
+.cb-stern .cardback{background:radial-gradient(ellipse at 25% 30%,#2a6bff 0 12%,#0000 40%),radial-gradient(ellipse at 75% 70%,#ff2a3a 0 10%,#0000 40%),linear-gradient(160deg,#05051a,#10133a)}
+.cos .cardback.cb-prev-stern{background:radial-gradient(ellipse at 25% 30%,#2a6bff 0 12%,#0000 40%),radial-gradient(ellipse at 75% 70%,#ff2a3a 0 10%,#0000 40%),linear-gradient(160deg,#05051a,#10133a)}
+body.bt-wache #duel{background:repeating-linear-gradient(0deg,#ffffff06 0 2px,#0000 2px 60px),linear-gradient(180deg,#173f8a 0%,#2b6cd6 50%,#173f8a 100%)}
+.bprev.bp-wache{background:repeating-linear-gradient(0deg,#ffffff06 0 2px,#0000 2px 60px),linear-gradient(180deg,#173f8a 0%,#2b6cd6 50%,#173f8a 100%)}
+body.bt-nacht #duel{background:radial-gradient(ellipse at 50% 0%,#fff6c955 0 25%,#0000 55%),linear-gradient(180deg,#3a3d44,#1d1f24)}
+.bprev.bp-nacht{background:radial-gradient(ellipse at 50% 0%,#fff6c955 0 25%,#0000 55%),linear-gradient(180deg,#3a3d44,#1d1f24)}
+body.bt-hafen #duel{background:repeating-linear-gradient(90deg,#c2410c33 0 30px,#1d4fa333 30px 60px,#0000 60px 90px),linear-gradient(180deg,#2a3440,#1d2a36)}
+.bprev.bp-hafen{background:repeating-linear-gradient(90deg,#c2410c33 0 30px,#1d4fa333 30px 60px,#0000 60px 90px),linear-gradient(180deg,#2a3440,#1d2a36)}
+body.bt-tresor #duel{background:repeating-linear-gradient(90deg,#5a5e66 0 46px,#44474e 46px 48px),repeating-linear-gradient(0deg,#0000 0 46px,#44474e 46px 48px),#55595f}
+.bprev.bp-tresor{background:repeating-linear-gradient(90deg,#5a5e66 0 46px,#44474e 46px 48px),repeating-linear-gradient(0deg,#0000 0 46px,#44474e 46px 48px),#55595f}
+body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0000 20%),radial-gradient(circle at 80% 85%,#ff3b3b33 0 8%,#0000 20%),repeating-linear-gradient(90deg,#0b2a4a 0 1px,#0000 1px 40px),repeating-linear-gradient(0deg,#0b2a4a 0 1px,#0000 1px 40px),linear-gradient(180deg,#041427,#0a2340)}
+.bprev.bp-all{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0000 20%),radial-gradient(circle at 80% 85%,#ff3b3b33 0 8%,#0000 20%),repeating-linear-gradient(90deg,#0b2a4a 0 1px,#0000 1px 40px),repeating-linear-gradient(0deg,#0b2a4a 0 1px,#0000 1px 40px),linear-gradient(180deg,#041427,#0a2340)}
 .cos .cardback.cb-prev-std{background:radial-gradient(circle,#ffd23f 0 18%,var(--ink) 19% 22%,transparent 23%),repeating-conic-gradient(#2b6cd6 0 15deg,#173f8a 15deg 30deg)}
-body.bt-wache #duel{background:linear-gradient(180deg,#0e2a5c 0%,#173f8a 45%,#0e2a5c 100%),repeating-linear-gradient(90deg,#ffffff08 0 40px,#0000 40px 80px)}
-.bprev.bp-wache{background:linear-gradient(180deg,#0e2a5c 0%,#173f8a 45%,#0e2a5c 100%),repeating-linear-gradient(90deg,#ffffff08 0 40px,#0000 40px 80px)}
-body.bt-nacht #duel{background:linear-gradient(180deg,#05051a 0%,#1a1040 60%,#3a1a5a 100%)}
-.bprev.bp-nacht{background:linear-gradient(180deg,#05051a 0%,#1a1040 60%,#3a1a5a 100%)}
-body.bt-hafen #duel{background:linear-gradient(180deg,#2a3440 0%,#3e4c5a 50%,#1d2a36 100%)}
-.bprev.bp-hafen{background:linear-gradient(180deg,#2a3440 0%,#3e4c5a 50%,#1d2a36 100%)}
-body.bt-tresor #duel{background:radial-gradient(circle at 50% 50%,#6b6f78 0 20%,#3a3d44 21% 22%,#55595f 23% 40%,#2c2e33 41%)}
-.bprev.bp-tresor{background:radial-gradient(circle at 50% 50%,#6b6f78 0 20%,#3a3d44 21% 22%,#55595f 23% 40%,#2c2e33 41%)}
-body.bt-all #duel{background:radial-gradient(circle at 15% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 60% 10%,#fff 0 1px,transparent 2px),radial-gradient(circle at 85% 55%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 30% 80%,#fff 0 1px,transparent 2px),radial-gradient(ellipse at 70% 70%,#7a3cff55,transparent 50%),linear-gradient(180deg,#070420,#1b1446)}
-.bprev.bp-all{background:radial-gradient(circle at 15% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 60% 10%,#fff 0 1px,transparent 2px),radial-gradient(circle at 85% 55%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 30% 80%,#fff 0 1px,transparent 2px),radial-gradient(ellipse at 70% 70%,#7a3cff55,transparent 50%),linear-gradient(180deg,#070420,#1b1446)}
