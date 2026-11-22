@@ -408,6 +408,24 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 .ownwrap .upg{position:absolute;top:-6px;left:-6px;z-index:3;background:var(--green);color:var(--ink);border:2px solid var(--ink);border-radius:50%;width:24px;height:24px;
   display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:2px 2px 0 var(--ink);animation:kbPulse 1.6s infinite}
 .card .rar .plus{color:#7dff8a;font-weight:normal}
+/* ---------- Celestial-Karten ---------- */
+.card.r-CE{border:3px solid transparent!important;
+  background:radial-gradient(circle at 20% 15%,rgba(255,255,255,.9) 0 1px,transparent 2px) padding-box,radial-gradient(circle at 70% 30%,rgba(255,255,255,.8) 0 1px,transparent 2px) padding-box,
+  radial-gradient(circle at 40% 80%,rgba(255,255,255,.8) 0 1px,transparent 2px) padding-box,radial-gradient(circle at 85% 70%,rgba(255,255,255,.9) 0 1px,transparent 2px) padding-box,
+  linear-gradient(160deg,#1b1446 0%,#3a1a6e 40%,#0d4a6b 75%,#2a0c33 100%) padding-box,
+  conic-gradient(from var(--celA),#ff7ad9,#7af0ff,#fff27a,#b37aff,#ff7ad9) border-box!important;
+  animation:celSpin 4s linear infinite;position:relative}
+.card.r-CE::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;mix-blend-mode:screen;
+  background:linear-gradient(115deg,transparent 30%,rgba(122,240,255,.3) 45%,rgba(255,122,217,.3) 55%,transparent 70%);background-size:250% 100%;animation:celShine 3.2s ease-in-out infinite}
+.card.r-CE .nm{background:linear-gradient(90deg,#fff6c9,#e3d4ff,#c9f7ff)!important}
+.card.r-CE .lv{color:#fff27a;text-shadow:0 0 4px #b37aff}
+.card.r-CE .art{box-shadow:0 0 0 2px #fff27a,0 0 12px 2px rgba(122,240,255,.7);position:relative}
+.card.r-CE .art::after{content:"✦ CELESTIAL";position:absolute;top:3%;right:3%;font-size:calc(var(--w,150px)*.055);font-weight:900;letter-spacing:1px;color:#fff;
+  background:linear-gradient(90deg,#ff7ad9,#7a5cff,#2bc6ff);border-radius:6px;padding:1px 5px;text-shadow:0 0 3px #000}
+.card.r-CE .st{color:#fff27a}
+@property --celA{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes celSpin{to{--celA:360deg}}
+@keyframes celShine{0%{background-position:150% 0}100%{background-position:-50% 0}}
 </style>
 </head>
 <body>
@@ -1080,7 +1098,27 @@ const START_CARDS = [{"id":"p001","name":"Streifenpolizist Kai","faction":"poliz
 {"id":"vf09","name":"Clan der Schatten","faction":"verbrecher","type":"fusion","attr":"bande","level":9,"atk":3300,"rarity":"UR","effect":"pierce","val":0,"materials":["bande","dieb","any"],"starter":false,"art":{"emoji":"🌑","c1":"#ffb3b3","c2":"#2a0a0a"},"def":2700},
 {"id":"vf10","name":"Fluchthelfer-Ring","faction":"verbrecher","type":"fusion","attr":"raub","level":6,"atk":2400,"rarity":"R","effect":"summon_draw","val":1,"materials":["raub","any"],"starter":false,"art":{"emoji":"🚐","c1":"#ffe28a","c2":"#7a1010"},"def":1900},
 {"id":"vf11","name":"Geldwäsche-Ring","faction":"verbrecher","type":"fusion","attr":"hehler","level":7,"atk":2600,"rarity":"R","effect":"summon_burn","val":600,"materials":["hehler","betrug"],"starter":false,"art":{"emoji":"🧼","c1":"#f1dcc0","c2":"#5a3410"},"def":2600},
-{"id":"vf12","name":"Straßengang","faction":"verbrecher","type":"fusion","attr":"bande","level":5,"atk":2100,"rarity":"N","effect":"pierce","val":0,"materials":["bande","any"],"starter":false,"art":{"emoji":"👥","c1":"#ffb3b3","c2":"#2a0a0a"},"def":1600}];
+{"id":"vf12","name":"Straßengang","faction":"verbrecher","type":"fusion","attr":"bande","level":5,"atk":2100,"rarity":"N","effect":"pierce","val":0,"materials":["bande","any"],"starter":false,"art":{"emoji":"👥","c1":"#ffb3b3","c2":"#2a0a0a"},"def":1600},
+{"id":"pc01","name":"Sonnenwache Sol","faction":"polizei","type":"monster","attr":"streife","level":7,"atk":2500,"rarity":"CE","effect":"cel_sun","val":0,"starter":false,"art":{"emoji":"☀️","c1":"#f5e9ff","c2":"#1b1446"},"def":2400},
+{"id":"pc02","name":"Polarstern-Kommissarin Aurora","faction":"polizei","type":"monster","attr":"kripo","level":8,"atk":2800,"rarity":"CE","effect":"cel_supernova","val":0,"starter":false,"art":{"emoji":"🌟","c1":"#f5e9ff","c2":"#1b1446"},"def":2400},
+{"id":"pc03","name":"Sternbild-Einsatzleiter Orion","faction":"polizei","type":"monster","attr":"sek","level":8,"atk":2900,"rarity":"CE","effect":"cel_constellation","val":0,"starter":false,"art":{"emoji":"🌌","c1":"#f5e9ff","c2":"#1b1446"},"def":2300},
+{"id":"pc04","name":"Schutzengel Seraphina","faction":"polizei","type":"monster","attr":"bepo","level":7,"atk":2000,"rarity":"CE","effect":"cel_guardian","val":0,"starter":false,"art":{"emoji":"😇","c1":"#f5e9ff","c2":"#1b1446"},"def":3000},
+{"id":"pc05","name":"Mondhund Luna","faction":"polizei","type":"monster","attr":"hunde","level":7,"atk":2600,"rarity":"CE","effect":"cel_gravity","val":0,"starter":false,"art":{"emoji":"🌙","c1":"#f5e9ff","c2":"#1b1446"},"def":2200},
+{"id":"pc06","name":"Kometenstreife Nova","faction":"polizei","type":"monster","attr":"verkehr","level":7,"atk":2700,"rarity":"CE","effect":"cel_comet","val":0,"starter":false,"art":{"emoji":"☄️","c1":"#f5e9ff","c2":"#1b1446"},"def":1800},
+{"id":"pc07","name":"Sternenschild-Hüter Atlas","faction":"polizei","type":"monster","attr":"bepo","level":9,"atk":2400,"rarity":"CE","effect":"cel_starshield","val":0,"starter":false,"art":{"emoji":"🛡️","c1":"#f5e9ff","c2":"#1b1446"},"def":3200},
+{"id":"pc08","name":"Himmlische Razzia","faction":"polizei","type":"spell","law":"StPO","ref":"§ 102 StPO","rarity":"CE","effect":"cel_heaven_raid","val":0,"starter":false,"art":{"emoji":"🌠","c1":"#f5e9ff","c2":"#1b1446"}},
+{"id":"pc09","name":"Spiegel des Mondes","faction":"polizei","type":"trap","law":"SOG","ref":"SOG","rarity":"CE","effect":"cel_moon_mirror","val":0,"starter":false,"art":{"emoji":"🪞","c1":"#f5e9ff","c2":"#1b1446"}},
+{"id":"pc10","name":"Sternenkarte","faction":"polizei","type":"spell","law":"SOG","ref":"SOG","rarity":"CE","effect":"cel_starmap","val":0,"starter":false,"art":{"emoji":"🗺️","c1":"#f5e9ff","c2":"#1b1446"}},
+{"id":"vc01","name":"Schwarzes Loch Vanta","faction":"verbrecher","type":"monster","attr":"betrug","level":9,"atk":3000,"rarity":"CE","effect":"cel_blackhole","val":0,"starter":false,"art":{"emoji":"🕳️","c1":"#ffe9f6","c2":"#2a0c33"},"def":2000},
+{"id":"vc02","name":"Finsternis-Diebin Eclipsa","faction":"verbrecher","type":"monster","attr":"dieb","level":8,"atk":2400,"rarity":"CE","effect":"cel_eclipse","val":0,"starter":false,"art":{"emoji":"🌑","c1":"#ffe9f6","c2":"#2a0c33"},"def":2000},
+{"id":"vc03","name":"Meteoritenboss Krater","faction":"verbrecher","type":"monster","attr":"bande","level":8,"atk":2700,"rarity":"CE","effect":"cel_meteor","val":0,"starter":false,"art":{"emoji":"🌋","c1":"#ffe9f6","c2":"#2a0c33"},"def":2300},
+{"id":"vc04","name":"Orbit-Räuber Saturnino","faction":"verbrecher","type":"monster","attr":"raub","level":7,"atk":2600,"rarity":"CE","effect":"cel_orbit","val":0,"starter":false,"art":{"emoji":"🪐","c1":"#ffe9f6","c2":"#2a0c33"},"def":2000},
+{"id":"vc05","name":"Zeitdieb Chronos","faction":"verbrecher","type":"monster","attr":"dieb","level":7,"atk":2300,"rarity":"CE","effect":"cel_timeloop","val":0,"starter":false,"art":{"emoji":"⏳","c1":"#ffe9f6","c2":"#2a0c33"},"def":1900},
+{"id":"vc06","name":"Nebelgestalt Nebula","faction":"verbrecher","type":"monster","attr":"drogen","level":7,"atk":2500,"rarity":"CE","effect":"cel_nebula","val":0,"starter":false,"art":{"emoji":"🌫️","c1":"#ffe9f6","c2":"#2a0c33"},"def":2100},
+{"id":"vc07","name":"Ereignishorizont","faction":"verbrecher","type":"spell","law":"Trick","ref":"Trick","rarity":"CE","effect":"cel_event_horizon","val":0,"starter":false,"art":{"emoji":"🌀","c1":"#ffe9f6","c2":"#2a0c33"}},
+{"id":"vc08","name":"Sternschnuppen-Coup","faction":"verbrecher","type":"spell","law":"Trick","ref":"Trick","rarity":"CE","effect":"cel_shooting_star","val":0,"starter":false,"art":{"emoji":"💫","c1":"#ffe9f6","c2":"#2a0c33"}},
+{"id":"vc09","name":"Mondfinsternis","faction":"verbrecher","type":"spell","law":"Trick","ref":"Trick","rarity":"CE","effect":"cel_lp_swap","val":0,"starter":false,"art":{"emoji":"🌘","c1":"#ffe9f6","c2":"#2a0c33"}},
+{"id":"vc10","name":"Wurmloch","faction":"verbrecher","type":"trap","law":"Trick","ref":"Trick","rarity":"CE","effect":"cel_wormhole","val":0,"starter":false,"art":{"emoji":"🌌","c1":"#ffe9f6","c2":"#2a0c33"}}];
 
 /* Kurze, lustige Beschreibungen zu jeder Karte (Admin kann sie pro Karte überschreiben: Feld „flavor“) */
 const FLAVOR = {
@@ -1329,6 +1367,27 @@ vf09:"Man sieht sie nicht. Man hört sie nicht. Aber das Auto ist weg.",
 vf10:"Ihr Fluchtwagen hat mehr Kilometer als ein Linienbus.",
 vf11:"Schmutziges Geld rein, glänzendes Geld raus.",
 vf12:"Treffen sich jeden Tag am Kiosk. Machen jeden Tag Ärger.",
+// ---------- Celestial ----------
+pc01:"Geht nie unter. Außer abends, da hat er Feierabend.",
+pc02:"Zeigt allen den Weg – vor allem den Weg in die Zelle.",
+pc03:"Hat seinen Einsatzplan in die Sterne geschrieben. Wörtlich.",
+pc04:"Fängt jeden Sturz ab. Auch den deiner Lebenspunkte.",
+pc05:"Heult nur bei Vollmond. Und wenn jemand flieht.",
+pc06:"Einmal im Jahr sichtbar. Dann aber richtig.",
+pc07:"Trägt das Gewicht der ganzen Wache auf den Schultern.",
+pc08:"Der Durchsuchungsbeschluss kam direkt von ganz oben.",
+pc09:"Was du austeilst, scheint dir zurück.",
+pc10:"Weiß immer, wo es langgeht. Sogar im Bürokratie-Labyrinth.",
+vc01:"Zieht alles an. Auch Ärger.",
+vc02:"Wenn sie kommt, wird es dunkel. Und deine Brieftasche leicht.",
+vc03:"Schlägt ein, wo man ihn am wenigsten erwartet.",
+vc04:"Kommt immer wieder. Wie ein schlechter Ohrwurm im Weltall.",
+vc05:"Hat schon morgen gestohlen, was du heute noch suchst.",
+vc06:"Ist da. Und dann wieder nicht. Und dann doch.",
+vc07:"Was einmal drin ist, kommt nie wieder raus.",
+vc08:"Wünsch dir was! … Zu spät, schon geklaut.",
+vc09:"Für einen kurzen Moment ist alles auf den Kopf gestellt.",
+vc10:"Eben warst du noch hier. Jetzt bist du irgendwo zwischen Dienstag und Saturn.",
 };
 function flavorOf(c){ return (c && (c.flavor || FLAVOR[c.id])) || ""; }
 
@@ -1344,8 +1403,8 @@ function flavorOf(c){ return (c && (c.flavor || FLAVOR[c.id])) || ""; }
 const FACTIONS = {polizei:["Polizei","👮"], verbrecher:["Verbrecher","🦹"]};
 const OTHER = {polizei:"verbrecher", verbrecher:"polizei"};
 const TYPES   = {monster:"Charakter", fusion:"Fusion", spell:"Maßnahme", trap:"Reaktion"};
-const RARITY  = {N:"Normal", R:"Rar", SR:"Super", UR:"Ultra"};
-const RANK    = {N:0, R:1, SR:2, UR:3};
+const RARITY  = {N:"Normal", R:"Rar", SR:"Super", UR:"Ultra", CE:"Celestial"};
+const RANK    = {N:0, R:1, SR:2, UR:3, CE:4};
 const ROLES = {
   polizei:    {streife:["Streife","🚓"], kripo:["Kripo","🕵️"], sek:["SEK","🪖"], verkehr:["Verkehr","🚦"], hunde:["Diensthunde","🐕"], bepo:["Bereitschaft","🛡️"]},
   verbrecher: {dieb:["Dieb","👜"], betrug:["Betrüger","🎭"], bande:["Bande","👥"], hehler:["Hehler","📦"], raub:["Räuber","💰"], drogen:["Dealer","💊"]},
@@ -1437,6 +1496,27 @@ const EFFECTS = {
   trap_steal:    {types:["trap"], group:"Reaktion", label:"Angreifer übernehmen",           text:"Wenn der Gegner angreift: Übernimm den Angreifer.", val:false},
   trap_lock:     {types:["trap"], group:"Reaktion", label:"Abwehren + festhalten",          text:"Wenn der Gegner angreift: Angriff abwehren, gegnerische Charaktere können bis zu seinem nächsten Zug nicht angreifen.", val:false},
   trap_draw:     {types:["trap"], group:"Reaktion", label:"Abwehren + ziehen",              text:"Wenn der Gegner angreift: Angriff abwehren, ziehe {v} Karte(n).", val:true},
+  // ---------- Celestial: einzigartige Effekte (nur auf Celestial-Karten) ----------
+  cel_sun:          {types:CH, group:"Celestial", label:"✨ Sonnenwache",       text:"Zugbeginn: Du erhältst 300 LP, alle eigenen Charaktere +100 ATK.", val:false},
+  cel_supernova:    {types:CH, group:"Celestial", label:"✨ Supernova",         text:"Beim Ausspielen: Alle Gegner mit weniger ATK scheiden aus.", val:false},
+  cel_constellation:{types:CH, group:"Celestial", label:"✨ Sternbild",         text:"Beim Ausspielen: Deine 2 stärksten ausgeschiedenen Charaktere kehren in VER zurück.", val:false},
+  cel_guardian:     {types:CH, group:"Celestial", label:"✨ Schutzengel",       text:"Solange er auf dem Feld ist, erhältst du nur halben Kampfschaden.", val:false},
+  cel_gravity:      {types:CH, group:"Celestial", label:"✨ Schwerkraft",       text:"Muss zuerst angegriffen werden. Angreifer verlieren danach 500 ATK.", val:false},
+  cel_comet:        {types:CH, group:"Celestial", label:"✨ Kometeneinschlag",  text:"Beim Ausspielen: Gegner verliert LP = halbe ATK dieser Karte.", val:false},
+  cel_starshield:   {types:CH, group:"Celestial", label:"✨ Sternenschild",     text:"Scheidet im Kampf nie aus (der Kampfschaden zählt trotzdem).", val:false},
+  cel_blackhole:    {types:CH, group:"Celestial", label:"✨ Schwarzes Loch",    text:"Beim Ausspielen: Alle anderen Charaktere scheiden aus, je +300 ATK.", val:false},
+  cel_eclipse:      {types:CH, group:"Celestial", label:"✨ Finsternis",        text:"Beim Ausspielen: Übernimm den stärksten gegnerischen Charakter.", val:false},
+  cel_meteor:       {types:CH, group:"Celestial", label:"✨ Meteoritenschauer", text:"Zugbeginn: Ein zufälliger Gegner −400 ATK, bei 0 scheidet er aus.", val:false},
+  cel_orbit:        {types:CH, group:"Celestial", label:"✨ Umlaufbahn",        text:"Scheidet er aus, kehrt er im nächsten Zug zurück (1× pro Duell).", val:false},
+  cel_timeloop:     {types:CH, group:"Celestial", label:"✨ Zeitschleife",      text:"Besiegt er einen Charakter, darf er noch einmal angreifen.", val:false},
+  cel_nebula:       {types:CH, group:"Celestial", label:"✨ Nebelgestalt",      text:"Nicht angreifbar, solange du einen anderen Charakter hast.", val:false},
+  cel_heaven_raid:  {types:["spell"], group:"Celestial", label:"✨ Himmlische Razzia", text:"Alle Gegner scheiden aus. Du kannst in diesem Zug nicht mehr angreifen.", val:false},
+  cel_starmap:      {types:["spell"], group:"Celestial", label:"✨ Sternenkarte",   text:"Ziehe Karten, bis du 6 Karten auf der Hand hast.", val:false},
+  cel_event_horizon:{types:["spell"], group:"Celestial", label:"✨ Ereignishorizont", text:"Gegner legt alle Handkarten ab und zieht 1 weniger nach.", val:false},
+  cel_shooting_star:{types:["spell"], group:"Celestial", label:"✨ Sternschnuppe",  text:"Nimm 2 zufällige Handkarten des Gegners auf deine Hand.", val:false},
+  cel_lp_swap:      {types:["spell"], group:"Celestial", label:"✨ Mondfinsternis", text:"Nur wenn du weniger LP hast: Tausche die LP mit dem Gegner.", val:false},
+  cel_moon_mirror:  {types:["trap"], group:"Celestial", label:"✨ Mondspiegel",     text:"Bei Angriff: Angreifer scheidet aus, Gegner verliert LP = seine ATK.", val:false},
+  cel_wormhole:     {types:["trap"], group:"Celestial", label:"✨ Wurmloch",        text:"Bei Angriff: Angreifer zurück ins gegnerische Deck. Ziehe 1 Karte.", val:false},
 };
 const EMOJIS = ["👮","👮‍♀️","🕵️","🕵️‍♀️","💂","🪖","🚓","🚔","🚨","🐕","🦮","🛡️","🔦","📻","🚦","🏍️","🚁","🦹","🦹‍♀️","🥷","🎭","💰","💎","👜","📦","💊","🔫","🗝️","🧤","🏃","🚗","⛓️","⚖️","📜","🔍","📋","🗂️","🚫","🛑","📸","🔒","🏚️"];
 
@@ -1681,7 +1761,7 @@ function rollPrint(luck=0, min="C"){
   for(let i=0;i<PRINTS.length;i++){ if((r-=ws[i])<0){ k=PRINTS[i].k; break; } }
   return PRINT[k].rank<PRINT[min].rank ? min : k;
 }
-const RARITY_GEM = {N:"#b8b8b8",R:"#3fa9ff",SR:"#a463ff",UR:"#ffd23f"};
+const RARITY_GEM = {N:"#b8b8b8",R:"#3fa9ff",SR:"#a463ff",UR:"#ffd23f",CE:"conic-gradient(#ff7ad9,#7af0ff,#fff27a,#b37aff,#ff7ad9)"};
 
 /* ============================ SPIELER / SAMMLUNG ============================ */
 const Player = {
@@ -2237,12 +2317,13 @@ const Deck = {
   prune(){
     Object.keys(FACTIONS).forEach(f=>{ const cnt={};
       this.lists[f]=this.lists[f].filter(id=>{const c=DB.byId(id); if(!c||c.faction!==f||c.type==="fusion") return false;
-        cnt[id]=(cnt[id]||0)+1; return cnt[id]<=Math.min(this.COPIES,Player.has(id)); }); });
+        cnt[id]=(cnt[id]||0)+1; return cnt[id]<=Math.min(this.maxCopies(id),Player.has(id)); }); });
     this.save();
   },
-  limit(id){ return Math.min(this.COPIES, Player.has(id)); },
+  maxCopies(id){ const c=DB.byId(id); return c&&c.rarity==="CE"?1:this.COPIES; },   // Celestial: einzigartig, nur 1× pro Deck
+  limit(id){ return Math.min(this.maxCopies(id), Player.has(id)); },
   count(id){ return this.list.filter(x=>x===id).length; },
-  add(id){ if(this.list.length>=this.MAX) return toast("Deck ist voll (40)"); if(this.count(id)>=this.limit(id)) return toast(Player.has(id)<3?"Du besitzt nicht mehr Kopien":"Max. 3 Kopien"); this.list.push(id); this.save(); this.render(); },
+  add(id){ if(this.list.length>=this.MAX) return toast("Deck ist voll (40)"); if(this.count(id)>=this.limit(id)) return toast(this.maxCopies(id)===1?"Celestial-Karten sind einzigartig: nur 1× pro Deck":Player.has(id)<3?"Du besitzt nicht mehr Kopien":"Max. 3 Kopien"); this.list.push(id); this.save(); this.render(); },
   sub(id){ const i=this.list.indexOf(id); if(i>=0){this.list.splice(i,1);this.save();this.render()} },
   clear(){ this.list=[]; this.save(); this.render(); },
   auto(){ this.list=this.autoOwned(this.faction); this.save(); this.render(); toast("Deck automatisch gebaut"); },
@@ -2267,7 +2348,7 @@ const Deck = {
     const ok=c=>RANK[c.rarity]<=RANK[maxRarity] && (!isChar(c)||(c.level<=maxLevel&&(c.type==="fusion"||c.level>=minLevel)));
     const cards=DB.ofFaction(f).filter(ok);
     const fus=cards.filter(c=>c.type==="fusion"), chars=cards.filter(c=>c.type==="monster"), acts=cards.filter(c=>!isChar(c)&&(fus.length||c.effect!=="fusion"));
-    const out=[], pick=(pool,n)=>{ let g=0; while(n>0&&pool.length&&g++<4000){const c=pool[Math.floor(Math.random()*pool.length)]; if(out.filter(x=>x===c.id).length<this.COPIES){out.push(c.id);n--}} };
+    const out=[], pick=(pool,n)=>{ let g=0; while(n>0&&pool.length&&g++<4000){const c=pool[Math.floor(Math.random()*pool.length)]; if(out.filter(x=>x===c.id).length<this.maxCopies(c.id)){out.push(c.id);n--}} };
     pick(chars,Math.round(size*.6)); pick(acts,size-out.length); pick(chars,size-out.length);
     return {main:out, extra:shuffle(fus.map(c=>c.id)).slice(0,8)};
   },
@@ -2301,6 +2382,7 @@ const PACKS = [
   {id:"ver",  name:"Unterwelt-Booster",  icon:"🦹", faction:"verbrecher", price:100, size:5, p1:"#ff5a5a", p2:"#3a0a0a", desc:"5 Verbrecher-Karten: Charaktere & Tricks"},
   {id:"mix",  name:"Großeinsatz-Booster",icon:"🚨", faction:null,         price:150, size:7, p1:"#ffd23f", p2:"#c2410c", desc:"7 Karten beider Parteien"},
   {id:"fus",  name:"Fusions-Akte",       icon:"🧩", faction:null,         price:300, size:4, fusion:true, p1:"#a463ff", p2:"#2c0a57", desc:"1 garantierte Fusion + 3 Karten (R oder besser)"},
+  {id:"cel",  name:"Himmelsakte",        icon:"🌌", faction:null,         price:2500, size:3, celestial:true, p1:"#7af0ff", p2:"#2a0c57", desc:"1 garantierte Celestial-Karte + 2 Karten (SR oder besser)"},
   {id:"prem", name:"Ermittlerakte Gold", icon:"🏅", faction:null,         price:450, size:5, premium:true, p1:"#ffe28a", p2:"#7a5a00", desc:"5 Karten, mindestens 1× SR oder UR"},
 ];
 const Shop = {
@@ -2314,6 +2396,7 @@ const Shop = {
     const luck = fac ? Prog.skill(fac,"luck") : Math.max(Prog.skill("polizei","luck"),Prog.skill("verbrecher","luck"));
     const ur=2+luck*.5, sr=ur+8+luck;
     const r=Math.random()*100; let rar = r<ur?"UR":r<sr?"SR":r<sr+20?"R":"N";
+    if(Math.random()*100 < .4+luck*.05) rar="CE";                 // Celestial: sehr selten
     return RANK[rar]<RANK[min]?min:rar;
   },
   pickCard(pool, rar){
@@ -2328,9 +2411,10 @@ const Shop = {
     Player.coins-=p.price;
     const out=[];
     if(p.fusion){ const fp=pool.filter(c=>c.type==="fusion"); out.push(this.pickCard(fp.length?fp:pool,this.rollRarity("R"))); }
+    if(p.celestial){ const cp=pool.filter(c=>c.rarity==="CE"); if(cp.length) out.push(cp[Math.floor(Math.random()*cp.length)]); }
     while(out.length<p.size){
       const i=out.length, last=i===p.size-1;
-      let min = p.fusion?"R":"N";
+      let min = p.fusion?"R":p.celestial?"SR":"N";
       if(last && !out.some(c=>RANK[c.rarity]>=1)) min="R";          // mind. 1× R
       if(last && p.premium && !out.some(c=>RANK[c.rarity]>=2)) min="SR";
       out.push(this.pickCard(pool.filter(c=>!p.fusion||c.type!=="fusion"), this.rollRarity(min,p.faction)));
@@ -2561,10 +2645,15 @@ const Duel = {
     if(this.turn>1) this.draw(p);
     if(this.over) return;
     // Zugbeginn-Effekte
+    // Umlaufbahn: zurück aufs Feld
+    if(p.orbitBack&&p.orbitBack.length){ p.orbitBack=p.orbitBack.filter(c=>{ if(this.freeZone(p.mz)<0) return true; this.place(p,c,"atk"); const m=p.mz.find(x=>x&&x.card===c); if(m) m.faceDown=false; this.bn("UMLAUFBAHN!"); this.log(`${c.name} kehrt aus der Umlaufbahn zurück!`); return false; }); }
     p.mz.forEach(m=>{ if(!m||m.faceDown) return; const c=m.card;
       if(c.effect==="growth"){ m.atk+=c.val; this.log(`${c.name} sammelt Erfahrung: +${c.val} ATK`); }
       if(c.effect==="turn_heal") this.heal(p,c.val);
-      if(c.effect==="turn_burn") this.damage(o,c.val,c.name); });
+      if(c.effect==="turn_burn") this.damage(o,c.val,c.name);
+      if(c.effect==="cel_sun"){ this.heal(p,300); p.mz.forEach(x=>x&&(x.atk+=100)); this.log(`${c.name}: Sonnenkraft – alle eigenen Charaktere +100 ATK`); }
+      if(c.effect==="cel_meteor"){ const t=o.mz.map((x,i)=>x&&!this.isImmune(x)?i:-1).filter(i=>i>=0); if(t.length){ const z=t[Math.floor(Math.random()*t.length)], x=o.mz[z];
+        x.atk=Math.max(0,x.atk-400); this.log(`Meteoritenschauer! ${x.card.name} −400 ATK`); if(x.atk<=0) this.destroy(o,z); } } });
     if(this.over) return;
     $("phaseLbl").textContent = p===this.P ? `Dein Zug ${Math.ceil(this.turn/2)}` : `${this.AI.name} am Zug`;
     banner(p===this.P?"DEIN ZUG!":"GEGNER!");
@@ -2596,9 +2685,14 @@ const Duel = {
   canAttack(m){ return m && m.pos==="atk" && !m.attacked && !(m.lockedUntil>=this.turn) && this.canBattle(); },
   /* Gültige Angriffsziele: Deckung zwingt den Angriff auf sich */
   validTargets(o){
-    const guards=o.mz.map((m,i)=>m&&!m.faceDown&&m.card.effect==="guard"?i:-1).filter(i=>i>=0);
-    return guards.length ? guards : o.mz.map((m,i)=>m?i:-1).filter(i=>i>=0);
+    const guards=o.mz.map((m,i)=>m&&!m.faceDown&&(m.card.effect==="guard"||m.card.effect==="cel_gravity")?i:-1).filter(i=>i>=0);
+    const all=guards.length ? guards : o.mz.map((m,i)=>m?i:-1).filter(i=>i>=0);
+    // Nebelgestalt: nicht angreifbar, solange ein anderer Charakter da ist
+    const nb=all.filter(i=>!(o.mz[i]&&!o.mz[i].faceDown&&o.mz[i].card.effect==="cel_nebula"&&this.monsterCount(o)>1));
+    return nb.length?nb:all;
   },
+  /* Kampfschaden (Schutzengel halbiert) */
+  battleDamage(p,n,src){ if(p.mz.some(m=>m&&!m.faceDown&&m.card.effect==="cel_guardian")){ n=Math.ceil(n/2); this.log("Schutzengel: Kampfschaden halbiert"); } this.damage(p,n,src); },
   canDirect(p, a){ const o=this.opp(p); return !this.monsterCount(o) || (a && a.card.effect==="direct" && !a.faceDown); },
 
   /* ---------- Feld-Hilfen ---------- */
@@ -2620,8 +2714,10 @@ const Duel = {
   /* Ausscheiden – cause: "battle" | "effect" */
   destroy(p,z,cause="effect"){
     const m=p.mz[z]; if(!m) return;
+    if(cause==="battle" && m.card.effect==="cel_starshield" && !m.faceDown){ this.log(`${m.card.name}: Sternenschild – bleibt im Einsatz!`); return; }
     this.fxPoof(p,z);
     p.mz[z]=null;
+    if(m.card.effect==="cel_orbit" && !m.card._orbitUsed){ m.card._orbitUsed=true; (p.orbitBack=p.orbitBack||[]).push(m.card); this.log(`${m.card.name} verschwindet in die Umlaufbahn …`); return; }
     if(cause==="battle" && m.card.effect==="survivor" && !m.faceDown){ p.hand.push(m.card); this.log(`${m.card.name} entwischt – zurück auf die Hand!`); return; }
     p.grave.push(m.card); this.log(`${m.card.name} scheidet aus!`);
     if(m.card.effect==="revenge") this.damage(this.opp(p), m.card.val, m.card.name);
@@ -2646,6 +2742,16 @@ const Duel = {
       case "summon_flip_all": o.mz.forEach(m=>{ if(m&&m.faceDown){ m.faceDown=false; } }); this.log("Alle verdeckten Charaktere werden aufgedeckt!"); break;
       case "summon_lock": { const z=this.target(o,"strong"); if(z>=0){ o.mz[z].lockedUntil=this.turn+1; this.log(`${o.mz[z].card.name} wird festgehalten!`); } break; }
       case "summon_steal": { const z=this.target(o,"weak"); if(z>=0) this.takeControl(o,z,p); break; }
+      // Celestial
+      case "cel_supernova": { const me=p.mz.find(m=>m&&m.card===c), a=me?me.atk:c.atk; this.bn("SUPERNOVA!");
+        o.mz.forEach((m,i)=>{ if(m&&!this.isImmune(m)&&m.atk<a) this.destroy(o,i); }); break; }
+      case "cel_blackhole": { const me=p.mz.find(m=>m&&m.card===c); let n=0; this.bn("SCHWARZES LOCH!");
+        [p,o].forEach(pl=>pl.mz.forEach((m,i)=>{ if(m&&m!==me&&!this.isImmune(m)){ this.destroy(pl,i); n++; } }));
+        if(me&&n){ me.atk+=300*n; this.log(`${c.name} verschlingt ${n} Charakter(e): +${300*n} ATK`); } break; }
+      case "cel_eclipse": { const z=this.target(o,"strong"); if(z>=0){ this.bn("FINSTERNIS!"); this.takeControl(o,z,p); } break; }
+      case "cel_constellation": { const ms=p.grave.filter(x=>x.type==="monster").sort((a,b)=>b.atk-a.atk).slice(0,2);
+        ms.forEach(x=>{ if(this.freeZone(p.mz)<0) return; p.grave.splice(p.grave.indexOf(x),1); this.place(p,x,"def"); const m=p.mz.find(y=>y&&y.card===x); if(m) m.faceDown=false; this.log(`Sternbild: ${x.name} kehrt zurück!`); }); break; }
+      case "cel_comet": { const me=p.mz.find(m=>m&&m.card===c); this.bn("KOMETENEINSCHLAG!"); this.damage(o,Math.round((me?me.atk:c.atk)/2),c.name); break; }
     }
   },
   /* Effekt nach Ansage auslösen (bei der KI erst, wenn du die Ansage weggetippt hast) */
@@ -2742,6 +2848,10 @@ const Duel = {
       case "search_spell": return p.deck.some(x=>x.type==="spell");
       case "extra_summon": return p.summoned;
       case "reset_atk": return [...p.mz,...o.mz].some(m=>m&&m.atk!==m.card.atk);
+      case "cel_heaven_raid": return o.mz.some(m=>m&&!this.isImmune(m));
+      case "cel_starmap": return p.hand.length-1<6 && p.deck.length>0;
+      case "cel_event_horizon": case "cel_shooting_star": return o.hand.length>0;
+      case "cel_lp_swap": return p.lp<o.lp;
     }
     return true;
   },
@@ -2755,7 +2865,9 @@ const Duel = {
       discard:`Du verlierst ${c.val} Handkarte(n)`, mill:`Du legst ${c.val} Karte(n) vom Deck ab`, lock_all:"Deine Charaktere können im nächsten Zug nicht angreifen",
       def_mode:"Alle deine Charaktere müssen in Verteidigung", burn_per_monster:`Du verlierst ${c.val*n} LP`, heal_per_monster:`${p.name} erhält ${c.val*n} LP`,
       destroy_level:`Alle deine Charaktere bis Stufe ${c.val} scheiden aus`, weaken_all:`Alle deine Charaktere −${c.val} ATK`, boost_all:`Alle gegnerischen Charaktere +${c.val} ATK`,
-      destroy_all:"Alle Charaktere auf dem Feld scheiden aus!", reset_atk:"Alle Werte werden zurückgesetzt"})[c.effect]||"";
+      destroy_all:"Alle Charaktere auf dem Feld scheiden aus!", reset_atk:"Alle Werte werden zurückgesetzt",
+      cel_heaven_raid:"Alle deine Charaktere scheiden aus!", cel_starmap:`${p.name} füllt die Hand auf 6 Karten auf`, cel_event_horizon:"Du legst alle Handkarten ab!",
+      cel_shooting_star:"2 deiner Handkarten werden gestohlen!", cel_lp_swap:`Die LP werden getauscht: ${p.lp} ↔ ${o.lp}`})[c.effect]||"";
   },
   async activateSpell(p, handIdx, targetZ, fusionOpt){
     const c=p.hand[handIdx]; if(!c||c.type!=="spell") return false;
@@ -2807,6 +2919,12 @@ const Duel = {
       case "revive_field": { const ms=p.grave.filter(x=>x.type==="monster").sort((a,b)=>b.atk-a.atk)[0]; p.grave.splice(p.grave.indexOf(ms),1); this.place(p,ms,"atk"); this.log(`${ms.name} ist zurück im Einsatz!`); break; }
       case "scapegoat": { let wi=-1,wv=1e9; p.mz.forEach((m,i)=>{ if(m&&m.atk<wv){wv=m.atk;wi=i} }); this.destroy(p,wi); this.damage(o,wv,c.name); break; }
       case "fusion": this.doFusion(p,fusionOpt); break;
+      // Celestial
+      case "cel_heaven_raid": o.mz.forEach((m,i)=>{ if(m&&!this.isImmune(m)) this.destroy(o,i); }); p.mz.forEach(m=>m&&(m.lockedUntil=this.turn)); this.log("Himmlische Razzia! Deine Charaktere greifen in diesem Zug nicht mehr an."); break;
+      case "cel_starmap": { let k=0; while(p.hand.length<6 && p.deck.length){ this.draw(p); k++; } this.log(`${this.me(p,"Du ziehst","zieht")} ${k} Karte(n)`); break; }
+      case "cel_event_horizon": { const n=o.hand.length; o.grave.push(...o.hand.splice(0)); for(let i=0;i<Math.max(0,n-1);i++) this.draw(o,true); this.log(`Ereignishorizont: ${this.me(o,"Du verlierst","verliert")} ${n} Handkarten und ${this.me(o,"ziehst","zieht")} ${Math.max(0,n-1)} nach`); break; }
+      case "cel_shooting_star": { let k=0; for(;k<2&&o.hand.length;k++){ const x=o.hand.splice(Math.floor(Math.random()*o.hand.length),1)[0]; p.hand.push(x); } this.log(`Sternschnuppe: ${k} Handkarte(n) gestohlen!`); break; }
+      case "cel_lp_swap": { const a=p.lp; p.lp=o.lp; o.lp=a; this.floatText($("myLP"),"⇄","#ffd23f"); this.floatText($("oppLP"),"⇄","#ffd23f"); this.log(`Mondfinsternis! Die LP werden getauscht (${p.lp} / ${o.lp})`); if(o.lp<=0) this.win(p); break; }
     }
     this.render(); return true;
   },
@@ -2848,6 +2966,9 @@ const Duel = {
       case "trap_steal": if(imm||!this.takeControl(attacker,fromZ,d)) { if(!imm) this.destroy(attacker,fromZ); } break;
       case "trap_lock": attacker.mz.forEach(m=>m&&(m.lockedUntil=this.turn+2)); this.log("Angriff abgewehrt – alle Angreifer festgehalten!"); break;
       case "trap_draw": this.log("Angriff abgewehrt!"); for(let i=0;i<(t.val||1);i++) this.draw(d); break;
+      case "cel_moon_mirror": if(a&&!imm){ const atk=a.atk; this.destroy(attacker,fromZ); this.damage(attacker,atk,t.name); } else this.log("Immun – Angriff nur abgewehrt!"); break;
+      case "cel_wormhole": if(a&&!imm){ attacker.mz[fromZ]=null; this.fxPoof(attacker,fromZ); if(a.card.type==="fusion") attacker.extra.push(a.card); else attacker.deck.splice(Math.floor(Math.random()*(attacker.deck.length+1)),0,a.card);
+          this.log(`${a.card.name} verschwindet im Wurmloch!`); } else this.log("Immun – Angriff nur abgewehrt!"); this.draw(d); break;
     }
     if(attacker.mz[fromZ]===a && a){ a.attacks++; a.attacked = a.attacks>=this.maxAttacks(a); }
     this.render(); return true;
@@ -2864,25 +2985,27 @@ const Duel = {
       if(!p.mz[fromZ]||p.mz[fromZ]!==a) return;
       a.attacks++; a.attacked = a.attacks>=this.maxAttacks(a);
       await this.fxAttack(p,fromZ,toZ);
-      if(toZ==null){ this.damage(o,a.atk,a.card.name); return; }
+      if(toZ==null){ this.battleDamage(o,a.atk,a.card.name); return; }
       const d=o.mz[toZ]; if(!d) return;
       if(d.faceDown){ d.faceDown=false; this.log(`${d.card.name} wird aufgedeckt!`); this.render(); await sleep(600); }
       let won=false;
       if(d.pos==="atk"){
-        if(a.atk>d.atk){ this.destroy(o,toZ,"battle"); this.damage(o,a.atk-d.atk,a.card.name); won=true; }
-        else if(a.atk<d.atk){ this.destroy(p,fromZ,"battle"); this.damage(p,d.atk-a.atk,d.card.name); }
+        if(a.atk>d.atk){ this.destroy(o,toZ,"battle"); this.battleDamage(o,a.atk-d.atk,a.card.name); won=o.mz[toZ]!==d; }
+        else if(a.atk<d.atk){ this.destroy(p,fromZ,"battle"); this.battleDamage(p,d.atk-a.atk,d.card.name); }
         else { this.destroy(o,toZ,"battle"); this.destroy(p,fromZ,"battle"); this.log("Beide scheiden aus!"); }
       } else {
         const df=d.card.def;
-        if(a.atk>df){ this.destroy(o,toZ,"battle"); won=true; if(a.card.effect==="pierce") this.damage(o,a.atk-df,"Durchschlag"); }
-        else if(a.atk<df){ this.damage(p,df-a.atk,"Verteidigung"); }
+        if(a.atk>df){ this.destroy(o,toZ,"battle"); won=!o.mz[toZ]||o.mz[toZ]!==d; if(a.card.effect==="pierce") this.battleDamage(o,a.atk-df,"Durchschlag"); }
+        else if(a.atk<df){ this.battleDamage(p,df-a.atk,"Verteidigung"); }
         else this.log("Kein Schaden.");
       }
       if(won && p.mz[fromZ]===a){
         if(a.card.effect==="battle_heal") this.heal(p,a.card.val);
         if(a.card.effect==="battle_burn") this.damage(o,a.card.val,a.card.name);
         if(a.card.effect==="battle_draw"){ this.draw(p); this.log(`${a.card.name}: ${this.me(p,"du ziehst","zieht")} 1 Karte`); }
+        if(a.card.effect==="cel_timeloop" && a.loopTurn!==this.turn){ a.loopTurn=this.turn; a.attacks=Math.max(0,a.attacks-1); a.attacked=false; this.bn("ZEITSCHLEIFE!"); this.log(`${a.card.name} darf noch einmal angreifen!`); }
       }
+      if(d.card.effect==="cel_gravity" && p.mz[fromZ]===a && !d.faceDown){ a.atk=Math.max(0,a.atk-500); this.log(`Schwerkraft: ${a.card.name} −500 ATK`); }
     } finally { this.render(); this.busy = this.active===this.AI && !this.over && !this.host; }
   },
 
@@ -3059,8 +3182,8 @@ const AI = {
     const D=Duel, me=D.AI;
     if(!a) return traps[0];
     // starke Angreifer lieber ausschalten/übernehmen, schwache nur abwehren
-    const prio = a.atk>=2000 ? ["trap_steal","mirror","trap_destroy_all_atk","trap_bounce","trap_lock","counter_burn","trap_weaken","trap_weaken_all","negate","trap_heal","trap_draw"]
-                             : ["trap_destroy_all_atk","counter_burn","trap_draw","trap_heal","trap_weaken","negate","trap_lock","trap_weaken_all","mirror","trap_bounce","trap_steal"];
+    const prio = a.atk>=2000 ? ["cel_moon_mirror","cel_wormhole","trap_steal","mirror","trap_destroy_all_atk","trap_bounce","trap_lock","counter_burn","trap_weaken","trap_weaken_all","negate","trap_heal","trap_draw"]
+                             : ["trap_destroy_all_atk","cel_wormhole","cel_moon_mirror","counter_burn","trap_draw","trap_heal","trap_weaken","negate","trap_lock","trap_weaken_all","mirror","trap_bounce","trap_steal"];
     traps.sort((x,y)=>prio.indexOf(me.st[x].card.effect)-prio.indexOf(me.st[y].card.effect));
     return traps[0];
   },
@@ -3080,6 +3203,11 @@ const AI = {
       case "reset_atk": { const s=pl=>pl.mz.reduce((t,m)=>t+(m?m.atk-m.card.atk:0),0); return s(op)>s(me); }
       case "boost": return mc>=1;
       case "extra_summon": return false;   // wird nach dem Ausspielen gesondert genutzt
+      case "cel_heaven_raid": return oc>=1;
+      case "cel_starmap": return me.hand.length<=4;
+      case "cel_event_horizon": return op.hand.length>=3;
+      case "cel_shooting_star": return true;
+      case "cel_lp_swap": return op.lp-me.lp>=1500;
     }
     return false;
   },
@@ -4233,7 +4361,7 @@ const Kombi = {
   },
   pickPool(){
     // je Einheiten-Art 2 Karten → 24 Einheiten im Spiel, gemischt über alle Kostenstufen
-    const chars=DB.cards.filter(c=>c.type==="monster" && ROLES[c.faction] && ROLES[c.faction][c.attr] && c.atk>0);
+    const chars=DB.cards.filter(c=>c.type==="monster" && c.rarity!=="CE" && ROLES[c.faction] && ROLES[c.faction][c.attr] && c.atk>0);
     const ids=[];
     Object.keys(KB_TRAITS).forEach(role=>{
       const list=shuffle(chars.filter(c=>c.attr===role));

@@ -77,3 +77,21 @@
 .ownwrap .upg{position:absolute;top:-6px;left:-6px;z-index:3;background:var(--green);color:var(--ink);border:2px solid var(--ink);border-radius:50%;width:24px;height:24px;
   display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;box-shadow:2px 2px 0 var(--ink);animation:kbPulse 1.6s infinite}
 .card .rar .plus{color:#7dff8a;font-weight:normal}
+/* ---------- Celestial-Karten ---------- */
+.card.r-CE{border:3px solid transparent!important;
+  background:radial-gradient(circle at 20% 15%,rgba(255,255,255,.9) 0 1px,transparent 2px) padding-box,radial-gradient(circle at 70% 30%,rgba(255,255,255,.8) 0 1px,transparent 2px) padding-box,
+  radial-gradient(circle at 40% 80%,rgba(255,255,255,.8) 0 1px,transparent 2px) padding-box,radial-gradient(circle at 85% 70%,rgba(255,255,255,.9) 0 1px,transparent 2px) padding-box,
+  linear-gradient(160deg,#1b1446 0%,#3a1a6e 40%,#0d4a6b 75%,#2a0c33 100%) padding-box,
+  conic-gradient(from var(--celA),#ff7ad9,#7af0ff,#fff27a,#b37aff,#ff7ad9) border-box!important;
+  animation:celSpin 4s linear infinite;position:relative}
+.card.r-CE::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;mix-blend-mode:screen;
+  background:linear-gradient(115deg,transparent 30%,rgba(122,240,255,.3) 45%,rgba(255,122,217,.3) 55%,transparent 70%);background-size:250% 100%;animation:celShine 3.2s ease-in-out infinite}
+.card.r-CE .nm{background:linear-gradient(90deg,#fff6c9,#e3d4ff,#c9f7ff)!important}
+.card.r-CE .lv{color:#fff27a;text-shadow:0 0 4px #b37aff}
+.card.r-CE .art{box-shadow:0 0 0 2px #fff27a,0 0 12px 2px rgba(122,240,255,.7);position:relative}
+.card.r-CE .art::after{content:"✦ CELESTIAL";position:absolute;top:3%;right:3%;font-size:calc(var(--w,150px)*.055);font-weight:900;letter-spacing:1px;color:#fff;
+  background:linear-gradient(90deg,#ff7ad9,#7a5cff,#2bc6ff);border-radius:6px;padding:1px 5px;text-shadow:0 0 3px #000}
+.card.r-CE .st{color:#fff27a}
+@property --celA{syntax:"<angle>";inherits:false;initial-value:0deg}
+@keyframes celSpin{to{--celA:360deg}}
+@keyframes celShine{0%{background-position:150% 0}100%{background-position:-50% 0}}

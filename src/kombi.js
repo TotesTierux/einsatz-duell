@@ -70,7 +70,7 @@ const Kombi = {
   },
   pickPool(){
     // je Einheiten-Art 2 Karten → 24 Einheiten im Spiel, gemischt über alle Kostenstufen
-    const chars=DB.cards.filter(c=>c.type==="monster" && ROLES[c.faction] && ROLES[c.faction][c.attr] && c.atk>0);
+    const chars=DB.cards.filter(c=>c.type==="monster" && c.rarity!=="CE" && ROLES[c.faction] && ROLES[c.faction][c.attr] && c.atk>0);
     const ids=[];
     Object.keys(KB_TRAITS).forEach(role=>{
       const list=shuffle(chars.filter(c=>c.attr===role));
