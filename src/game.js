@@ -3204,9 +3204,24 @@ const Account = {
   },
   async doLogout(){ if(!await UI.ask("Abmelden? Dein Spielstand bleibt im Konto gespeichert.")) return;
     try{ await this.pushNow(); }catch(e){} this.logout(); this.render(); toast("Abgemeldet"); },
+  /* Konto endgültig löschen (Pflicht für den Play Store): Cloud-Spielstand + Firebase-Konto */
+  async deleteAccount(){
+    if(!await UI.ask("Konto endgültig löschen? Dein Cloud-Spielstand und dein Login werden unwiderruflich entfernt. Der Spielstand auf diesem Gerät bleibt erhalten.")) return;
+    if(!await UI.ask("Wirklich sicher? Das kann nicht rückgängig gemacht werden.")) return;
+    try{
+      const t=await this.token();
+      await fetch(this.docUrl(),{method:"DELETE",headers:{"Authorization":"Bearer "+t}}).catch(()=>{});
+      await this.call(this.idt()+"delete?key="+FIREBASE.apiKey,{idToken:t});
+      this.logout(); Store.set("syncedAt",0); this.render(); toast("Konto gelöscht");
+    }catch(e){
+      const m=String(e.message||"");
+      toast(/CREDENTIAL_TOO_OLD|TOKEN_EXPIRED/.test(m)?"Bitte ab- und wieder anmelden, dann erneut löschen":this.errText(m));
+    }
+  },
 };
 
 /* ============================ START ============================ */
+$("acPrivacy").href=(window.APP_SITE||"")+"/datenschutz.html";
 $("colType").innerHTML=filterOptions(); $("admType").innerHTML=filterOptions();
 $("admTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>Admin.tab(s.dataset.t));
 DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins(); Account.load(); Prog.data(); UI.badges();
@@ -3229,7 +3244,7 @@ if(Account.enabled()){
   if(Account.loggedIn()) Account.syncOnStart();
   else if(!Store.get("skipLogin",false)) setTimeout(()=>UI.show("account"),300);
 }
-UI.verLine=()=>{ const n=Object.keys(GlobalCards.data.c||{}).length+Object.keys(GlobalCards.data.del||{}).length; $("appVer").textContent = "Version "+(window.APP_VERSION||"dev")+" · "+Object.keys(EFFECTS).length+" Effekte · Admin-Änderungen: "+n+(GlobalCards.live?" 🟢":" ⚪"); }; UI.verLine();
+UI.verLine=()=>{ const n=Object.keys(GlobalCards.data.c||{}).length+Object.keys(GlobalCards.data.del||{}).length; if(window.APP_STORE==="play"){ const b=$("btnUpdate"); if(b) b.style.display="none"; } $("appVer").textContent = "Version "+(window.APP_VERSION||"dev")+" · "+Object.keys(EFFECTS).length+" Effekte · Admin-Änderungen: "+n+(GlobalCards.live?" 🟢":" ⚪"); }; UI.verLine();
 window.onAndroidBack = () => UI.back();
 window.openInvite = code => Lobby.openInvite(code);       // von der Android-App bei Einladungslinks aufgerufen
 // Web-Version: Einladung über #join-CODE

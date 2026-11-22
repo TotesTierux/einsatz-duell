@@ -8,16 +8,22 @@ def updateUrl = project.hasProperty('updateUrl') ? project.property('updateUrl')
 
 android {
     namespace 'de.kartenduell.app'
-    compileSdk 34
+    compileSdk 36
     defaultConfig {
         applicationId "de.kartenduell.app"
         minSdk 26
-        targetSdk 34
+        targetSdk 36
         versionCode vcCode
         versionName vcName
         buildConfigField "String", "UPDATE_URL", "\"${updateUrl}\""
     }
     buildFeatures { buildConfig true }
+    // Zwei Ausgaben: „github“ (APK mit eingebautem Updater) und „play“ (AAB für den Play Store – Updates nur über Google Play)
+    flavorDimensions "store"
+    productFlavors {
+        github { dimension "store"; buildConfigField "boolean", "SELF_UPDATE", "true";  buildConfigField "String", "STORE", "\"github\"" }
+        play   { dimension "store"; buildConfigField "boolean", "SELF_UPDATE", "false"; buildConfigField "String", "STORE", "\"play\"" }
+    }
     signingConfigs {
         // Fester Schlüssel, damit Updates die alte App überschreiben (Spielstand bleibt erhalten).
         // Im GitHub-Workflow kommt er aus einem Secret; lokal aus der Datei kartenduell.keystore.

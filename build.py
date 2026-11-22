@@ -46,5 +46,6 @@ if '--web' in sys.argv:
     has_apk=os.environ.get("APK_AVAILABLE","")=="1"
     json.dump({"versionCode":vcode if has_apk else 0,"versionName":version,"apk":repo+"/releases/latest/download/EinsatzDuell.apk" if has_apk else "",
                "notes":os.environ.get("APP_NOTES","")}, open(os.path.join(site,'version.json'),'w'), ensure_ascii=False)
+    for f in ['datenschutz.html','konto-loeschen.html']: open(os.path.join(site,f),'w',encoding='utf-8').write(r('web/'+f).replace('__FONT__',font))
     open(os.path.join(site,'.nojekyll'),'w').close()
     print('Webseite ok →',site)

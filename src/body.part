@@ -260,8 +260,10 @@
         <button class="small blue" onclick="Account.loadNow()">⬇ Vom Konto laden</button>
         <button class="small red" onclick="Account.doLogout()">Abmelden</button>
       </div>
+      <div class="row"><button class="small" style="opacity:.75" onclick="Account.deleteAccount()">🗑 Konto löschen</button></div>
     </div>
     <p class="muted" style="text-align:center">Dein Spielstand wird nach jeder Änderung automatisch gespeichert.</p>
+    <p class="muted" style="text-align:center"><a id="acPrivacy" target="_blank" style="color:var(--blue)" href="datenschutz.html">Datenschutzerklärung</a></p>
   </div>
 </section>
 

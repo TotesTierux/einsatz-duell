@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.view.View;
+import android.view.WindowInsets;
+import android.widget.FrameLayout;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -40,7 +42,29 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         web = new WebView(this);
         web.setBackgroundColor(0xFF1B1035);
-        setContentView(web);
+        // Ab Android 15 zeichnet die App bis unter Status- und Navigationsleiste („edge-to-edge“) –
+        // deshalb Rand in Höhe der Systemleisten freilassen, damit nichts verdeckt wird.
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xFF1B1035);
+        root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
+        root.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top, bottom, left, right;
+            if (Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets i = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                top = i.top; bottom = i.bottom; left = i.left; right = i.right;
+            } else {
+                top = insets.getSystemWindowInsetTop(); bottom = insets.getSystemWindowInsetBottom();
+                left = insets.getSystemWindowInsetLeft(); right = insets.getSystemWindowInsetRight();
+            }
+            v.setPadding(left, top, right, bottom);
+            return insets;
+        });
+        setContentView(root);
+        // Zurück-Taste (ab Android 13 über OnBackInvokedCallback – onBackPressed wird ab Android 16 nicht mehr aufgerufen)
+        if (Build.VERSION.SDK_INT >= 33) {
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                    android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::handleBack);
+        }
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -71,8 +95,17 @@ public class MainActivity extends Activity {
         else web.loadUrl("file:///android_asset/index.html");
         // Version der App an das Spiel weitergeben (Anzeige im Menü)
         web.setWebViewClient(new WebViewClient() {
+            // Externe Links (z. B. Datenschutzerklärung) im Browser öffnen statt im Spiel
+            @Override public boolean shouldOverrideUrlLoading(WebView v, android.webkit.WebResourceRequest req) {
+                String u = req.getUrl().toString();
+                if (u.startsWith("http")) {
+                    try { startActivity(new Intent(Intent.ACTION_VIEW, req.getUrl())); } catch (Exception ignored) {}
+                    return true;
+                }
+                return false;
+            }
             @Override public void onPageFinished(WebView v, String url) {
-                v.evaluateJavascript("window.APP_VERSION='" + BuildConfig.VERSION_NAME + "';var e=document.getElementById('appVer');if(e)e.textContent='Version '+window.APP_VERSION+' · 69 Effekte';", null);
+                v.evaluateJavascript("window.APP_VERSION='" + BuildConfig.VERSION_NAME + "';window.APP_STORE='" + BuildConfig.STORE + "';if(window.UI&&UI.verLine)UI.verLine();", null);
                 pageReady = true;
                 deliverInvite();
             }
@@ -80,8 +113,10 @@ public class MainActivity extends Activity {
         hideSystemBars();
 
         // Automatische Update-Prüfung kurz nach dem Start
-        updater = new Updater(this);
-        web.postDelayed(() -> updater.check(true), 2500);
+        if (BuildConfig.SELF_UPDATE) {           // Play-Store-Version aktualisiert sich nur über Google Play
+            updater = new Updater(this);
+            web.postDelayed(() -> updater.check(true), 2500);
+        }
     }
 
     /** Liest den Raumcode aus einsatzduell://join/CODE */
@@ -146,9 +181,11 @@ public class MainActivity extends Activity {
 
     @SuppressWarnings("deprecation")
     @Override
-    public void onBackPressed() {
+    public void onBackPressed() { handleBack(); }
+
+    private void handleBack() {
         web.evaluateJavascript("window.onAndroidBack ? window.onAndroidBack() : false", value -> {
-            if (!"true".equals(value)) MainActivity.super.onBackPressed();
+            if (!"true".equals(value)) finish();
         });
     }
 
@@ -173,7 +210,9 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void checkUpdate() { runOnUiThread(() -> updater.check(false)); }
+        public void checkUpdate() { if (updater != null) runOnUiThread(() -> updater.check(false)); }
+        @JavascriptInterface
+        public String store() { return BuildConfig.STORE; }
 
         @JavascriptInterface
         public String version() { return BuildConfig.VERSION_NAME; }

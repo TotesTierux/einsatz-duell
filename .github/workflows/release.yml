@@ -59,16 +59,17 @@ jobs:
           export KS_FILE="$RUNNER_TEMP/release.keystore"
           echo "sdk.dir=$ANDROID_HOME" > local.properties   # vorinstalliertes Android-SDK des Runners
           OWNER_LC=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          gradle assembleRelease --no-daemon -PvcCode=$VC -PvcName=$VN \
+          gradle assembleGithubRelease bundlePlayRelease --no-daemon -PvcCode=$VC -PvcName=$VN \
             "-PupdateUrl=https://raw.githubusercontent.com/${{ github.repository }}/gh-pages/version.json https://$OWNER_LC.github.io/${{ github.event.repository.name }}/version.json"
-          cp app/build/outputs/apk/release/app-release.apk ../EinsatzDuell.apk
+          cp app/build/outputs/apk/github/release/app-github-release.apk ../EinsatzDuell.apk
+          cp app/build/outputs/bundle/playRelease/app-play-release.aab ../EinsatzDuell-PlayStore.aab
           rm -f "$RUNNER_TEMP/release.keystore"
 
       - name: GitHub-Release erstellen
         if: env.APK_AVAILABLE == '1'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v$VN" EinsatzDuell.apk --title "Einsatz-Duell $VN" --notes "$NOTES" --latest
+        run: gh release create "v$VN" EinsatzDuell.apk EinsatzDuell-PlayStore.aab --title "Einsatz-Duell $VN" --notes "$NOTES" --latest
 
       # ---------- Webseite ----------
       - name: Webseite auf gh-pages veröffentlichen
