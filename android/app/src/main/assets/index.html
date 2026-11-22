@@ -3872,15 +3872,30 @@ const Net = {
     this.conn=c; this.role="host"; this.side=e.hostSide; this.name=Tour.myName();
     c.on("open",()=>{ this.wire(c); this.send({t:"welcome",name:this.name,side:this.side,v:window.APP_VERSION||"dev",mid:e.mid}); });
   },
-  host(side,name){
+  async host(side,name){
     this.close(); this.role="host"; this.side=side; this.name=name; this.code=this.newCode();
     Lobby.status("Raum wird erstellt …");
+    // bevorzugt über den Server – funktioniert auch mit mobilen Daten (direkte Verbindungen scheitern dort oft)
+    if(Cloud.enabled()){
+      try{ const code=await Cloud.createRoom({type:"duel",host:name,side}); if(this.role!=="host") return;
+        this.code=code; Cloud.open(code,"org"); Cloud.mode="duel"; Lobby.showCode(code); return; }
+      catch(e){ console.warn("Cloud:",e); if(this.role!=="host") return; toast("Server nicht erreichbar – versuche direkte Verbindung"); }
+    }
     this.openPeer(this.pid(this.code), ()=>Lobby.showCode(this.code), e=>{ if(e.type==="unavailable-id") return this.host(side,name); Lobby.error(e); });
   },
   join(code,name){
     this.close(); this.role="client"; this.name=name; this.code=code.toUpperCase();
     Lobby.status("Verbinde mit Raum "+this.code+" …");
     this.openPeer(null, p=>{ const c=p.connect(this.pid(this.code),{reliable:true,metadata:{kind:"join"}}); this.conn=c; c.on("open",()=>this.wire(c)); }, e=>Lobby.error(e));
+  },
+  /* Duell- oder Tausch-Raum über den Server betreten */
+  joinCloud(code,name,meta){
+    this.close(); this.role="client"; this.name=name; this.code=code;
+    const me="g"+Math.random().toString(36).slice(2,10), c=new MailConn("org");
+    Cloud.open(code,me); Cloud.hubConn=c; Cloud.last.org=Date.now(); this.conn=c; c.on("open",()=>this.wire(c));
+    c.send({t:"t_join"});
+    Lobby.status(`Verbinde mit ${meta.host||"Gastgeber"} …`);
+    setTimeout(()=>{ if(this.conn===c && !Duel.online && !Trade.active && this.role==="client"){ Lobby.error("Der Raum antwortet nicht. Ist der Gastgeber noch in der Lobby?"); } },20000);
   },
   /* Turnier: direkte Verbindung zum Match-Gegner aufbauen */
   connectMatch(peerId, mid){
@@ -4047,7 +4062,7 @@ const Cloud = {
   /* Eigenes Postfach öffnen */
   open(room,me){
     this.close(true);
-    Object.assign(this,{room,me,seen:{},del:{},q:{},busy:{},last:{},hubConn:null,_tick:Date.now()});
+    Object.assign(this,{room,me,seen:{},del:{},q:{},busy:{},last:{},hubConn:null,_tick:Date.now(),mode:null,peers:{}});
     this.listen();
     this._hb=setInterval(()=>this.beat(),20000);
   },
@@ -4109,6 +4124,14 @@ const Cloud = {
       if(m.t==="t_bye") return c.close();
       return c.emit("data",m);
     }
+    // Duell- oder Tausch-Raum: Gastgeber nimmt Gäste über ihr Postfach an
+    if(this.me==="org" && (this.mode==="duel"||this.mode==="trade")){
+      let c=this.peers[from];
+      if(!c && m.t==="t_join"){ c=new MailConn(from); this.peers[from]=c; this.last[from]=Date.now();
+        c.on("close",()=>{ if(this.peers[from]===c) delete this.peers[from]; });
+        return this.mode==="duel" ? Net.acceptDuel(c) : Trade.accept(c); }
+      if(!c) return; if(m.t==="t_bye") return c.close(); return c.emit("data",m);
+    }
     if(from==="org"){ const c=this.hubConn; if(!c) return; if(m.t==="t_bye") return c.close(); return c.emit("data",m); }
     if(m.t==="t_relay") Tour.onData(m,null);            // direkt vom Match-Gegner
   },
@@ -4121,6 +4144,9 @@ const Cloud = {
       this.req(`rooms/${this.room}/meta`,"PATCH",{alive:{".sv":"timestamp"},status:Tour.status}).catch(()=>{});
       Object.entries(Tour.conns).forEach(([id,c])=>{ if(!(c instanceof MailConn)) return; c.send({t:"t_ping"});
         if(now-(this.last[id]||now)>CLOUD_TIMEOUT) c.close(); });
+    } else if(this.me==="org" && this.peers){
+      this.req(`rooms/${this.room}/meta`,"PATCH",{alive:{".sv":"timestamp"}}).catch(()=>{});
+      Object.entries(this.peers).forEach(([id,c])=>{ c.send({t:"t_ping"}); if(now-(this.last[id]||now)>CLOUD_TIMEOUT) c.close(); });
     } else if(this.hubConn){
       this.hubConn.send({t:"t_ping"});
       if(now-(this.last.org||now)>CLOUD_TIMEOUT) this.hubConn.close();
@@ -4133,6 +4159,8 @@ const Cloud = {
     if(!silent){
       if(Tour.hosting){ Object.values(Tour.conns).forEach(c=>{ if(c instanceof MailConn) this.send(c.to,{t:"t_bye"}); });
         setTimeout(()=>this.req(`rooms/${room}`,"DELETE").catch(()=>{}), 20000); }
+      else if(this.me==="org" && this.mode){ Object.keys(this.peers||{}).forEach(id=>this.send(id,{t:"t_bye"}));
+        setTimeout(()=>this.req(`rooms/${room}`,"DELETE").catch(()=>{}), 15000); }
       else if(this.hubConn) this.send("org",{t:"t_bye"});
     }
     if(this._delT){ clearTimeout(this._delT); this.flushDel(); }
@@ -4295,6 +4323,9 @@ const Tour = {
     if(!Cloud.enabled()) return false;
     let meta=null; try{ meta=await Cloud.req(`rooms/${code}/meta`); }catch(e){ console.warn("Cloud:",e); return false; }
     if(!meta) return false;
+    if(meta.type==="duel"||meta.type==="trade"){
+      if(spec){ Lobby.error("Zuschauen geht nur bei Turnieren."); return true; }
+      Net.joinCloud(code,name,meta); return true; }
     Net.close(); this.reset(); Net.role="tourjoin"; Net.code=code; Net.name=name;
     const me="m"+Math.random().toString(36).slice(2,10), hub=new MailConn("org");
     Cloud.open(code,me); Cloud.hubConn=hub; Cloud.last.org=Date.now(); Net.wire(hub);
@@ -4487,9 +4518,13 @@ const Trade = {
     Net.close(); this.reset(); this.host=true;
     Net.role="tradehost"; Net.name=n; Net.code=Net.newCode();
     Lobby.status("Tausch-Raum wird erstellt …");
+    if(Cloud.enabled()){
+      Cloud.createRoom({type:"trade",host:n}).then(code=>{ if(Net.role!=="tradehost") return; Net.code=code; Cloud.open(code,"org"); Cloud.mode="trade"; this.active=true; UI.show("trade"); })
+        .catch(e=>{ console.warn("Cloud:",e); if(Net.role==="tradehost"){ toast("Server nicht erreichbar – versuche direkte Verbindung"); open(); } });
+    }
     const open=()=>Net.openPeer(Net.pid(Net.code), ()=>{ this.active=true; UI.show("trade"); },
       e=>{ if(e.type==="unavailable-id"){ Net.code=Net.newCode(); return open(); } Lobby.error(e); });
-    open();
+    if(!Cloud.enabled()) open();
   },
   accept(c){
     if(this.conn) return Net.reject(c,"busy");
