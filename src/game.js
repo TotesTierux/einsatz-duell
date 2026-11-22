@@ -1169,7 +1169,7 @@ const Duel = {
     else if(!Deck.validFor(side)) toast("Kein gültiges Deck – automatisches Deck aus deiner Sammlung");
     const od = opts.oppDeck || Deck.genDeck(other,{});
     const on = opts.online;   // {myName, guestName, guestDeck, guestExtra}
-    this.online=!!on; this.host=!!on; this.client=false; this.waiting=false;
+    this.online=!!on; this.host=!!on; this.client=false; this.waiting=false; this.matchConn=on?Net.conn:null;
     this.P = opts.pDeck ? makePlayer("KI-Polizei", opts.pDeck.main, opts.pDeck.extra)
            : makePlayer(on?on.myName:(Store.get("nick","")||"Du"), Prog.deckCopies(myDeck), Prog.deckCopies(Deck.fusionDeck(side)));
     if(!on && !opts.pDeck) this.P.name="Du";
@@ -1274,7 +1274,7 @@ const Duel = {
         const onEnd=this.opts.onEnd; this.opts.onEnd=null;
         if(onEnd) await onEnd(won);
         if(UI.current!=="duel") return;
-        if(this.online && Tour.active()) return UI.modal(null,[["🏆 Zum Turnier",()=>{Net.endDuelConn();UI.show("tour")},"red"]]);
+        if(this.online && Tour.active()) return UI.modal(null,[["🏆 Zum Turnier",()=>{Net.endDuelConn(Duel.matchConn||null);UI.show("tour")},"red"]]);
         const again = this.online ? ["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"] : this.opts.oppName ? ["📖 Zur Story",()=>UI.show("story"),"red"] : ["Nochmal",()=>UI.startDuel(),"red"];
         UI.modal(null,[again,["Hauptmenü",()=>UI.show("home"),"blue"]]);
       },1300); },300);
@@ -1788,7 +1788,7 @@ const Duel = {
     const inTour = this.online && Tour.active();
     if(inTour && !this.over) Tour.duelEnded(false, 0, 1);
     this.over=true; this.opts.onEnd=null; this.closeReveal();
-    if(inTour){ Net.endDuelConn(); UI.show("tour"); } else { if(this.online) Net.close(); UI.show("home"); } } },
+    if(inTour){ Net.endDuelConn(this.matchConn||null); UI.show("tour"); } else { if(this.online) Net.close(); UI.show("home"); } } },
 
   /* ---------- Rendering ---------- */
   renderMZ(p, el, mine){
@@ -2012,7 +2012,13 @@ const Net = {
   sendTo(c,m){ try{ if(c&&c.open) c.send(m); }catch(e){ console.error(e); } },
   ask(kind,data){ return new Promise(res=>{ const id=++this.rid; this.pend[id]=res; this.send({t:"ask",id,kind,data}); }); },
   /* nur die Duell-Verbindung beenden (Turnier-Verbindung bleibt bestehen) */
-  endDuelConn(){ const c=this.conn; this.conn=null; this.pend={}; if(c&&c===Tour.vc) Tour.vc=null; try{ c&&c.close(); }catch(e){} },
+  /* Verbindung eines beendeten Duells schließen – nur genau diese (im Turnier kann schon das nächste Match laufen) */
+  endDuelConn(only){
+    const c = only!==undefined ? only : this.conn; if(!c) return;
+    if(c===this.conn){ this.conn=null; this.pend={}; }
+    if(c===Tour.vc) Tour.vc=null;
+    try{ c.close(); }catch(e){}
+  },
   close(){ this.closing=true; Cloud.close(); try{ this.conn&&this.conn.close(); }catch(e){} try{ Trade.conn&&Trade.conn.close(); }catch(e){} Tour.reset(); Trade.reset(); try{ this.peer&&this.peer.destroy(); }catch(e){} this.conn=null; this.peer=null; this.pend={}; },
   onConnClose(c){
     if(this.closing) return;
@@ -2037,6 +2043,7 @@ const Net = {
     switch(m.t){
       // ---- beim Gast ----
       case "welcome": {
+        if(this.role!=="client" && this.role!=="join") { console.warn("welcome ignoriert (Rolle "+this.role+")"); break; }
         if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
         const side=OTHER[m.side];
         const deckIds = Deck.validFor(side) ? Deck.lists[side] : Deck.autoOwned(side);
@@ -2056,6 +2063,8 @@ const Net = {
       case "end": Duel.endClient(m.w==="g"); break;
       // ---- beim Gastgeber ----
       case "join": {
+        if(this.role!=="host") { console.warn("join ignoriert (Rolle "+this.role+")"); break; }
+        if(Tour.active() && UI.current==="duel" && Duel.online && !Duel.over) break;   // Match läuft schon
         if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
         Duel.start(this.side,{ online:{myName:this.name, guestName:m.name||"Gast", guestDeck:m.deck, guestExtra:m.extra, guestSkills:m.skills||{}},
           onEnd:win=>{ Prog.reward(Duel.side, win?ONLINE_WIN:ONLINE_LOSS, win?150:60); Rewards.result("online",win); Tour.duelEnded(win, Duel.P.lp, Duel.AI.lp); return Promise.resolve(); } });
@@ -2548,7 +2557,7 @@ const Spectate = {
   /* ---------- Gastgeber eines Matches: veröffentlichen ---------- */
   pubPath(){ return Duel.liveMid && Cloud.room ? `rooms/${Cloud.room}/live/${Duel.liveMid}` : null; },
   publishStart(){
-    const p=this.pubPath(); if(!p) return;
+    const p=this.pubPath(); if(!p) return; this._seq=0;
     const table={}; [Duel.P,Duel.AI].forEach(pl=>[...pl.deck,...pl.extra,...pl.hand,...pl.grave].forEach(c=>{ if(c&&c._k) table[c._k]=c; }));
     Cloud.req(p,"PUT",{start:{table:JSON.stringify(table),h:Duel.P.name,g:Duel.AI.name,hs:Duel.side}}).catch(()=>{});
     this._lastPub=0; this.publish();
@@ -2558,12 +2567,13 @@ const Spectate = {
     const now=Date.now(), wait=Math.max(0,700-(now-this._lastPub));
     if(this._pend) return; this._pend=setTimeout(()=>{ this._pend=null; this._lastPub=Date.now();
       const path=this.pubPath(); if(!path) return;
-      Cloud.req(path+"/s","PUT",{d:JSON.stringify(Duel.snapSpec())}).catch(()=>{}); },wait);
+      const body={n:++this._seq, d:JSON.stringify(Duel.snapSpec())};
+      this._chain=(this._chain||Promise.resolve()).then(()=>Cloud.req(path+"/s","PUT",body)).catch(()=>{}); },wait);
   },
   /* ---------- Zuschauer ---------- */
   async watch(mid){
     if(!Cloud.room) return toast("Zuschauen geht nur bei Turnieren über den Server");
-    this.stop(); this.mid=mid; this.started=false; this.shownOver=false;
+    this.stop(); this.mid=mid; this.started=false; this.shownOver=false; this._lastN=0;
     let t; try{ t=await Cloud.token(); }catch(e){ return toast("Zuschauen gerade nicht möglich"); }
     if(this.mid!==mid) return;
     const es=new EventSource(`${Cloud.url()}/rooms/${Cloud.room}/live/${mid}.json?auth=${encodeURIComponent(t)}`); this.es=es;
@@ -2576,7 +2586,7 @@ const Spectate = {
     setTimeout(()=>{ if(this.mid===mid && !this.started){ toast("Das Match hat noch nicht begonnen – gleich nochmal versuchen"); this.stop(); } },12000);
   },
   onStart(st){ if(this.started) return; this.started=true; Duel.startSpectate(st); },
-  onState(s){ if(!this.started) return; try{ Duel.applySpec(JSON.parse(s.d)); }catch(e){ console.error(e); } },
+  onState(s){ if(!this.started||!s) return; if(s.n && s.n<=(this._lastN||0)) return; this._lastN=s.n||0; try{ Duel.applySpec(JSON.parse(s.d)); }catch(e){ console.error(e); } },
   stop(){ try{ this.es&&this.es.close(); }catch(e){} this.es=null; this.mid=null; this.started=false; if(Duel.spectate){ Duel.spectate=false; Duel.over=true; } },
   leave(){ this.stop(); UI.show(Tour.active()?"tour":"online"); },
 };
@@ -2760,11 +2770,11 @@ Object.assign(Duel, {
     if(oldH!=null && s.h.lp!==oldH) this.floatText($("oppLP"),(s.h.lp<oldH?"−":"+")+Math.abs(s.h.lp-oldH),s.h.lp<oldH?"#ff3b3b":"#3ddc84");
     this.render();
     if(s.over && !Spectate.shownOver){ Spectate.shownOver=true; const w=s.win==="h"?s.h.name:s.g.name;
-      setTimeout(()=>{ banner(`${w.toUpperCase().slice(0,14)} GEWINNT!`); setTimeout(()=>UI.modal(null,[["🏆 Zurück zum Turnier",()=>Spectate.leave(),"red"]]),1500); },500); }
+      setTimeout(()=>{ if(!this.spectate) return; banner(`${w.toUpperCase().slice(0,14)} GEWINNT!`); setTimeout(()=>{ if(this.spectate) UI.modal(null,[["🏆 Zurück zum Turnier",()=>Spectate.leave(),"red"]]); },1500); },500); }
   },
   startClient(m){
     this.online=true; this.client=true; this.host=false; this.spectate=false; this.waiting=false; this.over=false; this.mode=null; this.busy=false;
-    this.side=OTHER[m.hostSide]; this.opts={}; this.history=[]; this._ann=null; this._lastTurn=-1; this.turn=0;
+    this.matchConn=Net.conn; this.side=OTHER[m.hostSide]; this.opts={}; this.history=[]; this._ann=null; this._lastTurn=-1; this.turn=0;
     Net.table=m.table;
     $("reveal").classList.remove("show"); $("fx").innerHTML="";
     $("oppWho").textContent=`${FACTIONS[m.hostSide][1]} ${m.hostName}`;
@@ -2821,7 +2831,7 @@ Object.assign(Duel, {
     if(this.over && this._ended) return; this.over=true; this._ended=true; this.closeReveal(); this.render();
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
       setTimeout(()=>{ Prog.reward(this.side, won?ONLINE_WIN:ONLINE_LOSS, won?150:60); Rewards.result("online",won); Tour.duelEnded(won, this.P&&this.P.lp, this.AI&&this.AI.lp); if(UI.current!=="duel") return;
-        UI.modal(null, Tour.active() ? [["🏆 Zum Turnier",()=>{Net.endDuelConn();UI.show("tour")},"red"]]
+        UI.modal(null, Tour.active() ? [["🏆 Zum Turnier",()=>{Net.endDuelConn(Duel.matchConn||null);UI.show("tour")},"red"]]
           : [["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },1300); },300);
   },
   opponentLeft(){
