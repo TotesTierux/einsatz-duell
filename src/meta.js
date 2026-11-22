@@ -211,7 +211,7 @@ const GlobalCards = {
     return cards;
   },
   apply(){
-    Store.set("globalCards",this.data);
+    Store.set("globalCards",this.data); UI.verLine&&UI.verLine();
     DB.load();
     if(UI.current==="collection") UI.renderCollection();
     if(UI.current==="admin" && typeof Admin!=="undefined" && Admin.renderList) Admin.renderList();
@@ -224,9 +224,9 @@ const GlobalCards = {
     try{ this.es&&this.es.close(); }catch(e){}
     const es=new EventSource(`${Cloud.url()}/global/cards.json?auth=${encodeURIComponent(t)}`); this.es=es;
     const on=e=>{ try{ const d=JSON.parse(e.data); if(!d) return; this.onEvent(e.type,d); }catch(err){ console.error(err); } };
-    es.addEventListener("put",on); es.addEventListener("patch",on);
-    const again=()=>{ try{ es.close(); }catch(e){} if(gen===this._gen) setTimeout(()=>this.start(),5000); };
-    es.addEventListener("auth_revoked",again); es.addEventListener("cancel",again); es.onerror=()=>{ if(es.readyState===2) again(); };
+    es.addEventListener("put",on); es.addEventListener("patch",on); es.onopen=()=>{ this.live=true; UI.verLine&&UI.verLine(); };
+    const again=()=>{ this.live=false; UI.verLine&&UI.verLine(); try{ es.close(); }catch(e){} if(gen===this._gen) setTimeout(()=>this.start(),5000); };
+    es.addEventListener("auth_revoked",again); es.addEventListener("cancel",()=>{ console.warn("Kartenabgleich: keine Leseberechtigung (Regeln prüfen)"); again(); }); es.onerror=()=>{ if(es.readyState===2) again(); };
   },
   onEvent(type,d){
     const parts=(d.path||"/").split("/").filter(Boolean);

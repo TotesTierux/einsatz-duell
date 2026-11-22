@@ -3048,7 +3048,7 @@ if(Account.enabled()){
   if(Account.loggedIn()) Account.syncOnStart();
   else if(!Store.get("skipLogin",false)) setTimeout(()=>UI.show("account"),300);
 }
-$("appVer").textContent = "Version "+(window.APP_VERSION||"dev")+" · 69 Effekte";
+UI.verLine=()=>{ const n=Object.keys(GlobalCards.data.c||{}).length+Object.keys(GlobalCards.data.del||{}).length; $("appVer").textContent = "Version "+(window.APP_VERSION||"dev")+" · "+Object.keys(EFFECTS).length+" Effekte · Admin-Änderungen: "+n+(GlobalCards.live?" 🟢":" ⚪"); }; UI.verLine();
 window.onAndroidBack = () => UI.back();
 window.openInvite = code => Lobby.openInvite(code);       // von der Android-App bei Einladungslinks aufgerufen
 // Web-Version: Einladung über #join-CODE
