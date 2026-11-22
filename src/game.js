@@ -1662,7 +1662,7 @@ const Duel = {
         if(a.card.effect==="cel_timeloop" && a.loopTurn!==this.turn){ a.loopTurn=this.turn; a.attacks=Math.max(0,a.attacks-1); a.attacked=false; this.bn("EINBRUCHSSERIE!"); this.log(`${a.card.name} darf noch einmal angreifen!`); }
       }
       if(d.card.effect==="cel_gravity" && p.mz[fromZ]===a && !d.faceDown){ a.atk=Math.max(0,a.atk-500); this.log(`Personenschutz: ${a.card.name} −500 ATK`); }
-    } finally { this.render(); this.busy = this.active===this.AI && !this.over && !this.host; }
+    } finally { this.busy = this.active===this.AI && !this.over && !this.host; this.render(); }   // erst freigeben, dann zeichnen (sonst bleibt „Zug beenden“ grau)
   },
 
   /* ---------- Animationen ---------- */
