@@ -39,7 +39,7 @@ Alles Technische ist vorbereitet. Diese Anleitung führt durch die Schritte, die
 > ⚔️ DUELLE – Beschwöre Charaktere, setze Einsatzkarten und Fallen, verschmelze Karten zu mächtigen Fusionen.
 > 📖 STORY – Mehrere Kampagnen mit steigender Schwierigkeit. Jeden Monat kommt eine neue Mission dazu.
 > 🌐 ONLINE – Duelle per Raumcode, Karten tauschen und Turniere für bis zu 8 Spieler mit Zuschauermodus.
-> 🧩 KOMBI-EINSATZ – Ein Taktik-Modus: kombiniere Einheiten in der Arena.
+> 👥 FREUNDE & ORGANISATIONEN – Füge Freunde hinzu, fordere sie direkt heraus und gründe deine eigene Dienststelle oder dein Syndikat mit schweren Wochen-Aufträgen.
 > ✨ SAMMELN – Booster öffnen, seltene Celestial-Karten finden, doppelte Karten trainieren, tägliche und wöchentliche Aufträge erledigen.
 > 🆕 Jede Woche erscheinen neue Karten für beide Seiten.
 >
