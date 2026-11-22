@@ -148,6 +148,7 @@
       <button class="blue" onclick="UI.show('online')" style="background:#a463ff;color:#fff">🌐 Online</button>
     </div>
     <button class="kb-home" onclick="UI.show('kombi')">🧩 Kombi-Einsatz <small>NEU</small></button>
+    <button class="ghost" id="btnQuests" onclick="UI.show('quests')">📋 Aufträge</button>
     <div class="two">
       <button class="green" onclick="UI.show('shop')">🛒 Shop</button>
       <button onclick="UI.show('deck')">🃏 Deck</button>
@@ -162,6 +163,12 @@
     </div>
   </div>
   <p class="muted" style="margin-top:22px" id="appVer">Version</p>
+</section>
+
+<!-- ================= AUFTRÄGE ================= -->
+<section id="quests" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Aufträge</h2></div>
+  <div id="questMain"></div>
 </section>
 
 <!-- ================= KOMBI-EINSATZ ================= -->
@@ -342,7 +349,8 @@
 <section id="shop" class="screen">
   <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Shop</h2><span class="coins" id="shopCoins">🪙 0</span></div>
   <div id="shopPacks" class="packs"></div>
-  <div class="panel" style="margin-top:16px"><p class="muted" style="margin:0">Münzen verdienst du im Duell (Sieg 🪙100, Niederlage 🪙25) und in der Story. Jede gezogene Karte hat eine <b>Seltenheitsstufe</b> (nur optisch): Common 62 % · Rare 24 % · Special Rare 9 % · Secret Rare 3,5 % · Ghost Rare 1,2 % · Legendary 0,3 %. Die Ermittlerakte Gold enthält mindestens ein Special Rare. Der Skill „Beziehungen/Kontakte“ erhöht die Chancen.</p></div>
+  <div id="cosmetics" class="panel" style="margin-top:16px"></div>
+  <div class="panel" style="margin-top:16px"><p class="muted" style="margin:0">Münzen verdienst du im Duell (Sieg 🪙100, Niederlage 🪙25) und in der Story. Jede gezogene Karte hat eine <b>Seltenheitsstufe</b> (nur optisch): Common 62 % · Rare 24 % · Special Rare 9 % · Secret Rare 3,5 % · Ghost Rare 1,2 % · Legendary 0,3 %. Die Ermittlerakte Gold enthält mindestens ein Special Rare. Der Skill „Beziehungen/Kontakte“ erhöht die Chancen.<br>✨ <b>Celestial-Karten</b>: 0,4 % Chance pro Karte in jedem Booster, garantiert in der Himmelsakte. 🎁 Nach Siegen und für Aufträge gibt es manchmal <b>Gratis-Booster</b> – sie erscheinen hier oben.</p></div>
 </section>
 <section id="opening" class="screen">
   <div class="topbar"><h2 id="openTitle">Booster</h2><span class="coins" id="openCoins">🪙 0</span></div>

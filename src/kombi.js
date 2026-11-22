@@ -409,7 +409,7 @@ const Kombi = {
     const place=me.place, pr=KB_PRIZE[place];
     const fac={}; [...me.board,...me.bench].filter(Boolean).forEach(u=>{ const f=this.card(u).faction; fac[f]=(fac[f]||0)+u.star; });
     const side=Object.keys(fac).sort((a,b)=>fac[b]-fac[a])[0]||"polizei";
-    Prog.reward(side, pr.coins, pr.xp);
+    Prog.reward(side, pr.coins, pr.xp); Rewards.result("kombi",place<=2,{place});
     const st=Player.kombi=Player.kombi||{n:0,w:0,best:0}; st.n++; if(place<=2) st.w++; st.best=st.best?Math.min(st.best,place):place; Player.save();
     banner(place===1?"EINSATZSIEG!":`PLATZ ${place}!`);
     const ranking=[...g.players].sort((a,b)=>a.place-b.place).map(p=>`${p.place}. ${p.name}${p.ai?"":" (du)"}`);

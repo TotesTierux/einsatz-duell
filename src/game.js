@@ -392,7 +392,7 @@ const Player = {
   /* angezeigte Stufe: selbst gewählt, sonst die beste */
   display(id){ const s=this.show[id]; return s&&this.printsOf(id)[s] ? s : this.bestPrint(id); },
   remove(id,pr="C",n=1){ const p=this.prints[id]; if(!p||!(p[pr]>=n)) return false; p[pr]-=n; if(!p[pr]) delete p[pr]; this.owned[id]-=n; if(this.owned[id]<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } return true; },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],kombi:this.kombi,boost:this.boost}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],kombi:this.kombi,boost:this.boost,packs:this.packs,quests:this.quests,cosmetics:this.cosmetics}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1,pr="C"){ this.owned[id]=(this.owned[id]||0)+n; const p=this.prints[id]||(this.prints[id]={}); p[pr]=(p[pr]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -509,7 +509,7 @@ const Prog = {
     for(const x of order){ while(left>0 && (Player.printsOf(id)[x.k]||0)>0 && !(x.k===show && Player.printsOf(id)[x.k]<=1 && Player.has(id)<=1)){ if(!Player.remove(id,x.k,1)) break; left--; } if(!left) break; }
     if(left) return false;
     const b=Player.boost[id]=Player.boost[id]||{n:0,used:0}; b.n++; b.used+=k.copies;
-    Player.coins-=k.coins; Deck.prune&&Deck.prune(); Deck.save(); Player.save();
+    Player.coins-=k.coins; Quests.track("train"); Quests.track("coins_spent",k.coins); Deck.prune&&Deck.prune(); Deck.save(); Player.save();
     return true;
   },
   /* Deck-Kopien mit den tatsächlich besessenen Stufen versehen (angezeigte Stufe zuerst, dann absteigend) */
@@ -633,6 +633,8 @@ const UI = {
     if(id==="online") Lobby.render();
     if(id==="profile") Prog.render();
     if(id==="tour") Tour.render();
+    if(id==="quests") Quests.render();
+    if(id==="shop") Cosmetic.render();
     if(id==="kombi") Kombi.render();
     if(id==="trade") Trade.render();
     if(id==="account") Account.render();
@@ -644,6 +646,7 @@ const UI = {
     const acc = typeof Account!=="undefined" && Account.enabled() ? (Account.loggedIn()?"☁️ ":"🔓 ") : "";
     const me=$("homeMe"); if(me) me.innerHTML=`${acc}👤 ${esc(nick)} · 👮${pp.lv} · 🦹${pv.lv}${sp?'<span class="dot"></span>':""}`;
     const b=$("btnProfile"); if(b) b.innerHTML=`⭐ Laufbahn${sp?` (${sp})`:""}`;
+    const q=$("btnQuests"); if(q && typeof Quests!=="undefined"){ const n=Quests.claimable(); q.innerHTML=`📋 Aufträge${n?` <span class="qdot">${n}</span>`:""}`; }
   },
   back(){ // Android-Zurück-Taste
     if($("reveal").classList.contains("show")){return true}
@@ -697,6 +700,8 @@ const UI = {
     const p=Player.printsOf(id), cur=Player.display(id);
     const acts=[[`Kartenstufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} bei ${nx} Exemplaren`:" · Maximum"}`,null,"ghost"],
       [`Exemplare: ${PRINTS.filter(x=>p[x.k]).map(x=>`${x.name} ×${p[x.k]}`).join(", ")}`,null,"ghost"]];
+    { const k=Player.display(id), nx=Refine.next(k);
+      if(nx) acts.push([`💎 ${PRINT[k].name} → ${PRINT[nx].name} veredeln (${REFINE_COST[k].toLocaleString("de-DE")} 🪙)`,()=>Refine.run(id),Player.coins>=REFINE_COST[k]?"blue":"ghost"]); }
     if(Prog.boostable(c)){
       const t=Prog.boostOf(id), k=Prog.boostCost(id), word=c.faction==="polizei"?"Fortbildung":"Training";
       acts.push([`⬆ ${word} +${t}/${BOOST_MAX}${t?` · ${Prog.boostText(c,t)}`:""}`,null,"ghost"]);
@@ -732,7 +737,7 @@ const UI = {
   startDuel(){
     this.pickSide("Wähle deine Seite", side=>{
       Duel.start(side,{ oppDeck:Deck.genDeck(OTHER[side],{maxLevel:12,maxRarity:"SR"}),
-        onEnd:win=>{ Prog.reward(side, win?100:25, win?100:40); return Promise.resolve(); } });
+        onEnd:win=>{ Prog.reward(side, win?100:25, win?100:40); Rewards.result("ki",win); return Promise.resolve(); } });
     });
   },
 };
@@ -993,9 +998,12 @@ const PACKS = [
 const Shop = {
   last:null, pulled:[], revealed:[],
   render(){
+    const free=Player.packs||{};
     $("shopPacks").innerHTML=PACKS.map(p=>`<div class="pack" style="--p1:${p.p1};--p2:${p.p2}"><div class="pi">${p.icon}</div><h3>${p.name}</h3><p>${p.desc}</p>
+      ${free[p.id]?`<button class="green" data-free="${p.id}">🎁 Gratis öffnen (×${free[p.id]})</button>`:""}
       <button class="${Player.coins>=p.price?"":"ghost"}" data-p="${p.id}">🪙 ${p.price}</button></div>`).join("");
     $("shopPacks").querySelectorAll("[data-p]").forEach(b=>b.onclick=()=>this.buy(b.dataset.p));
+    $("shopPacks").querySelectorAll("[data-free]").forEach(b=>b.onclick=()=>this.buy(b.dataset.free,true));
   },
   rollRarity(min="N", fac){
     const luck = fac ? Prog.skill(fac,"luck") : Math.max(Prog.skill("polizei","luck"),Prog.skill("verbrecher","luck"));
@@ -1008,12 +1016,15 @@ const Shop = {
     for(let k=RANK[rar];k>=0;k--){ const r=Object.keys(RANK).find(x=>RANK[x]===k); const p=pool.filter(c=>c.rarity===r); if(p.length) return p[Math.floor(Math.random()*p.length)]; }
     return pool[Math.floor(Math.random()*pool.length)];
   },
-  buy(id){
+  buy(id, free){
     const p=PACKS.find(x=>x.id===id); if(!p) return;
-    if(Player.coins<p.price) return toast("Nicht genug Münzen – gewinne Duelle!");
+    if(free && !((Player.packs||{})[id]>0)) free=false;
+    if(!free && Player.coins<p.price) return toast("Nicht genug Münzen – gewinne Duelle!");
     const pool=DB.cards.filter(c=>!p.faction||c.faction===p.faction);
     if(!pool.length) return toast("Keine Karten für diesen Booster");
-    Player.coins-=p.price;
+    if(free){ Player.packs[id]--; if(!Player.packs[id]) delete Player.packs[id]; }
+    else { Player.coins-=p.price; Quests.track("coins_spent",p.price); }
+    Quests.track("booster");
     const out=[];
     if(p.fusion){ const fp=pool.filter(c=>c.type==="fusion"); out.push(this.pickCard(fp.length?fp:pool,this.rollRarity("R"))); }
     if(p.celestial){ const cp=pool.filter(c=>c.rarity==="CE"); if(cp.length) out.push(cp[Math.floor(Math.random()*cp.length)]); }
@@ -1082,6 +1093,7 @@ const Story = {
       const deck=Deck.genDeck(OTHER[f],{maxLevel:c.opp.maxLevel,minLevel:c.opp.minLevel||1,maxRarity:c.opp.maxRarity});
       Duel.start(f,{oppName:c.opp.name, oppEmoji:c.opp.emoji, oppLP:c.opp.lp, oppDeck:deck, oppSkills:c.opp.skills,
         onEnd:win=>new Promise(res=>{
+          Rewards.result("story",win,{hard});
           if(!win){ Prog.reward(f,hard?40:25,hard?60:40); return res(); }
           const first=i>=(Player.progress[k]||0);
           if(first){ Player.progress[k]=i+1; }
@@ -1146,7 +1158,7 @@ const Duel = {
   P:null, AI:null, history:[], turn:0, online:false, host:false, client:false, waiting:false, active:null, busy:false, over:false, ready:false, opts:{},
   mode:null,       // null | {type:"attack",from} | {type:"tribute",handIdx,need,picked:[],pos} | {type:"boost",handIdx}
   start(side, opts={}){
-    this.side=side; this.opts=opts;
+    this.side=side; this.opts=opts; Store.set("lastSide",side);
     const other = OTHER[side];
     if(!DB.ofFaction(other).length) return toast("Die Gegenpartei hat keine Karten");
     let myDeck = Deck.validFor(side) ? Deck.lists[side] : Deck.autoOwned(side);
@@ -1221,7 +1233,7 @@ const Duel = {
     p.hand.push(p.deck.pop()); return true;
   },
   damage(p, n, src){
-    if(n<=0||this.over) return; p.lp=Math.max(0,p.lp-n);
+    if(n<=0||this.over) return; if(p===this.AI) Quests.track("damage",Math.min(n,p.lp)); p.lp=Math.max(0,p.lp-n);
     const el = p===this.P?$("myLP"):$("oppLP"); el.parentElement.classList.remove("shake"); void el.offsetWidth; el.parentElement.classList.add("shake");
     this.floatText(el, `−${n}`, "#ff3b3b");
     this.log(`${this.me(p,"Du verlierst","verliert")} ${n} LP${src?" ("+src+")":""}`);
@@ -1321,7 +1333,7 @@ const Duel = {
     const m=p.mz[z]; if(!m) return;
     if(cause==="battle" && m.card.effect==="cel_starshield" && !m.faceDown){ this.log(`${m.card.name}: Sternenschild – bleibt im Einsatz!`); return; }
     this.fxPoof(p,z);
-    p.mz[z]=null;
+    p.mz[z]=null; if(p===this.AI) Quests.track("destroy");
     if(m.card.effect==="cel_orbit" && !m.card._orbitUsed){ m.card._orbitUsed=true; (p.orbitBack=p.orbitBack||[]).push(m.card); this.log(`${m.card.name} verschwindet in die Umlaufbahn …`); return; }
     if(cause==="battle" && m.card.effect==="survivor" && !m.faceDown){ p.hand.push(m.card); this.log(`${m.card.name} entwischt – zurück auf die Hand!`); return; }
     p.grave.push(m.card); this.log(`${m.card.name} scheidet aus!`);
@@ -1372,6 +1384,7 @@ const Duel = {
     tributes.forEach(z=>{ if(p.mz[z]){ p.grave.push(p.mz[z].card); p.mz[z]=null; } });
     if(this.freeZone(p.mz)<0) return false;
     p.hand.splice(handIdx,1); p.summoned=true; this.place(p,c,pos);
+    if(p===this.P){ Quests.track("summon"); if(c.rarity==="CE") Quests.track("celestial"); }
     if(pos==="atk"){ this.log(`${this.me(p,"Du schickst","schickt")} ${c.name} ins Feld!`);
       this.triggerSummon(p,c,`${p.name} schickt einen Charakter ins Feld!`, tributes.length?`Dafür räumen ${tributes.length} Charakter(e) das Feld.`:""); }
     else this.log(`${this.me(p,"Du setzt","setzt")} einen Charakter verdeckt.`);
@@ -1412,6 +1425,7 @@ const Duel = {
     return out;
   },
   doFusion(p, opt){
+    if(p===this.P) Quests.track("fusion");
     // Materialien über die Karte selbst finden (Positionen können sich verschoben haben)
     opt.mats.forEach(m=>{
       if(m.src==="field"){ const z=p.mz.findIndex(x=>x&&x.card===m.c); if(z>=0){ p.grave.push(p.mz[z].card); p.mz[z]=null; } }
@@ -1489,6 +1503,7 @@ const Duel = {
       if(!fusionOpt) return false;
     }
     p.hand.splice(p.hand.indexOf(c),1); p.grave.push(c);
+    if(p===this.P){ Quests.track("spell"); if(c.rarity==="CE") Quests.track("celestial"); }
     await this.announce(p,c,`${p.name} setzt ${c.law==="Trick"?"einen Trick":"eine "+c.law+"-Maßnahme"} ein!`,this.spellPreview(p,c,targetZ));
     if(this.over) return false;
     this.bn(c.law==="Trick"?c.name+"!":c.law+"!"); this.fxStamp(c);
@@ -1590,7 +1605,7 @@ const Duel = {
       if(!p.mz[fromZ]||p.mz[fromZ]!==a) return;
       a.attacks++; a.attacked = a.attacks>=this.maxAttacks(a);
       await this.fxAttack(p,fromZ,toZ);
-      if(toZ==null){ this.battleDamage(o,a.atk,a.card.name); return; }
+      if(toZ==null){ if(p===this.P) Quests.track("direct"); this.battleDamage(o,a.atk,a.card.name); return; }
       const d=o.mz[toZ]; if(!d) return;
       if(d.faceDown){ d.faceDown=false; this.log(`${d.card.name} wird aufgedeckt!`); this.render(); await sleep(600); }
       let won=false;
@@ -1994,7 +2009,7 @@ const Net = {
       case "join": {
         if(m.v && window.APP_VERSION && m.v!==window.APP_VERSION) toast(`Andere Spielversion beim Gegner (${m.v}) – am besten beide aktualisieren`);
         Duel.start(this.side,{ online:{myName:this.name, guestName:m.name||"Gast", guestDeck:m.deck, guestExtra:m.extra, guestSkills:m.skills||{}},
-          onEnd:win=>{ Prog.reward(Duel.side, win?ONLINE_WIN:ONLINE_LOSS, win?150:60); Tour.duelEnded(win, Duel.P.lp, Duel.AI.lp); return Promise.resolve(); } });
+          onEnd:win=>{ Prog.reward(Duel.side, win?ONLINE_WIN:ONLINE_LOSS, win?150:60); Rewards.result("online",win); Tour.duelEnded(win, Duel.P.lp, Duel.AI.lp); return Promise.resolve(); } });
         break; }
       case "act": this.actQ=this.actQ.then(()=>this.runAct(m)).catch(e=>console.error(e)).then(()=>{ this.queueState(); this.send({t:"ack"}); }); break;
       case "reply": { const f=this.pend[m.id]; delete this.pend[m.id]; f&&f(m.val); break; }
@@ -2671,7 +2686,7 @@ Object.assign(Duel, {
   endClient(won){
     if(this.over && this._ended) return; this.over=true; this._ended=true; this.closeReveal(); this.render();
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
-      setTimeout(()=>{ Prog.reward(this.side, won?ONLINE_WIN:ONLINE_LOSS, won?150:60); Tour.duelEnded(won, this.P&&this.P.lp, this.AI&&this.AI.lp); if(UI.current!=="duel") return;
+      setTimeout(()=>{ Prog.reward(this.side, won?ONLINE_WIN:ONLINE_LOSS, won?150:60); Rewards.result("online",won); Tour.duelEnded(won, this.P&&this.P.lp, this.AI&&this.AI.lp); if(UI.current!=="duel") return;
         UI.modal(null, Tour.active() ? [["🏆 Zum Turnier",()=>{Net.endDuelConn();UI.show("tour")},"red"]]
           : [["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },1300); },300);
   },
@@ -2790,7 +2805,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, boost:Player.boost, decks:Deck.lists, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, boost:Player.boost, packs:Player.packs, quests:Player.quests, cosmetics:Player.cosmetics, decks:Deck.lists, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -2808,10 +2823,10 @@ const Account = {
     if(!r.ok) throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status));
     const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
     const d = JSON.parse(raw);
-    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.kombi=d.kombi||Player.kombi; Player.syncPrints();
+    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.kombi=d.kombi||Player.kombi; Player.packs=d.packs||Player.packs; Player.quests=d.quests||Player.quests; Player.cosmetics=d.cosmetics||Player.cosmetics; setTimeout(()=>Cosmetic.apply(),0); Player.syncPrints();
     if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
     if(d.nick) Store.set("nick", d.nick);
-    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],kombi:Player.kombi,boost:Player.boost}); Deck.save();
+    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],kombi:Player.kombi,boost:Player.boost,packs:Player.packs,quests:Player.quests,cosmetics:Player.cosmetics}); Deck.save();
     UI.coins(); UI.badges(); return "loaded";
   },
   /* nach jeder Änderung am Spielstand: verzögert hochladen */

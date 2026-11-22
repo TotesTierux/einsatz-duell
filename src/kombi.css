@@ -95,3 +95,49 @@
 @property --celA{syntax:"<angle>";inherits:false;initial-value:0deg}
 @keyframes celSpin{to{--celA:360deg}}
 @keyframes celShine{0%{background-position:150% 0}100%{background-position:-50% 0}}
+/* ---------- Aufträge ---------- */
+.qh{color:var(--yellow);font-family:var(--comic);letter-spacing:1px;margin:14px 0 8px;font-size:20px}
+.qh small{font-family:var(--body);font-size:12px;color:#ccc;letter-spacing:0;margin-left:6px}
+.qrow{display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);border-radius:12px;padding:8px 10px;margin-bottom:8px}
+.qrow.ready{border-color:var(--green);box-shadow:0 0 10px rgba(61,220,132,.4)}
+.qrow.done{opacity:.55}
+.qrow .qt{flex:1;min-width:0}
+.qrow small{opacity:.8;font-size:12px}
+.qbar{position:relative;height:16px;background:rgba(0,0,0,.4);border-radius:8px;overflow:hidden;margin:4px 0}
+.qbar i{display:block;height:100%;background:linear-gradient(90deg,#3ddc84,#ffd23f)}
+.qbar span{position:absolute;inset:0;text-align:center;font-size:11px;line-height:16px;font-weight:700;text-shadow:0 0 2px #000}
+.qok{font-size:22px}
+.qbonus{background:rgba(164,99,255,.18);border:2px dashed rgba(164,99,255,.6);border-radius:12px;padding:8px 10px;margin:4px 0 6px;font-size:14px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.qbonus.ready{border-style:solid;border-color:var(--yellow)}
+.qbonus.done{opacity:.55}
+.qdot{display:inline-block;background:var(--red);color:#fff;border:2px solid var(--ink);border-radius:10px;font-size:13px;padding:0 6px;margin-left:4px}
+/* ---------- Kosmetik ---------- */
+.cosrow{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.cos{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border-radius:12px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.15);text-align:center;cursor:pointer}
+.cos.on{border-color:var(--yellow);box-shadow:0 0 10px rgba(255,210,63,.5)}
+.cos b{font-size:12px;line-height:1.15}
+.cos small{font-size:11px;opacity:.85}
+.bprev{width:56px;height:82px;border:3px solid var(--ink);border-radius:8px;background:#2c1a57}
+.cb-blau .cardback{background:radial-gradient(circle,#fff 0 12%,#2b6cd6 13% 18%,transparent 19%),repeating-linear-gradient(45deg,#1d4fa3 0 10px,#2b6cd6 10px 20px,#ff3b3b 20px 26px,#2b6cd6 26px 36px)}
+.cos .cardback.cb-prev-blau{background:radial-gradient(circle,#fff 0 12%,#2b6cd6 13% 18%,transparent 19%),repeating-linear-gradient(45deg,#1d4fa3 0 10px,#2b6cd6 10px 20px,#ff3b3b 20px 26px,#2b6cd6 26px 36px)}
+.cb-unter .cardback{background:radial-gradient(circle,#ff3b3b 0 16%,#111 17% 21%,transparent 22%),repeating-conic-gradient(#3a0a0a 0 15deg,#160404 15deg 30deg)}
+.cos .cardback.cb-prev-unter{background:radial-gradient(circle,#ff3b3b 0 16%,#111 17% 21%,transparent 22%),repeating-conic-gradient(#3a0a0a 0 15deg,#160404 15deg 30deg)}
+.cb-akte .cardback{background:linear-gradient(#0000 46%,#b3262b 46% 54%,#0000 54%),repeating-linear-gradient(0deg,#e9d8a6 0 6px,#d9c48c 6px 7px)}
+.cos .cardback.cb-prev-akte{background:linear-gradient(#0000 46%,#b3262b 46% 54%,#0000 54%),repeating-linear-gradient(0deg,#e9d8a6 0 6px,#d9c48c 6px 7px)}
+.cb-neon .cardback{background:radial-gradient(circle at 50% 50%,#ff3bd4 0 10%,transparent 11%),repeating-linear-gradient(90deg,#0b0b2a 0 8px,#1a1a4a 8px 9px),linear-gradient(135deg,#00f0ff55,#ff3bd455)}
+.cos .cardback.cb-prev-neon{background:radial-gradient(circle at 50% 50%,#ff3bd4 0 10%,transparent 11%),repeating-linear-gradient(90deg,#0b0b2a 0 8px,#1a1a4a 8px 9px),linear-gradient(135deg,#00f0ff55,#ff3bd455)}
+.cb-gold .cardback{background:radial-gradient(circle,#fff6c9 0 14%,#a87b00 15% 19%,transparent 20%),repeating-conic-gradient(#ffd23f 0 10deg,#c99a00 10deg 20deg)}
+.cos .cardback.cb-prev-gold{background:radial-gradient(circle,#fff6c9 0 14%,#a87b00 15% 19%,transparent 20%),repeating-conic-gradient(#ffd23f 0 10deg,#c99a00 10deg 20deg)}
+.cb-stern .cardback{background:radial-gradient(circle at 20% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 70% 35%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 40% 75%,#fff 0 1px,transparent 2px),radial-gradient(circle at 80% 80%,#fff 0 1px,transparent 2px),radial-gradient(circle,#fff27a 0 10%,transparent 11%),linear-gradient(160deg,#1b1446,#3a1a6e,#0d4a6b)}
+.cos .cardback.cb-prev-stern{background:radial-gradient(circle at 20% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 70% 35%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 40% 75%,#fff 0 1px,transparent 2px),radial-gradient(circle at 80% 80%,#fff 0 1px,transparent 2px),radial-gradient(circle,#fff27a 0 10%,transparent 11%),linear-gradient(160deg,#1b1446,#3a1a6e,#0d4a6b)}
+.cos .cardback.cb-prev-std{background:radial-gradient(circle,#ffd23f 0 18%,var(--ink) 19% 22%,transparent 23%),repeating-conic-gradient(#2b6cd6 0 15deg,#173f8a 15deg 30deg)}
+body.bt-wache #duel{background:linear-gradient(180deg,#0e2a5c 0%,#173f8a 45%,#0e2a5c 100%),repeating-linear-gradient(90deg,#ffffff08 0 40px,#0000 40px 80px)}
+.bprev.bp-wache{background:linear-gradient(180deg,#0e2a5c 0%,#173f8a 45%,#0e2a5c 100%),repeating-linear-gradient(90deg,#ffffff08 0 40px,#0000 40px 80px)}
+body.bt-nacht #duel{background:linear-gradient(180deg,#05051a 0%,#1a1040 60%,#3a1a5a 100%)}
+.bprev.bp-nacht{background:linear-gradient(180deg,#05051a 0%,#1a1040 60%,#3a1a5a 100%)}
+body.bt-hafen #duel{background:linear-gradient(180deg,#2a3440 0%,#3e4c5a 50%,#1d2a36 100%)}
+.bprev.bp-hafen{background:linear-gradient(180deg,#2a3440 0%,#3e4c5a 50%,#1d2a36 100%)}
+body.bt-tresor #duel{background:radial-gradient(circle at 50% 50%,#6b6f78 0 20%,#3a3d44 21% 22%,#55595f 23% 40%,#2c2e33 41%)}
+.bprev.bp-tresor{background:radial-gradient(circle at 50% 50%,#6b6f78 0 20%,#3a3d44 21% 22%,#55595f 23% 40%,#2c2e33 41%)}
+body.bt-all #duel{background:radial-gradient(circle at 15% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 60% 10%,#fff 0 1px,transparent 2px),radial-gradient(circle at 85% 55%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 30% 80%,#fff 0 1px,transparent 2px),radial-gradient(ellipse at 70% 70%,#7a3cff55,transparent 50%),linear-gradient(180deg,#070420,#1b1446)}
+.bprev.bp-all{background:radial-gradient(circle at 15% 20%,#fff 0 1px,transparent 2px),radial-gradient(circle at 60% 10%,#fff 0 1px,transparent 2px),radial-gradient(circle at 85% 55%,#fff 0 1.5px,transparent 2.5px),radial-gradient(circle at 30% 80%,#fff 0 1px,transparent 2px),radial-gradient(ellipse at 70% 70%,#7a3cff55,transparent 50%),linear-gradient(180deg,#070420,#1b1446)}
