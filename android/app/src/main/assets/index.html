@@ -489,6 +489,20 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 .admglobal.ok{border-color:var(--green)}
 .admglobal.warn{border-color:var(--yellow)}
 .admglobal code{background:rgba(0,0,0,.3);padding:0 4px;border-radius:4px;word-break:break-all}
+.anrow{background:rgba(255,255,255,.07);border-radius:10px;padding:7px 9px;margin-bottom:6px;font-size:13px}
+.anrow button{margin-top:4px}
+.antab{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.antab th,.antab td{padding:4px 3px;border-bottom:1px solid rgba(255,255,255,.1);text-align:right}
+.antab th:first-child,.antab td:first-child{text-align:left}
+.antab td.hi{color:#ff7a7a;font-weight:700}.antab td.lo{color:#7ab8ff;font-weight:700}
+.newbadge{position:absolute;top:-6px;right:-6px;z-index:3;background:var(--red);color:#fff;border:2px solid var(--ink);border-radius:8px;font-size:11px;font-weight:900;padding:0 5px;transform:rotate(8deg)}
+/* Viele Handkarten: Karten rücken zusammen, damit alle sichtbar bleiben */
+.hand{--n:5}
+.hand .card,.hand .cardback{margin:0 min(-6px, calc(((100vw - 48px) / var(--n) - var(--w)) / 2))!important;position:relative}
+.hand .card:active,.hand .card.sel{z-index:5}
+.newlist{background:var(--paper);color:var(--ink);width:min(340px,90vw);margin:0 auto;font-size:13px}
+.newlist .nl{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-top:6px;max-height:42vh;overflow:auto}
+.newlist .nl span{line-height:1.25}
 </style>
 </head>
 <body>
@@ -735,7 +749,8 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
   <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Admin</h2>
     <button class="small green" id="admNew" onclick="Admin.newCard()">＋ Karte</button></div>
   <div id="admGlobal" class="panel admglobal"></div>
-  <div class="tabs" id="admTabs"><span data-t="cards" class="on">Karten</span><span data-t="story">Story</span><span data-t="player">Spieler & Daten</span></div>
+  <div class="tabs" id="admTabs"><span data-t="cards" class="on">Karten</span><span data-t="story">Story</span><span data-t="player">Spieler & Daten</span><span data-t="analysis">📊 Analyse</span></div>
+  <div id="admAnalysis" style="display:none"></div>
   <div id="admCards">
     <div class="filterbar"><input id="admSearch" placeholder="Karte suchen…" oninput="Admin.renderList()">
       <select id="admType" onchange="Admin.renderList()"></select></div>
@@ -1171,6 +1186,46 @@ const START_CARDS = [{"id":"p001","name":"Streifenpolizist Kai","faction":"poliz
 {"id":"vf10","name":"Fluchthelfer-Ring","faction":"verbrecher","type":"fusion","attr":"raub","level":6,"atk":2400,"rarity":"R","effect":"summon_draw","val":1,"materials":["raub","any"],"starter":false,"art":{"emoji":"🚐","c1":"#ffe28a","c2":"#7a1010"},"def":1900},
 {"id":"vf11","name":"Geldwäsche-Ring","faction":"verbrecher","type":"fusion","attr":"hehler","level":7,"atk":2600,"rarity":"R","effect":"summon_burn","val":600,"materials":["hehler","betrug"],"starter":false,"art":{"emoji":"🧼","c1":"#f1dcc0","c2":"#5a3410"},"def":2600},
 {"id":"vf12","name":"Straßengang","faction":"verbrecher","type":"fusion","attr":"bande","level":5,"atk":2100,"rarity":"N","effect":"pierce","val":0,"materials":["bande","any"],"starter":false,"art":{"emoji":"👥","c1":"#ffb3b3","c2":"#2a0a0a"},"def":1600},
+{"id":"p601","name":"Streifenführerin Kowalczyk","faction":"polizei","type":"monster","attr":"streife","level":4,"atk":1500,"rarity":"R","effect":"summon_vest","val":0,"starter":false,"release":"2026-11-23","art":{"emoji":"🦺","c1":"#d8ecff","c2":"#2b6cd6"},"def":1500},
+{"id":"p602","name":"Profilerin Dr. Sandmann","faction":"polizei","type":"monster","attr":"kripo","level":5,"atk":1700,"rarity":"R","effect":"summon_copy_atk","val":0,"starter":false,"release":"2026-11-23","art":{"emoji":"🧠","c1":"#efe6d2","c2":"#5a4a2e"},"def":1600},
+{"id":"p603","name":"Bereitschaftsführer Yilmaz","faction":"polizei","type":"monster","attr":"bepo","level":3,"atk":1200,"rarity":"N","effect":"summon_team_draw","val":2,"starter":false,"release":"2026-11-23","art":{"emoji":"📯","c1":"#c7d7f0","c2":"#203a6b"},"def":1500},
+{"id":"p604","name":"Durchsuchung der Wohnung","faction":"polizei","type":"spell","law":"StPO","ref":"§ 102 StPO","rarity":"R","effect":"discard_best","val":0,"starter":false,"release":"2026-11-23","art":{"emoji":"🔦","c1":"#e1f7e6","c2":"#2f8f4e"}},
+{"id":"p605","name":"Fahrzeugsperre","faction":"polizei","type":"trap","law":"SOG","ref":"SOG","rarity":"R","effect":"trap_freeze","val":500,"starter":false,"release":"2026-11-23","art":{"emoji":"🚧","c1":"#dcf6f8","c2":"#127a8a"}},
+{"id":"v601","name":"Steuerberater Schlitzohr","faction":"verbrecher","type":"monster","attr":"betrug","level":4,"atk":1500,"rarity":"R","effect":"lifelink","val":0,"starter":false,"release":"2026-11-23","art":{"emoji":"🧾","c1":"#ffd6f2","c2":"#6b1a5b"},"def":1400},
+{"id":"v602","name":"Kronzeuge Kalle","faction":"verbrecher","type":"monster","attr":"hehler","level":3,"atk":1200,"rarity":"N","effect":"death_discard","val":0,"starter":false,"release":"2026-11-23","art":{"emoji":"🗣️","c1":"#f1dcc0","c2":"#5a3410"},"def":1200},
+{"id":"v603","name":"Bandenspitzel Ratte","faction":"verbrecher","type":"monster","attr":"bande","level":3,"atk":1300,"rarity":"N","effect":"summon_team_draw","val":2,"starter":false,"release":"2026-11-23","art":{"emoji":"🐀","c1":"#ffb3b3","c2":"#2a0a0a"},"def":900},
+{"id":"v604","name":"Hinterhalt im Hinterhof","faction":"verbrecher","type":"trap","law":"Trick","ref":"","rarity":"R","effect":"trap_ambush","val":0,"starter":false,"release":"2026-11-23","art":{"emoji":"🌳","c1":"#efe0ff","c2":"#5b2a87"}},
+{"id":"v605","name":"Steuertrick","faction":"verbrecher","type":"spell","law":"Trick","ref":"","rarity":"SR","effect":"percent_burn","val":25,"starter":false,"release":"2026-11-23","art":{"emoji":"🧮","c1":"#efe0ff","c2":"#5b2a87"}},
+{"id":"p606","name":"Bußgeldstelle Frau Grimm","faction":"polizei","type":"monster","attr":"verkehr","level":4,"atk":1200,"rarity":"R","effect":"hand_burn","val":100,"starter":false,"release":"2026-11-30","art":{"emoji":"📠","c1":"#fff4b8","c2":"#2b6cd6"},"def":1800},
+{"id":"p607","name":"Hundeführer Bauer mit Kira","faction":"polizei","type":"monster","attr":"hunde","level":4,"atk":1600,"rarity":"N","effect":"summon_team_draw","val":2,"starter":false,"release":"2026-11-30","art":{"emoji":"🐕‍🦺","c1":"#ffe2b3","c2":"#9a5b1e"},"def":1200},
+{"id":"p608","name":"Autobahnpolizei-Kommandant Hagen","faction":"polizei","type":"monster","attr":"verkehr","level":6,"atk":2400,"rarity":"SR","effect":"lifelink","val":0,"starter":false,"release":"2026-11-30","art":{"emoji":"🛣️","c1":"#fff4b8","c2":"#2b6cd6"},"def":1900},
+{"id":"p609","name":"Beweismittel sichern","faction":"polizei","type":"spell","law":"StPO","ref":"§ 94 StPO","rarity":"N","effect":"recover_spell","val":0,"starter":false,"release":"2026-11-30","art":{"emoji":"🧪","c1":"#e1f7e6","c2":"#2f8f4e"}},
+{"id":"p610","name":"Steuerfahndung","faction":"polizei","type":"spell","law":"StPO","ref":"§ 208 AO","rarity":"SR","effect":"percent_burn","val":25,"starter":false,"release":"2026-11-30","art":{"emoji":"💶","c1":"#e1f7e6","c2":"#2f8f4e"}},
+{"id":"v606","name":"Raser Kevin","faction":"verbrecher","type":"monster","attr":"raub","level":4,"atk":1700,"rarity":"N","effect":"pierce","val":0,"starter":false,"release":"2026-11-30","art":{"emoji":"🚗","c1":"#ffe28a","c2":"#7a1010"},"def":900},
+{"id":"v607","name":"Unfallflüchtiger Udo","faction":"verbrecher","type":"monster","attr":"dieb","level":3,"atk":1300,"rarity":"N","effect":"summon_vest","val":0,"starter":false,"release":"2026-11-30","art":{"emoji":"💨","c1":"#ffd0c2","c2":"#8a1c1c"},"def":1000},
+{"id":"v608","name":"Schrottplatz-Hehler Jupp","faction":"verbrecher","type":"monster","attr":"hehler","level":5,"atk":1900,"rarity":"R","effect":"summon_copy_atk","val":0,"starter":false,"release":"2026-11-30","art":{"emoji":"🔩","c1":"#f1dcc0","c2":"#5a3410"},"def":1700},
+{"id":"v609","name":"Spurenbeseitigung","faction":"verbrecher","type":"spell","law":"Trick","ref":"","rarity":"N","effect":"recover_spell","val":0,"starter":false,"release":"2026-11-30","art":{"emoji":"🧽","c1":"#efe0ff","c2":"#5b2a87"}},
+{"id":"v610","name":"Falsche Umleitung","faction":"verbrecher","type":"trap","law":"Trick","ref":"","rarity":"R","effect":"trap_freeze","val":500,"starter":false,"release":"2026-11-30","art":{"emoji":"↪️","c1":"#efe0ff","c2":"#5b2a87"}},
+{"id":"p611","name":"Weihnachtsmarkt-Streife Holger","faction":"polizei","type":"monster","attr":"streife","level":3,"atk":1300,"rarity":"N","effect":"summon_heal","val":400,"starter":false,"release":"2026-12-07","art":{"emoji":"🎄","c1":"#d8ecff","c2":"#2b6cd6"},"def":1100},
+{"id":"p612","name":"Taschendieb-Fahnderin Ines","faction":"polizei","type":"monster","attr":"kripo","level":4,"atk":1600,"rarity":"R","effect":"death_discard","val":0,"starter":false,"release":"2026-12-07","art":{"emoji":"🧤","c1":"#efe6d2","c2":"#5a4a2e"},"def":1300},
+{"id":"p613","name":"Diensthund Krümel","faction":"polizei","type":"monster","attr":"hunde","level":2,"atk":1000,"rarity":"N","effect":"summon_vest","val":0,"starter":false,"release":"2026-12-07","art":{"emoji":"🐶","c1":"#ffe2b3","c2":"#9a5b1e"},"def":700},
+{"id":"p614","name":"Glühwein-Kontrolle","faction":"polizei","type":"spell","law":"SOG","ref":"SOG","rarity":"N","effect":"discard_best","val":0,"starter":false,"release":"2026-12-07","art":{"emoji":"🍷","c1":"#dcf6f8","c2":"#127a8a"}},
+{"id":"p615","name":"Zugriff am Glühweinstand","faction":"polizei","type":"trap","law":"SOG","ref":"SOG","rarity":"R","effect":"trap_ambush","val":0,"starter":false,"release":"2026-12-07","art":{"emoji":"🎅","c1":"#dcf6f8","c2":"#127a8a"}},
+{"id":"v611","name":"Falscher Weihnachtsmann","faction":"verbrecher","type":"monster","attr":"betrug","level":4,"atk":1600,"rarity":"R","effect":"hand_burn","val":100,"starter":false,"release":"2026-12-07","art":{"emoji":"🤶","c1":"#ffd6f2","c2":"#6b1a5b"},"def":1300},
+{"id":"v612","name":"Taschendiebin Elfie","faction":"verbrecher","type":"monster","attr":"dieb","level":2,"atk":1100,"rarity":"N","effect":"summon_discard","val":1,"starter":false,"release":"2026-12-07","art":{"emoji":"🧝","c1":"#ffd0c2","c2":"#8a1c1c"},"def":600},
+{"id":"v613","name":"Glühwein-Dealer Gerd","faction":"verbrecher","type":"monster","attr":"drogen","level":3,"atk":1300,"rarity":"N","effect":"lifelink","val":0,"starter":false,"release":"2026-12-07","art":{"emoji":"🥃","c1":"#d8ffd0","c2":"#2a5a1a"},"def":1000},
+{"id":"v614","name":"Geschenke-Klau","faction":"verbrecher","type":"spell","law":"Trick","ref":"","rarity":"R","effect":"discard_best","val":0,"starter":false,"release":"2026-12-07","art":{"emoji":"🎁","c1":"#efe0ff","c2":"#5b2a87"}},
+{"id":"v615","name":"Schneeballschlacht","faction":"verbrecher","type":"spell","law":"Trick","ref":"","rarity":"N","effect":"extra_attack","val":0,"starter":false,"release":"2026-12-07","art":{"emoji":"❄️","c1":"#efe0ff","c2":"#5b2a87"}},
+{"id":"p616","name":"Einsatzleiterin Brenner-Voss","faction":"polizei","type":"monster","attr":"bepo","level":6,"atk":2200,"rarity":"SR","effect":"summon_team_draw","val":2,"starter":false,"release":"2026-12-14","art":{"emoji":"📋","c1":"#c7d7f0","c2":"#203a6b"},"def":2400},
+{"id":"p617","name":"Spurensicherin Lu","faction":"polizei","type":"monster","attr":"kripo","level":3,"atk":1100,"rarity":"N","effect":"death_discard","val":0,"starter":false,"release":"2026-12-14","art":{"emoji":"🔬","c1":"#efe6d2","c2":"#5a4a2e"},"def":1200},
+{"id":"p618","name":"Zivilfahnder Mertens","faction":"polizei","type":"monster","attr":"kripo","level":4,"atk":1700,"rarity":"R","effect":"lifelink","val":0,"starter":false,"release":"2026-12-14","art":{"emoji":"🕶️","c1":"#efe6d2","c2":"#5a4a2e"},"def":1100},
+{"id":"p619","name":"Großlage-Funkspruch","faction":"polizei","type":"spell","law":"SOG","ref":"SOG","rarity":"R","effect":"extra_attack","val":0,"starter":false,"release":"2026-12-14","art":{"emoji":"📡","c1":"#dcf6f8","c2":"#127a8a"}},
+{"id":"p620","name":"Nagelgurt","faction":"polizei","type":"trap","law":"SOG","ref":"SOG","rarity":"N","effect":"trap_freeze","val":400,"starter":false,"release":"2026-12-14","art":{"emoji":"📌","c1":"#dcf6f8","c2":"#127a8a"}},
+{"id":"v616","name":"Clan-Anwalt Dr. Brecht","faction":"verbrecher","type":"monster","attr":"betrug","level":6,"atk":2200,"rarity":"SR","effect":"summon_vest","val":0,"starter":false,"release":"2026-12-14","art":{"emoji":"⚖️","c1":"#ffd6f2","c2":"#6b1a5b"},"def":2200},
+{"id":"v617","name":"Kurier auf dem E-Roller","faction":"verbrecher","type":"monster","attr":"drogen","level":2,"atk":1200,"rarity":"N","effect":"summon_team_draw","val":1,"starter":false,"release":"2026-12-14","art":{"emoji":"🛴","c1":"#d8ffd0","c2":"#2a5a1a"},"def":500},
+{"id":"v618","name":"Inkasso-Ede","faction":"verbrecher","type":"monster","attr":"bande","level":5,"atk":2000,"rarity":"R","effect":"hand_burn","val":100,"starter":false,"release":"2026-12-14","art":{"emoji":"💰","c1":"#ffb3b3","c2":"#2a0a0a"},"def":1600},
+{"id":"v619","name":"Akten verschwinden lassen","faction":"verbrecher","type":"spell","law":"Trick","ref":"","rarity":"R","effect":"recover_spell","val":0,"starter":false,"release":"2026-12-14","art":{"emoji":"🗂️","c1":"#efe0ff","c2":"#5b2a87"}},
+{"id":"v620","name":"Hinterhof-Falle","faction":"verbrecher","type":"trap","law":"Trick","ref":"","rarity":"N","effect":"trap_ambush","val":0,"starter":false,"release":"2026-12-14","art":{"emoji":"🏚️","c1":"#efe0ff","c2":"#5b2a87"}},
 {"id":"pc01","name":"Revierleiter Sonnenschein","faction":"polizei","type":"monster","attr":"streife","level":7,"atk":2500,"rarity":"CE","effect":"cel_sun","val":0,"starter":false,"art":{"emoji":"👨‍✈️","c1":"#f5e9ff","c2":"#1b1446"},"def":2400},
 {"id":"pc02","name":"Generalfahnderin Aurora","faction":"polizei","type":"monster","attr":"kripo","level":8,"atk":2800,"rarity":"CE","effect":"cel_supernova","val":0,"starter":false,"art":{"emoji":"🚨","c1":"#f5e9ff","c2":"#1b1446"},"def":2400},
 {"id":"pc03","name":"Hundertschaftsführer Orion","faction":"polizei","type":"monster","attr":"sek","level":8,"atk":2900,"rarity":"CE","effect":"cel_constellation","val":0,"starter":false,"art":{"emoji":"📣","c1":"#f5e9ff","c2":"#1b1446"},"def":2300},
@@ -1439,6 +1494,47 @@ vf09:"Man sieht sie nicht. Man hört sie nicht. Aber das Auto ist weg.",
 vf10:"Ihr Fluchtwagen hat mehr Kilometer als ein Linienbus.",
 vf11:"Schmutziges Geld rein, glänzendes Geld raus.",
 vf12:"Treffen sich jeden Tag am Kiosk. Machen jeden Tag Ärger.",
+// ---------- Neuerscheinungen ----------
+p601:"Ihre Streife trägt Weste. Immer. Auch beim Bäcker.",
+p602:"Weiß nach drei Sekunden, was du zum Frühstück hattest.",
+p603:"Ein Signal – und die halbe Hundertschaft steht bereit.",
+p604:"Unterm Bett, im Schrank, im Gefrierfach. Vor allem im Gefrierfach.",
+p605:"Hier ist Endstation. Bitte wenden.",
+p606:"Jede Handkarte kostet. Sie hat die Liste.",
+p607:"Kira sucht, Bauer zeigt, alle staunen.",
+p608:"Holt sich jeden Cent zurück – inklusive Mahngebühr.",
+p609:"Tütchen, Etikett, Unterschrift. Und ab in die Asservatenkammer.",
+p610:"Ein Viertel ist für den Staat. Mindestens.",
+p611:"Hat mehr Lebkuchen in der Tasche als Strafzettel.",
+p612:"Spürt Taschendiebe schneller, als die „Entschuldigung“ sagen können.",
+p613:"Klein, flauschig, und hat schon drei Diebe zu Fall gebracht.",
+p614:"Einmal pusten, bitte. Und die Taschen leeren.",
+p615:"Der Glühwein war nur Tarnung.",
+p616:"Hat für jede Lage einen Ordner. Farblich sortiert.",
+p617:"Findet ein Haar im Teppich. Und weiß, von wem es ist.",
+p618:"Sieht aus wie ein Tourist. Ist keiner.",
+p619:"„An alle Einheiten: noch eine Runde!“",
+p620:"Platt in drei Sekunden. Die Reifen, nicht die Stimmung.",
+v601:"Seine Steuererklärung ist kreativer als jedes Kunstwerk.",
+v602:"Redet viel, wenn er fällt. Und nimmt andere mit.",
+v603:"Wo eine Ratte ist, sind noch mehr.",
+v604:"Hinter jeder Mülltonne wartet jemand.",
+v605:"Nimmt ein Viertel von allem. Steuerfrei natürlich.",
+v606:"0 auf 100 in 4 Sekunden. Bremsen? Überbewertet.",
+v607:"War nie da. Nur sein Spiegel liegt noch auf der Straße.",
+v608:"Macht aus jedem Wrack ein Schnäppchen. Und aus jedem Gegner ein Vorbild.",
+v609:"Putzmittel, Handschuhe, ein Lächeln. Fertig.",
+v610:"Die Umleitung führt direkt in den Wald. Absichtlich.",
+v611:"Ho-ho-hol dir deine Brieftasche zurück, wenn du kannst.",
+v612:"Klein, flink und mit sehr großen Taschen.",
+v613:"Sein Glühwein ist heiß. Sein Geschäft heißer.",
+v614:"Die Geschenke waren so schön verpackt. Waren.",
+v615:"Alle lachen. Keiner sieht, wer die Kasse nimmt.",
+v616:"„Mein Mandant hat von nichts gewusst.“ – Seit 20 Jahren derselbe Satz.",
+v617:"Liefert in 10 Minuten. Fragen kostet extra.",
+v618:"Pro Handkarte ein kleiner Aufpreis. Nennt er „Zinsen“.",
+v619:"Was nicht in der Akte steht, ist nie passiert.",
+v620:"Wer hier reinläuft, kommt nicht so schnell wieder raus.",
 // ---------- Celestial ----------
 pc01:"Seit 35 Jahren im Dienst. Seine Frühschicht-Brötchen sind Legende.",
 pc02:"Hat die Fahndungsliste auswendig gelernt. Rückwärts.",
@@ -1878,6 +1974,103 @@ const GlobalCards = {
 };
 setTimeout(()=>{ try{ GlobalCards.start(); }catch(e){} },1500);
 
+/* ============================ KARTEN-STATISTIK (für die Admin-Analyse) ============================
+   Pro Duell wird gezählt: welche Karten ein Spieler eingesetzt hat, wie viele gegnerische Charaktere
+   sie ausgeschaltet haben und ob das Duell gewonnen wurde. Am Ende wird das als Zähler auf den
+   Server addiert (stats/cards/{id}: games, won, kills, uses). Gezählt werden nur echte Spieler.
+   ================================================================================================ */
+const CardStats = {
+  cur:null,
+  tracked(D,p){ if(!D || D.autoP || D.spectate || D.client) return false; return D.host ? true : p===D.P; },
+  begin(D){ this.cur={pl:new Map(), kills:{}, uses:{}}; },
+  bucket(p){ if(!this.cur) this.begin(); let b=this.cur.pl.get(p); if(!b){ b=new Set(); this.cur.pl.set(p,b); } return b; },
+  play(D,p,c){ if(!c||!c.id||!this.tracked(D,p)) return; this.bucket(p).add(c.id); this.cur.uses[c.id]=(this.cur.uses[c.id]||0)+1; },
+  kill(D,victimOwner,killer){
+    if(!killer||!killer.id||!this.cur) return; const k=D.opp(victimOwner);
+    if(!this.tracked(D,k)) return;
+    // Killer muss dem Gegner des Opfers gehören (eigene Verluste zählen nicht)
+    const own=[...k.mz.filter(Boolean).map(m=>m.card),...k.grave,...k.hand,...k.st.filter(Boolean).map(s=>s.card)].includes(killer);
+    if(!own) return; this.cur.kills[killer.id]=(this.cur.kills[killer.id]||0)+1;
+  },
+  finish(D,won){
+    const cur=this.cur; this.cur=null; if(!cur||!cur.pl.size) return;
+    const inc=n=>({".sv":{increment:n}}), up={};
+    cur.pl.forEach((ids,p)=>{ const w = (p===(D.realP||D.P)) ? won : !won;
+      ids.forEach(id=>{ up[`${id}/games`]=inc(1); if(w) up[`${id}/won`]=inc(1); }); });
+    Object.entries(cur.kills).forEach(([id,n])=>up[`${id}/kills`]=inc(n));
+    Object.entries(cur.uses).forEach(([id,n])=>up[`${id}/uses`]=inc(n));
+    up["_total/games"]=inc(1);
+    // lokal mitzählen (Analyse ohne Server / Admin-Gerät)
+    const L=Store.get("cardStats",{}); Object.entries(up).forEach(([k,v])=>{ const [id,f]=k.split("/"); L[id]=L[id]||{}; L[id][f]=(L[id][f]||0)+v[".sv"].increment; }); Store.set("cardStats",L);
+    if(Cloud.enabled()) Cloud.req("stats/cards","PATCH",up).catch(e=>console.warn("Statistik:",e));
+  },
+};
+
+/* ---------------- Admin: Analyse & Balancing-Vorschläge ---------------- */
+const Analysis = {
+  data:null, src:"server", sort:"games",
+  async load(){
+    $("admAnalysis").innerHTML=`<p class="muted">Lade Statistik …</p>`;
+    let d=null;
+    if(Cloud.enabled()){ try{ d=await Cloud.req("stats/cards"); this.src="server"; }catch(e){ d=null; } }
+    if(!d){ d=Store.get("cardStats",{}); this.src="lokal"; }
+    this.data=d||{}; this.render();
+  },
+  rows(){
+    const d=this.data||{}, total=(d._total&&d._total.games)||0, base={};
+    ["polizei","verbrecher"].forEach(f=>{ let g=0,w=0; Object.entries(d).forEach(([id,s])=>{ const c=DB.byId(id); if(c&&c.faction===f){ g+=s.games||0; w+=s.won||0; } }); base[f]=g?w/g:.5; });
+    return {total, base, list:Object.entries(d).filter(([id])=>id!=="_total").map(([id,s])=>{ const c=DB.byId(id); if(!c) return null;
+      const g=s.games||0, wr=g?(s.won||0)/g:0; return {c, games:g, won:s.won||0, wr, kills:s.kills||0, kpg:g?(s.kills||0)/g:0, uses:s.uses||0, delta:g?wr-base[c.faction]:0}; }).filter(Boolean)};
+  },
+  /* Vorschlag pro Karte: ab 30 Spielen belastbar, ab 15 vorsichtig */
+  suggest(r, total){
+    const c=r.c, isChar=c.type==="monster"||c.type==="fusion", dz=r.delta*100, sure=r.games>=30, min=r.games>=15;
+    const step=v=>Math.min(400,Math.max(100,Math.round(Math.abs(v)/4)*100));
+    if(min && dz>8){ if(isChar) return {text:`zu stark (+${dz.toFixed(0)} % Siegquote) → ATK −${step(dz)}`, patch:{atk:Math.max(0,c.atk-step(dz))}, sure};
+      if(c.val && EFFECTS[c.effect]&&EFFECTS[c.effect].val) return {text:`zu stark (+${dz.toFixed(0)} %) → Wert ${c.val} → ${Math.max(1,Math.round(c.val*.8/(c.val>=50?50:1))*(c.val>=50?50:1))}`, patch:{val:Math.max(1,Math.round(c.val*.8/(c.val>=50?50:1))*(c.val>=50?50:1))}, sure};
+      return {text:`zu stark (+${dz.toFixed(0)} %) → Seltenheit erhöhen (seltener im Booster)`, patch:c.rarity!=="UR"&&c.rarity!=="CE"?{rarity:{N:"R",R:"SR",SR:"UR"}[c.rarity]}:null, sure}; }
+    if(min && dz<-8){ if(isChar) return {text:`zu schwach (${dz.toFixed(0)} % Siegquote) → ATK +${step(dz)}`, patch:{atk:c.atk+step(dz)}, sure};
+      if(c.val && EFFECTS[c.effect]&&EFFECTS[c.effect].val) return {text:`zu schwach (${dz.toFixed(0)} %) → Wert ${c.val} → ${Math.round(c.val*1.25/(c.val>=50?50:1))*(c.val>=50?50:1)}`, patch:{val:Math.round(c.val*1.25/(c.val>=50?50:1))*(c.val>=50?50:1)}, sure};
+      return {text:`zu schwach (${dz.toFixed(0)} %) → Effekt überdenken`, patch:null, sure}; }
+    if(total>=100 && r.games < total*.01 && isChar && (c.level||0)>=5) return {text:"wird kaum gespielt → Stufe −1 (leichter auszuspielen)", patch:{level:c.level-1}, sure:false};
+    if(isChar && r.games>=20 && r.kpg>=1.6) return {text:`sehr viele Kills (${r.kpg.toFixed(1)} pro Spiel) → ATK −100 beobachten`, patch:{atk:c.atk-100}, sure:false};
+    return null;
+  },
+  render(){
+    const {total, base, list}=this.rows(), el=$("admAnalysis");
+    const key={games:r=>r.games, kills:r=>r.kills, kpg:r=>r.kpg, wr:r=>r.games>=10?r.wr:-1, delta:r=>Math.abs(r.delta)*(r.games>=15?1:0)}[this.sort];
+    list.sort((a,b)=>key(b)-key(a));
+    const sug=list.map(r=>({r,s:this.suggest(r,total)})).filter(x=>x.s).sort((a,b)=>Math.abs(b.r.delta)-Math.abs(a.r.delta));
+    el.innerHTML=`
+      <div class="panel"><b>📊 Erfasste Duelle: ${total}</b> <small class="muted">(Quelle: ${this.src==="server"?"alle Spieler über den Server":"nur dieses Gerät"})</small><br>
+        Siegquote Polizei ${Math.round(base.polizei*100)} % · Verbrecher ${Math.round(base.verbrecher*100)} %
+        <div class="row" style="margin-top:6px"><button class="small ghost" onclick="Analysis.load()">🔄 Aktualisieren</button></div></div>
+      <h3 class="qh">⚖️ Balancing-Vorschläge</h3>
+      ${sug.length?sug.slice(0,25).map(({r,s})=>`<div class="anrow"><b>${esc(r.c.name)}</b> <small class="muted">${r.games} Spiele</small><br>
+        <span>${s.sure?"":"⚠️ wenige Daten · "}${esc(s.text)}</span>
+        ${s.patch?`<button class="small ${s.sure?"green":"ghost"}" data-apply="${r.c.id}">Übernehmen</button>`:""}</div>`).join("")
+        :`<p class="muted">Noch keine auffälligen Karten. Vorschläge erscheinen ab ca. 15 Spielen pro Karte.</p>`}
+      <h3 class="qh">🃏 Kartennutzung</h3>
+      <div class="row" style="flex-wrap:wrap;gap:4px">${[["games","Meist gespielt"],["kills","Meiste Kills"],["kpg","Kills/Spiel"],["wr","Siegquote"],["delta","Auffällig"]].map(([k,l])=>`<button class="small ${this.sort===k?"red":"ghost"}" data-sort="${k}">${l}</button>`).join("")}</div>
+      <table class="antab"><tr><th>Karte</th><th>Spiele</th><th>Kills</th><th>K/S</th><th>Sieg</th></tr>
+      ${list.slice(0,80).map(r=>`<tr><td>${esc((r.c.art&&r.c.art.emoji)||"")} ${esc(r.c.name)}</td><td>${r.games}</td><td>${r.kills}</td><td>${r.kpg.toFixed(1)}</td>
+        <td class="${r.games>=15&&r.delta>.08?"hi":r.games>=15&&r.delta<-.08?"lo":""}">${r.games?Math.round(r.wr*100)+" %":"–"}</td></tr>`).join("")}</table>`;
+    el.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{ this.sort=b.dataset.sort; this.render(); });
+    el.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>this.apply(b.dataset.apply));
+  },
+  async apply(id){
+    const r=this.rows().list.find(x=>x.c.id===id); if(!r) return; const s=this.suggest(r,this.rows().total); if(!s||!s.patch) return;
+    if(!await UI.ask(`„${r.c.name}“ ändern: ${s.text}?`)) return;
+    const d=normalizeCard(Object.assign(clone(r.c),s.patch)), i=DB.cards.findIndex(c=>c.id===id);
+    if(START_CARDS.some(c=>c.id===id)){ const ed=Store.get("edited",[]); if(!ed.includes(id)){ ed.push(id); Store.set("edited",ed); } }
+    DB.cards[i]=d; DB.save();
+    const ok=await GlobalCards.publish(d); toast(ok?`${d.name} angepasst – an alle Spieler verteilt`:`${d.name} angepasst (nur auf diesem Gerät)`);
+    // Statistik der Karte zurücksetzen, damit die neue Version frisch bewertet wird
+    if(ok) Cloud.req(`stats/cards/${id}`,"DELETE").catch(()=>{});
+    this.load();
+  },
+};
+
 /* =====================================================================
    EINSATZ-DUELL v0.3 – Polizei gegen Verbrecher
    Aufbau: Daten → Speicher → Spieler/Sammlung → Karten-HTML → UI → Admin →
@@ -1981,6 +2174,19 @@ const EFFECTS = {
   trap_steal:    {types:["trap"], group:"Reaktion", label:"Angreifer übernehmen",           text:"Wenn der Gegner angreift: Übernimm den Angreifer.", val:false},
   trap_lock:     {types:["trap"], group:"Reaktion", label:"Abwehren + festhalten",          text:"Wenn der Gegner angreift: Angriff abwehren, gegnerische Charaktere können bis zu seinem nächsten Zug nicht angreifen.", val:false},
   trap_draw:     {types:["trap"], group:"Reaktion", label:"Abwehren + ziehen",              text:"Wenn der Gegner angreift: Angriff abwehren, ziehe {v} Karte(n).", val:true},
+  // ---------- Neue Effekte (Erweiterung 2) ----------
+  summon_vest:   {types:CH, group:"Beim Ausspielen", label:"Schutzweste",            text:"Beim Ausspielen: Dein stärkster Charakter übersteht das nächste Ausscheiden (einmalig).", val:false},
+  summon_copy_atk:{types:CH, group:"Beim Ausspielen", label:"Profiling",             text:"Beim Ausspielen: Übernimmt die ATK des stärksten gegnerischen Charakters, wenn sie höher ist.", val:false},
+  summon_team_draw:{types:CH, group:"Beim Ausspielen", label:"Teamgeist",            text:"Beim Ausspielen: Ziehe 1 Karte für jeden anderen eigenen Charakter derselben Art (max. {v}).", val:true},
+  lifelink:      {types:CH, group:"Im Kampf",        label:"Vermögensabschöpfung",   text:"Kampfschaden, den er dem Gegner zufügt, erhältst du als LP.", val:false},
+  hand_burn:     {types:CH, group:"Zugbeginn",       label:"Bußgeld",                text:"Zu Beginn jedes eigenen Zuges verliert der Gegner {v} LP pro Handkarte.", val:true},
+  death_discard: {types:CH, group:"Beim Ausscheiden",label:"Kronzeuge",              text:"Scheidet er aus, legt der Gegner 1 zufällige Handkarte ab.", val:false},
+  discard_best:  {types:["spell"], group:"Maßnahme", label:"Durchsuchung",           text:"Der Gegner legt seine stärkste Handkarte ab.", val:false},
+  extra_attack:  {types:["spell"], group:"Maßnahme", label:"Überstunden",            text:"Dein stärkster Charakter, der schon angegriffen hat, darf noch einmal angreifen.", val:false},
+  recover_spell: {types:["spell"], group:"Maßnahme", label:"Beweismittel sichern",   text:"Nimm die zuletzt abgelegte Maßnahme aus deinem Ablagestapel auf die Hand.", val:false},
+  percent_burn:  {types:["spell"], group:"Maßnahme", label:"Steuerprüfung",          text:"Der Gegner verliert {v} % seiner aktuellen LP.", val:true},
+  trap_ambush:   {types:["trap"],  group:"Reaktion", label:"Hinterhalt",             text:"Wenn der Gegner angreift: Dein stärkster Charakter stellt den Angreifer – wer weniger ATK hat, scheidet aus.", val:false},
+  trap_freeze:   {types:["trap"],  group:"Reaktion", label:"Fahrzeugsperre",         text:"Wenn der Gegner angreift: Angriff abwehren, der Angreifer verliert {v} ATK und greift 2 Züge nicht an.", val:true},
   // ---------- Celestial: einzigartige Effekte (nur auf Celestial-Karten) ----------
   cel_sun:          {types:CH, group:"Celestial", label:"✨ Gute Moral",       text:"Zugbeginn: Du erhältst 300 LP, alle eigenen Charaktere +100 ATK.", val:false},
   cel_supernova:    {types:CH, group:"Celestial", label:"✨ Großfahndung",         text:"Beim Ausspielen: Alle Gegner mit weniger ATK scheiden aus.", val:false},
@@ -2189,6 +2395,79 @@ Object.assign(STORY_DEFAULT, {
   ]},
 });
 
+/* Monatliche Story-Missionen: erscheinen automatisch am 1. des Monats (release) */
+Object.assign(STORY_DEFAULT, {
+  m2612: {side:"polizei", diff:2, release:"2026-12-01", title:"Operation Lametta",
+   desc:"Dezember-Mission: Auf dem Weihnachtsmarkt verschwinden Geldbörsen, Geschenke und sogar der Weihnachtsbaum. Hinter allem steckt eine Bande in roten Mänteln.", chapters:[
+    {id:"md1", title:"Glühwein und lange Finger", reward:450,
+     opp:{name:"Taschendiebin Elfie", emoji:"🧝", lp:5000, minLevel:2, maxLevel:6, maxRarity:"R", skills:{atk:1,lp:1}},
+     intro:"Weihnachtsmarkt-Streife Holger|🎄|Drei Geldbörsen in zehn Minuten. Und alle Opfer erinnern sich nur an … spitze Ohren.\nTaschendiebin Elfie|🧝|Frohe Weihnachten! Danke für die Spende!",
+     outro:"Taschendiebin Elfie|🧝|Ich arbeite nur für den Weihnachtsmann! Den falschen …\nWeihnachtsmarkt-Streife Holger|🎄|Ho-ho-hoffentlich finden wir ihn schnell."},
+    {id:"md2", title:"Der falsche Weihnachtsmann", reward:500,
+     opp:{name:"Falscher Weihnachtsmann", emoji:"🤶", lp:5500, minLevel:3, maxLevel:7, maxRarity:"SR", skills:{atk:1,lp:2}},
+     intro:"Falscher Weihnachtsmann|🤶|Warst du dieses Jahr auch brav? Dann gib mir dein Portemonnaie.\nTaschendieb-Fahnderin Ines|🧤|Der Bart ist aus Watte. Und die Geschenke sind aus fremden Taschen.",
+     outro:"Falscher Weihnachtsmann|🤶|Die Beute ist längst beim Glühwein-Dealer. Der verkauft sie unter dem Tresen.\nKK Mara|🕵️‍♀️|Ab zum Glühweinstand!"},
+    {id:"md3", title:"Hinter dem Tresen", reward:550,
+     opp:{name:"Glühwein-Dealer Gerd", emoji:"🥃", lp:6000, minLevel:3, maxLevel:8, maxRarity:"SR", skills:{atk:2,lp:2}},
+     intro:"Glühwein-Dealer Gerd|🥃|Einmal Glühwein mit Schuss? Oder lieber … mit Geschenk?\nDiensthund Krümel|🐶|Wuff! *schnüffelt am Tresen*",
+     outro:"Glühwein-Dealer Gerd|🥃|Der Chef sitzt im Lagerhaus am Hafen. Dort steht auch der geklaute Weihnachtsbaum.\nKHK Brandt|🕵️|Einen ganzen Baum? Die haben Nerven."},
+    {id:"md4", title:"Das Geschenkelager", reward:600,
+     opp:{name:"Hehlerin Rosi", emoji:"📦", lp:6500, minLevel:4, maxLevel:9, maxRarity:"SR", skills:{atk:2,lp:3,eff:1}},
+     intro:"Hehlerin Rosi|📦|Hier ist alles ordentlich eingepackt. Mit Schleife. Und ohne Kassenbon.\nEinsatzleiterin Brenner-Voss|📋|Lagerhalle umstellt. Zugriff!",
+     outro:"Hehlerin Rosi|📦|Der Grinch hat alles geplant! Er will Weihnachten für die ganze Stadt stehlen!\nPolizeipräsidentin Dr. Wolf|🎖️|Nicht in meiner Stadt."},
+    {id:"md5", title:"Finale: Der Grinch der Unterwelt", reward:900,
+     opp:{name:"Der Grinch der Unterwelt", emoji:"💚", lp:8000, minLevel:5, maxLevel:12, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Der Grinch der Unterwelt|💚|Lichterketten, Geschenke, Plätzchen – ich nehme ALLES!\nWeihnachtsmarkt-Streife Holger|🎄|Und wir nehmen dich mit. Festnahme!",
+     outro:"Der Grinch der Unterwelt|💚|Mein Herz … es wächst … drei Nummern …\nPolizeipräsidentin Dr. Wolf|🎖️|Operation Lametta erfolgreich. Frohe Weihnachten, alle zusammen!"},
+  ]},
+  m2701: {side:"verbrecher", diff:2, release:"2027-01-01", title:"Der Neujahrs-Coup",
+   desc:"Januar-Mission: In der Silvesternacht ist die ganze Stadt abgelenkt. Der perfekte Moment für den größten Coup des Jahres.", chapters:[
+    {id:"mj1", title:"Böller und Ablenkung", reward:450,
+     opp:{name:"Streifenpolizist Kai", emoji:"👮", lp:5000, minLevel:2, maxLevel:6, maxRarity:"R", skills:{atk:1,lp:1}},
+     intro:"Das Phantom|🦹‍♀️|Um Mitternacht schaut jeder in den Himmel. Nur wir schauen auf die Bank.\nStreifenpolizist Kai|👮|Moment mal – warum zünden Sie Raketen VOR der Bank?",
+     outro:"Das Phantom|🦹‍♀️|Ablenkung gelungen. Jetzt brauchen wir den Tresorplan."},
+    {id:"mj2", title:"Der Bauplan", reward:500,
+     opp:{name:"IT-Forensikerin Pia", emoji:"💻", lp:5500, minLevel:3, maxLevel:7, maxRarity:"SR", skills:{atk:1,lp:2}},
+     intro:"Darknet-Händler Null|🕸️|Ich hab den Plan. Aber die Forensik verfolgt meine Spuren.\nIT-Forensikerin Pia|💻|Eure VPN-Verbindung ist so löchrig wie ein Sieb.",
+     outro:"Darknet-Händler Null|🕸️|Plan gesichert. Der Tresor öffnet sich nur um 0:00 Uhr – Zeitschloss."},
+    {id:"mj3", title:"Die Straßensperre", reward:550,
+     opp:{name:"Autobahnpolizei-Kommandant Hagen", emoji:"🛣️", lp:6000, minLevel:3, maxLevel:8, maxRarity:"SR", skills:{atk:2,lp:2}},
+     intro:"Raser Kevin|🚗|Die Polizei sperrt alle Brücken. Festhalten!\nAutobahnpolizei-Kommandant Hagen|🛣️|Heute Nacht kommt hier niemand durch.",
+     outro:"Raser Kevin|🚗|Durch! Noch zehn Minuten bis Mitternacht!"},
+    {id:"mj4", title:"Zehn Minuten bis Mitternacht", reward:600,
+     opp:{name:"Zielfahnder Kowalski", emoji:"🎯", lp:6500, minLevel:4, maxLevel:9, maxRarity:"SR", skills:{atk:2,lp:3,eff:1}},
+     intro:"Zielfahnder Kowalski|🎯|Ich wusste, dass ihr heute zuschlagt. Ich habe Silvester abgesagt.\nTresorknacker Ohr|🔐|Psst! Ich höre das Zeitschloss ticken …",
+     outro:"Tresorknacker Ohr|🔐|Drei … zwei … eins … der Tresor ist offen!"},
+    {id:"mj5", title:"Finale: Prosit Neujahr", reward:900,
+     opp:{name:"SEK-Teamführer Brenner", emoji:"🪖", lp:8000, minLevel:5, maxLevel:12, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"SEK-Teamführer Brenner|🪖|Frohes neues Jahr. Sie sind festgenommen.\nDas Phantom|🦹‍♀️|Das Jahr fängt ja gut an. Für uns!",
+     outro:"Das Phantom|🦹‍♀️|Der Neujahrs-Coup ist gelungen. Was für ein Feuerwerk!\nHehlerin Rosi|📦|Die Unterwelt feiert dich – gutes neues Jahr, Boss!"},
+  ]},
+  m2702: {side:"polizei", diff:3, release:"2027-02-01", title:"Karneval der Masken",
+   desc:"Februar-Mission: Im Karnevalstrubel tragen alle Masken – auch eine Diebesbande, die es auf die Kronjuwelen der Stadt abgesehen hat.", chapters:[
+    {id:"mf1", title:"Alaaf und Helau", reward:600,
+     opp:{name:"Maskierter Räuber", emoji:"🎭", lp:6500, minLevel:4, maxLevel:8, maxRarity:"SR", skills:{atk:3,lp:3,eff:1}},
+     intro:"Streifenführerin Kowalczyk|🦺|Zehntausend Menschen, alle verkleidet. Wie sollen wir da einen Dieb finden?\nMaskierter Räuber|🎭|Gar nicht! Helau!",
+     outro:"Maskierter Räuber|🎭|Ich bin nur einer von vielen. Die Bande trägt goldene Masken."},
+    {id:"mf2", title:"Der Prunkwagen", reward:650,
+     opp:{name:"Steuerberater Schlitzohr", emoji:"🧾", lp:7000, minLevel:5, maxLevel:9, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Profilerin Dr. Sandmann|🧠|Der Prunkwagen ist zu schwer für Konfetti. Da ist etwas anderes drin.\nSteuerberater Schlitzohr|🧾|Nur Kamelle! Und ein paar … abgesetzte Ausgaben.",
+     outro:"Steuerberater Schlitzohr|🧾|Die Bande trifft sich im Rathauskeller. Die Kronjuwelen liegen direkt darüber."},
+    {id:"mf3", title:"Im Rathauskeller", reward:700,
+     opp:{name:"Clan-Anwalt Dr. Brecht", emoji:"⚖️", lp:7500, minLevel:5, maxLevel:10, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Clan-Anwalt Dr. Brecht|⚖️|Meine Mandanten feiern nur Karneval. Haben Sie einen Durchsuchungsbeschluss?\nKK Mara|🕵️‍♀️|Zufällig ja. Hier, mit Konfetti.",
+     outro:"Clan-Anwalt Dr. Brecht|⚖️|Ohne meinen Mandanten Inkasso-Ede sage ich gar nichts mehr."},
+    {id:"mf4", title:"Die goldene Maske", reward:800,
+     opp:{name:"Inkasso-Ede", emoji:"💰", lp:8500, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:4,lp:5,eff:2,hand:1}},
+     intro:"Inkasso-Ede|💰|Die Kronjuwelen sind meine Bezahlung. Die Stadt schuldet mir noch was.\nZivilfahnder Mertens|🕶️|Du schuldest uns eine Erklärung.",
+     outro:"Inkasso-Ede|💰|Die Prinzessin … sie ist der Kopf der Bande!\nKHK Brandt|🕵️|Die Karnevalsprinzessin?!"},
+    {id:"mf5", title:"Finale: Die Karnevalsprinzessin", reward:1300,
+     opp:{name:"Karnevalsprinzessin Diamanta", emoji:"👸", lp:10000, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:5,lp:5,eff:3,hand:1,second:1}},
+     intro:"Karnevalsprinzessin Diamanta|👸|Jedes Jahr winke ich vom Wagen. Dieses Jahr winke ich mit den Kronjuwelen!\nPolizeipräsidentin Dr. Wolf|🎖️|Aschermittwoch kommt früher als gedacht.",
+     outro:"Karnevalsprinzessin Diamanta|👸|Meine Krone … meine Juwelen … mein Karneval …\nPolizeipräsidentin Dr. Wolf|🎖️|Fall gelöst. Und jetzt: Kamelle für alle!"},
+  ]},
+});
+
 /* ============================ SPEICHER ============================ */
 const Store = {
   get(k,d){try{const v=localStorage.getItem("kd3_"+k);return v?JSON.parse(v):d}catch(e){return d}},
@@ -2211,9 +2490,13 @@ function normalizeCard(c){
   if(!EFFECTS[n.effect] || !EFFECTS[n.effect].types.includes(n.type)) n.effect = defaultEffect(n.type);
   if(n.type==="fusion" && n.materials.length<2) n.materials = [Object.keys(roles)[0],"any"];
   n.level = Math.max(1,Math.min(12,n.level)); n.atk=Math.max(0,Math.min(9999,n.atk)); n.def=Math.max(0,Math.min(9999,n.def));
+  if(c.release) n.release=String(c.release).slice(0,10);   // Erscheinungstag (wöchentliche Neuerscheinungen)
+  if(c.flavor) n.flavor=String(c.flavor).slice(0,140);
   return n;
 }
 
+function todayISO(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function isNewCard(c){ if(!c||!c.release) return false; return (new Date()-new Date(c.release+"T00:00:00"))/864e5 < 14; }
 const DB = {
   cards: [],
   load(){
@@ -2221,7 +2504,10 @@ const DB = {
     const deleted = new Set(Store.get("deleted", [])), edited = new Set(Store.get("edited", []));
     const idx = new Map(cards.map((c,i)=>[c.id,i]));
     // Standardkarten aus Updates übernehmen – vom Admin bearbeitete oder gelöschte bleiben unangetastet
-    START_CARDS.forEach(c=>{ if(deleted.has(c.id)||edited.has(c.id)) return; if(idx.has(c.id)) cards[idx.get(c.id)]=c; else cards.push(c); });
+    const today=todayISO();
+    // Neuerscheinungen erst ab ihrem Release-Tag (wöchentliche Karten)
+    cards=cards.filter(c=>!c.release || c.release<=today);
+    START_CARDS.forEach(c=>{ if(c.release && c.release>today) return; if(deleted.has(c.id)||edited.has(c.id)) return; if(idx.has(c.id)) cards[idx.get(c.id)]=c; else cards.push(c); });
     this.cards = GlobalCards.overlay(cards.map(normalizeCard)); this.save();   // Änderungen des Admins vom Server
   },
   save(){ return Store.set("cards", this.cards); },
@@ -2570,7 +2856,7 @@ const UI = {
     const ownedCount=DB.cards.filter(c=>Player.has(c.id)).length;
     $("colCount").textContent=`${ownedCount}/${DB.cards.length}`;
     $("colList").innerHTML = list.map(c=>{const n=Player.has(c.id), g=Prog.collected(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id), up=n&&Prog.canBoost(c.id);
-      return `<div class="ownwrap">${n?`<span class="cnt">×${n}</span>`:""}${up?`<span class="upg" title="Kann trainiert werden">⬆</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
+      return `<div class="ownwrap">${isNewCard(c)?`<span class="newbadge">NEU</span>`:""}${n?`<span class="cnt">×${n}</span>`:""}${up?`<span class="upg" title="Kann trainiert werden">⬆</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
         ${n?`<div class="lvbar" title="Kartenstufe"><i style="width:${nx?Math.round(g/nx*100):100}%"></i><span>Lv${lv}${nx?` · ${g}/${nx}`:" MAX"}</span></div>`:""}</div>`}).join("") || `<p class="muted">Keine Karten gefunden.</p>`;
     $("colList").querySelectorAll(".card").forEach(el=>el.onclick=()=>this.cardInfo(el.dataset.id));
   },
@@ -2631,7 +2917,8 @@ const Admin = {
     $("admTabs").querySelectorAll("span").forEach(s=>s.classList.toggle("on",s.dataset.t===t));
     $("admCards").style.display=t==="cards"?"":"none"; $("admStory").style.display=t==="story"?"":"none"; $("admPlayer").style.display=t==="player"?"":"none";
     $("admNew").style.display=t==="cards"?"":"none";
-    if(t==="cards") this.renderList(); if(t==="story") StoryEd.renderList(); if(t==="player") this.renderPlayer();
+    $("admAnalysis").style.display=t==="analysis"?"":"none";
+    if(t==="cards") this.renderList(); if(t==="story") StoryEd.renderList(); if(t==="player") this.renderPlayer(); if(t==="analysis") Analysis.load();
   },
   renderList(){
     const q=$("admSearch").value.toLowerCase(), t=$("admType").value;
@@ -2947,18 +3234,21 @@ const Story = {
     // neue Standard-Kampagnen ergänzen, alte Spielstände bekommen Seite/Schwierigkeit
     Object.keys(STORY_DEFAULT).forEach(k=>{ const D=STORY_DEFAULT[k];
       if(!this.data[k]) this.data[k]=clone(D);
-      else ["side","diff","unlock"].forEach(x=>{ if(this.data[k][x]==null && D[x]!=null) this.data[k][x]=D[x]; }); });
+      else ["side","diff","unlock","release"].forEach(x=>{ if(this.data[k][x]==null && D[x]!=null) this.data[k][x]=D[x]; }); });
   },
   save(){ Store.set("story",this.data); },
-  keys(){ return Object.keys(this.data); },
+  keys(){ const t=todayISO(); return Object.keys(this.data).filter(k=>!this.data[k].release || this.data[k].release<=t); },
+  upcoming(){ const t=todayISO(); return Object.keys(this.data).filter(k=>this.data[k].release && this.data[k].release>t).sort((a,b)=>this.data[a].release<this.data[b].release?-1:1)[0]; },
   side(k){ return (this.data[k]&&this.data[k].side) || (FACTIONS[k]?k:"polizei"); },
   done(k){ const C=this.data[k]; return !!C && (Player.progress[k]||0)>=C.chapters.length && C.chapters.length>0; },
   locked(k){ const u=this.data[k]&&this.data[k].unlock; return !!u && this.data[u] && !this.done(u); },
   stars(k){ return "★".repeat((this.data[k]&&this.data[k].diff)||1); },
   render(){
-    if(!this.data[this.camp]) this.camp="polizei";
+    if(!this.data[this.camp] || !this.keys().includes(this.camp)) this.camp="polizei";
     $("storyTabs").innerHTML=this.keys().map(k=>`<span data-f="${k}" class="${k===this.camp?"on":""} ${this.locked(k)?"lk":""}">${FACTIONS[this.side(k)][1]} ${esc(this.data[k].title)} <small>${this.stars(k)}${this.locked(k)?" 🔒":this.done(k)?" ✅":""}</small></span>`).join("");
-    $("storyTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.camp=s.dataset.f;this.render()});
+    const up=this.upcoming(); if(up){ const d=new Date(this.data[up].release+"T00:00:00");
+      $("storyTabs").innerHTML+=`<span class="lk soon" title="erscheint bald">🔜 Neue Mission ab ${d.toLocaleDateString("de-DE",{day:"numeric",month:"long"})}</span>`; }
+    $("storyTabs").querySelectorAll("span[data-f]").forEach(s=>s.onclick=()=>{this.camp=s.dataset.f;this.render()});
     const k=this.camp, C=this.data[k], prog=Player.progress[k]||0, lock=this.locked(k);
     const diff=["","Normal","Schwer","Sehr schwer"][C.diff||1]||"Extrem";
     $("storyDesc").innerHTML=`<b>Schwierigkeit: ${this.stars(k)} ${diff}</b><br>${esc(C.desc)}`+
@@ -3060,7 +3350,7 @@ const Duel = {
     this.AI.handSize=HAND; if(on) Prog.apply(this.AI, on.guestSkills); else if(opts.oppSkills) Prog.apply(this.AI, opts.oppSkills);
     // jede Kartenkopie bekommt einen eindeutigen Schlüssel (für die Online-Übertragung)
     [[this.P,"h"],[this.AI,"g"]].forEach(([pl,pre])=>[...pl.deck,...pl.extra].forEach((c,i)=>c._k=pre+i));
-    this.gid=(this.gid||0)+1; this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
+    CardStats.begin(this); this._killer=null; this.gid=(this.gid||0)+1; this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
     $("reveal").classList.remove("show"); $("fx").innerHTML="";
     for(let i=0;i<Math.max(this.P.handSize||HAND,this.AI.handSize||HAND);i++){ if(i<(this.P.handSize||HAND)) this.draw(this.P,true); if(i<(this.AI.handSize||HAND)) this.draw(this.AI,true); }
     $("oppWho").textContent=`${opts.oppEmoji||FACTIONS[other][1]} ${this.AI.name}`;
@@ -3149,6 +3439,7 @@ const Duel = {
     if(this.host) Net.send({t:"end", w: p===this.P?"h":"g"});
     if(this.liveMid){ this._loser = p===this.P?"g":"h"; Spectate._lastPub=0; Spectate.publish(); setTimeout(()=>{ this.liveMid=null; },3000); }
     const won = p===(this.realP||this.P);
+    CardStats.finish(this, won);
     setTimeout(()=>Sound.play(won?"win":"lose"),300);
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
       setTimeout(async()=>{
@@ -3173,6 +3464,7 @@ const Duel = {
       if(c.effect==="growth"){ m.atk+=c.val; this.log(`${c.name} sammelt Erfahrung: +${c.val} ATK`); }
       if(c.effect==="turn_heal") this.heal(p,c.val);
       if(c.effect==="turn_burn") this.damage(o,c.val,c.name);
+      if(c.effect==="hand_burn" && o.hand.length) this.damage(o,c.val*o.hand.length,c.name);
       if(c.effect==="cel_sun"){ this.heal(p,300); p.mz.forEach(x=>x&&(x.atk+=100)); this.log(`${c.name}: Gute Moral auf der Wache – alle eigenen Charaktere +100 ATK`); }
       if(c.effect==="cel_meteor"){ const t=o.mz.map((x,i)=>x&&!this.isImmune(x)?i:-1).filter(i=>i>=0); if(t.length){ const z=t[Math.floor(Math.random()*t.length)], x=o.mz[z];
         x.atk=Math.max(0,x.atk-400); this.log(`Sprengfalle! ${x.card.name} −400 ATK`); if(x.atk<=0) this.destroy(o,z); } } });
@@ -3215,7 +3507,8 @@ const Duel = {
     return bi;
   },
   maxAttacks(m){ return m.card.effect==="double_attack"&&!m.faceDown?2:1; },
-  canAttack(m){ return m && m.pos==="atk" && !m.attacked && !(m.lockedUntil>=this.turn) && this.canBattle(); },
+  /* Regel: Wer in diesem Zug aufs Feld kommt (ausgespielt, beschworen, Fusion, zurückgeholt), greift erst ab dem nächsten eigenen Zug an */
+  canAttack(m){ return m && m.pos==="atk" && !m.attacked && !(m.lockedUntil>=this.turn) && m.summonedTurn!==this.turn && this.canBattle(); },
   /* Gültige Angriffsziele: Deckung zwingt den Angriff auf sich */
   validTargets(o){
     const guards=o.mz.map((m,i)=>m&&!m.faceDown&&(m.card.effect==="guard"||m.card.effect==="cel_gravity")?i:-1).filter(i=>i>=0);
@@ -3225,13 +3518,15 @@ const Duel = {
     return nb.length?nb:all;
   },
   /* Kampfschaden (Schutzengel halbiert) */
-  battleDamage(p,n,src){ if(p.mz.some(m=>m&&!m.faceDown&&m.card.effect==="cel_guardian")){ n=Math.ceil(n/2); this.log("Erste Hilfe: Kampfschaden halbiert"); } this.damage(p,n,src); },
+  battleDamage(p,n,src){ if(p.mz.some(m=>m&&!m.faceDown&&m.card.effect==="cel_guardian")){ n=Math.ceil(n/2); this.log("Erste Hilfe: Kampfschaden halbiert"); }
+    const before=p.lp; this.damage(p,n,src);
+    const k=this._lifelink; if(k && k.p!==p && before>p.lp){ this.heal(k.p,before-p.lp); this.log(`Vermögensabschöpfung: +${before-p.lp} LP`); } },
   canDirect(p, a){ const o=this.opp(p); return !this.monsterCount(o) || (a && a.card.effect==="direct" && !a.faceDown); },
 
   /* ---------- Feld-Hilfen ---------- */
   place(p, c, pos){
     const z=this.freeZone(p.mz); if(z<0) return -1;
-    p.mz[z]={card:c,pos,faceDown:pos==="def",atk:c.atk,attacks:0,attacked:false,changed:true,lockedUntil:0};
+    p.mz[z]={card:c,pos,faceDown:pos==="def",atk:c.atk,attacks:0,attacked:false,changed:true,lockedUntil:0,summonedTurn:this.turn};
     return z;
   },
   takeControl(from, z, to){
@@ -3248,6 +3543,8 @@ const Duel = {
   destroy(p,z,cause="effect"){
     const m=p.mz[z]; if(!m) return;
     if(cause==="battle" && m.card.effect==="cel_starshield" && !m.faceDown){ this.log(`${m.card.name}: Ballistischer Schild – bleibt im Einsatz!`); return; }
+    if(m.vest){ m.vest=false; this.log(`${m.card.name}: Die Schutzweste hat gehalten!`); this.bn("SCHUTZWESTE!"); return; }
+    CardStats.kill(this, p, this._killer);
     this.fxPoof(p,z);
     p.mz[z]=null; if(p===this.AI) Quests.track("destroy");
     if(m.card.effect==="cel_orbit" && !m.card._orbitUsed){ m.card._orbitUsed=true; (p.orbitBack=p.orbitBack||[]).push(m.card); this.log(`${m.card.name} wird abgeführt … plant aber schon den Ausbruch!`); return; }
@@ -3255,11 +3552,12 @@ const Duel = {
     p.grave.push(m.card); this.log(`${m.card.name} scheidet aus!`);
     if(m.card.effect==="revenge") this.damage(this.opp(p), m.card.val, m.card.name);
     if(m.card.effect==="last_draw") this.draw(p);
+    if(m.card.effect==="death_discard") this.discard(this.opp(p),1);
   },
 
   /* ---------- Effekte von Charakteren beim Ausspielen ---------- */
   monsterEffect(p,c){
-    const v=c.val, o=this.opp(p);
+    const v=c.val, o=this.opp(p); this._killer=c;
     switch(c.effect){
       case "summon_burn": this.damage(o,v,c.name); break;
       case "summon_heal": this.heal(p,v); break;
@@ -3275,6 +3573,10 @@ const Duel = {
       case "summon_flip_all": o.mz.forEach(m=>{ if(m&&m.faceDown){ m.faceDown=false; } }); this.log("Alle verdeckten Charaktere werden aufgedeckt!"); break;
       case "summon_lock": { const z=this.target(o,"strong"); if(z>=0){ o.mz[z].lockedUntil=this.turn+1; this.log(`${o.mz[z].card.name} wird festgehalten!`); } break; }
       case "summon_steal": { const z=this.target(o,"weak"); if(z>=0 && (!v||o.mz[z].atk<=v)) this.takeControl(o,z,p); else this.log("Niemand lässt sich überreden …"); break; }
+      case "summon_vest": { const ms=p.mz.filter(Boolean).sort((a,b)=>b.atk-a.atk); if(ms[0]){ ms[0].vest=true; this.log(`${ms[0].card.name} trägt jetzt eine Schutzweste`); } break; }
+      case "summon_copy_atk": { const me=p.mz.find(m=>m&&m.card===c), top=o.mz.filter(m=>m&&!m.faceDown).sort((a,b)=>b.atk-a.atk)[0];
+        if(me&&top&&top.atk>me.atk){ me.atk=top.atk; this.log(`${c.name} analysiert ${top.card.name}: ATK ${top.atk}`); } break; }
+      case "summon_team_draw": { const n=Math.min(v||2, p.mz.filter(m=>m&&m.card!==c&&m.card.attr===c.attr).length); for(let i=0;i<n;i++) this.draw(p); if(n) this.log(`Teamgeist: ${this.me(p,"du ziehst","zieht")} ${n} Karte(n)`); break; }
       // Celestial
       case "cel_supernova": { const me=p.mz.find(m=>m&&m.card===c), a=me?me.atk:c.atk; this.bn("GROSSFAHNDUNG!");
         o.mz.forEach((m,i)=>{ if(m&&!this.isImmune(m)&&m.atk<a) this.destroy(o,i); }); break; }
@@ -3301,6 +3603,7 @@ const Duel = {
     if(this.freeZone(p.mz)<0) return false;
     p.hand.splice(handIdx,1); p.summoned=true; this.place(p,c,pos);
     if(p===this.P){ Quests.track("summon"); if(c.rarity==="CE") Quests.track("celestial"); }
+    CardStats.play(this,p,c);
     Sound.play(c.rarity==="CE"&&pos==="atk"?"celestial":pos==="atk"?"summon":"set");
     if(pos==="atk"){ this.log(`${this.me(p,"Du schickst","schickt")} ${c.name} ins Feld!`);
       this.triggerSummon(p,c,`${p.name} schickt einen Charakter ins Feld!`, tributes.length?`Dafür räumen ${tributes.length} Charakter(e) das Feld.`:""); }
@@ -3385,6 +3688,10 @@ const Duel = {
       case "extra_summon": return p.summoned;
       case "reset_atk": return [...p.mz,...o.mz].some(m=>m&&m.atk!==m.card.atk);
       case "cel_heaven_raid": return o.mz.some(m=>m&&!this.isImmune(m));
+      case "discard_best": return o.hand.length>0;
+      case "extra_attack": return p.mz.some(m=>m&&m.attacked&&m.pos==="atk"&&!(m.lockedUntil>=this.turn)) && this.canBattle();
+      case "recover_spell": return p.grave.some(x=>x.type==="spell"&&x!==c&&x.effect!=="recover_spell");
+      case "percent_burn": return o.lp>0;
       case "cel_starmap": return p.hand.length-1<6 && p.deck.length>0;
       case "cel_event_horizon": case "cel_shooting_star": return o.hand.length>0;
       case "cel_lp_swap": return p.lp<o.lp;
@@ -3421,6 +3728,7 @@ const Duel = {
     }
     p.hand.splice(p.hand.indexOf(c),1); p.grave.push(c);
     if(p===this.P){ Quests.track("spell"); if(c.rarity==="CE") Quests.track("celestial"); }
+    this._killer=c; CardStats.play(this,p,c);
     await this.announce(p,c,`${p.name} setzt ${c.law==="Trick"?"einen Trick":"eine "+c.law+"-Maßnahme"} ein!`,this.spellPreview(p,c,targetZ));
     if(this.over) return false;
     this.bn(c.law==="Trick"?c.name+"!":c.law+"!"); this.fxStamp(c); Sound.play(c.rarity==="CE"?"celestial":c.law==="Trick"?"trick":"stamp");
@@ -3456,6 +3764,11 @@ const Duel = {
       case "revive_field": { const ms=p.grave.filter(x=>x.type==="monster").sort((a,b)=>b.atk-a.atk)[0]; p.grave.splice(p.grave.indexOf(ms),1); this.place(p,ms,"atk"); this.log(`${ms.name} ist zurück im Einsatz!`); break; }
       case "scapegoat": { let wi=-1,wv=1e9; p.mz.forEach((m,i)=>{ if(m&&m.atk<wv){wv=m.atk;wi=i} }); this.destroy(p,wi); this.damage(o,wv,c.name); break; }
       case "fusion": this.doFusion(p,fusionOpt); break;
+      case "discard_best": { const val=x=>x.type==="monster"||x.type==="fusion"?x.atk+x.level*100:RANK[x.rarity]*600+800;
+        const i=o.hand.reduce((bi,x,j,a)=>val(x)>val(a[bi])?j:bi,0); const x=o.hand.splice(i,1)[0]; o.grave.push(x); this.log(`Durchsuchung: ${x.name} wird sichergestellt!`); break; }
+      case "extra_attack": { const m=p.mz.filter(m=>m&&m.attacked&&m.pos==="atk").sort((a,b)=>b.atk-a.atk)[0]; if(m){ m.attacked=false; m.attacks=Math.max(0,m.attacks-1); this.log(`Überstunden: ${m.card.name} darf noch einmal angreifen!`); } break; }
+      case "recover_spell": { for(let i=p.grave.length-1;i>=0;i--){ const x=p.grave[i]; if(x.type==="spell"&&x!==c&&x.effect!=="recover_spell"){ p.grave.splice(i,1); p.hand.push(x); this.log(`Beweismittel gesichert: ${x.name} zurück auf die Hand`); break; } } break; }
+      case "percent_burn": this.damage(o,Math.max(100,Math.round(o.lp*(v||25)/100/50)*50),c.name); break;
       // Celestial
       case "cel_heaven_raid": o.mz.forEach((m,i)=>{ if(m&&!this.isImmune(m)) this.destroy(o,i); }); p.mz.forEach(m=>m&&(m.lockedUntil=this.turn)); this.log("Großrazzia! Deine Charaktere greifen in diesem Zug nicht mehr an."); break;
       case "cel_starmap": { let k=0; while(p.hand.length<6 && p.deck.length){ this.draw(p); k++; } this.log(`${this.me(p,"Du ziehst","zieht")} ${k} Karte(n)`); break; }
@@ -3484,7 +3797,7 @@ const Duel = {
       ti = r>=0 && r<traps.length ? traps[r] : -1;
     } else ti=AI.pickTrap(traps, attacker.mz[fromZ], d);
     if(ti<0) return false;
-    const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t); Sound.play("alarm");
+    const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t); Sound.play("alarm"); this._killer=t; CardStats.play(this,d,t);
     const a=attacker.mz[fromZ];
     await this.announce(d,t,`${d.name} reagiert auf deinen Angriff!`,`Gegen: ${a?a.card.name:"deinen Angreifer"}`);
     if(this.over) return true;
@@ -3503,6 +3816,11 @@ const Duel = {
       case "trap_steal": if(imm||!this.takeControl(attacker,fromZ,d)) { if(!imm) this.destroy(attacker,fromZ); } break;
       case "trap_lock": attacker.mz.forEach(m=>m&&(m.lockedUntil=this.turn+2)); this.log("Angriff abgewehrt – alle Angreifer festgehalten!"); break;
       case "trap_draw": this.log("Angriff abgewehrt!"); for(let i=0;i<(t.val||1);i++) this.draw(d); break;
+      case "trap_ambush": { const ds=d.mz.map((m,i)=>m?{m,i}:null).filter(Boolean).sort((x,y)=>y.m.atk-x.m.atk)[0];
+        if(!a||!ds){ this.log("Hinterhalt ins Leere – Angriff abgewehrt"); break; }
+        this.log(`Hinterhalt! ${ds.m.card.name} (${ds.m.atk}) stellt ${a.card.name} (${a.atk})`);
+        if(ds.m.atk>a.atk && !imm){ this._killer=ds.m.card; this.destroy(attacker,fromZ); } else if(ds.m.atk<a.atk){ this._killer=a.card; this.destroy(d,ds.i); } else { if(!imm) this.destroy(attacker,fromZ); this.destroy(d,ds.i); } break; }
+      case "trap_freeze": this.log("Fahrzeugsperre! Angriff abgewehrt"); if(a&&!imm){ a.atk=Math.max(0,a.atk-(t.val||500)); a.lockedUntil=this.turn+3; } break;
       case "cel_moon_mirror": if(a&&!imm){ const atk=a.atk; this.destroy(attacker,fromZ); this.damage(attacker,atk,t.name); } else this.log("Immun – Angriff nur abgewehrt!"); break;
       case "cel_wormhole": if(a&&!imm){ attacker.mz[fromZ]=null; this.fxPoof(attacker,fromZ); if(a.card.type==="fusion") attacker.extra.push(a.card); else attacker.deck.splice(Math.floor(Math.random()*(attacker.deck.length+1)),0,a.card);
           this.log(`${a.card.name} verschwindet im Fluchttunnel!`); } else this.log("Immun – Angriff nur abgewehrt!"); this.draw(d); break;
@@ -3522,13 +3840,14 @@ const Duel = {
       if(!p.mz[fromZ]||p.mz[fromZ]!==a) return;
       a.attacks++; a.attacked = a.attacks>=this.maxAttacks(a);
       await this.fxAttack(p,fromZ,toZ);
+      this._lifelink = a.card.effect==="lifelink" ? {p} : null; this._killer=a.card;
       if(toZ==null){ if(p===this.P) Quests.track("direct"); this.battleDamage(o,a.atk,a.card.name); return; }
       const d=o.mz[toZ]; if(!d) return;
       if(d.faceDown){ d.faceDown=false; this.log(`${d.card.name} wird aufgedeckt!`); this.render(); await sleep(600); }
       let won=false;
       if(d.pos==="atk"){
         if(a.atk>d.atk){ this.destroy(o,toZ,"battle"); this.battleDamage(o,a.atk-d.atk,a.card.name); won=o.mz[toZ]!==d; }
-        else if(a.atk<d.atk){ this.destroy(p,fromZ,"battle"); this.battleDamage(p,d.atk-a.atk,d.card.name); }
+        else if(a.atk<d.atk){ this._killer=d.card; this._lifelink = d.card.effect==="lifelink" ? {p:o} : null; this.destroy(p,fromZ,"battle"); this.battleDamage(p,d.atk-a.atk,d.card.name); }
         else { this.destroy(o,toZ,"battle"); this.destroy(p,fromZ,"battle"); this.log("Beide scheiden aus!"); }
       } else {
         const df=d.card.def;
@@ -3653,6 +3972,7 @@ const Duel = {
     if(this.canAttack(m)) acts.push([`💥 Angreifen${m.card.effect==="double_attack"?` (${2-m.attacks}×)`:""}`,()=>{this.mode={type:"attack",from:z};this.log(this.canDirect(this.P,m)&&this.monsterCount(this.AI)?"Ziel wählen – oder Direktangriff!":"Wähle ein Ziel");this.render()},"red"]);
     if(!m.changed && !m.attacks) acts.push([m.pos==="atk"?"🛡️ In Verteidigung":"⚔️ In Angriff",()=>this.changePos(this.P,z),"blue"]);
     if(m.lockedUntil>=this.turn) acts.push(["⛓️ Festgehalten – kann nicht angreifen",null,"ghost"]);
+    else if(m.summonedTurn===this.turn && m.pos==="atk") acts.push(["💤 Gerade eingesetzt – greift ab der nächsten Runde an",null,"ghost"]);
     else if(!this.canBattle() && m.pos==="atk") acts.push(["Im ersten Zug kein Angriff",null,"ghost"]);
     UI.modal(m.card,acts.filter(a=>a[1]).length?acts.filter(a=>a[1]):acts,m);
   },
@@ -3684,7 +4004,7 @@ const Duel = {
       if(m){ const pc=(m.pos==="def"?"def":"")+(m.attacked?" used":"");
         inner = m.faceDown ? `<div class="cardback ${pc}"></div>` : cardHTML(m.card,pc,"",m);
         const badges=[]; if(!m.faceDown){ if(m.card.effect==="guard") badges.push("🛡️"); if(m.card.effect==="immune") badges.push("✨"); if(m.card.effect==="double_attack") badges.push("⚔️²"); if(m.card.effect==="direct") badges.push("🎯"); }
-        if(m.lockedUntil>=this.turn) badges.push("⛓️");
+        if(m.lockedUntil>=this.turn) badges.push("⛓️"); else if(m.summonedTurn===this.turn) badges.push("💤");
         if(badges.length) inner+=`<span class="zbadge">${badges.join("")}</span>`; }
       return `<div class="${cls}" data-z="${i}">${inner}</div>`;
     }).join("");
@@ -3706,6 +4026,7 @@ const Duel = {
     this.renderST(A,$("oppST"),false); this.renderMZ(A,$("oppMZ"),false);
     this.renderMZ(P,$("myMZ"),true); this.renderST(P,$("myST"),true);
     const my=this.myTurn();
+    $("myHand").style.setProperty("--n",Math.max(1,P.hand.length)); $("oppHand")&&$("oppHand").style.setProperty("--n",Math.max(1,this.AI.hand.length));
     $("myHand").innerHTML=P.hand.map((c,i)=>{
       let playable=false;
       if(my){ if(c.type==="monster") playable=!P.summoned&&this.tributesNeeded(c)<=this.monsterCount(P)&&(this.tributesNeeded(c)>0||this.freeZone(P.mz)>=0);
@@ -3729,8 +4050,8 @@ const AI = {
     const D=Duel;
     if(!a) return traps[0];
     // starke Angreifer lieber ausschalten/übernehmen, schwache nur abwehren
-    const prio = a.atk>=2000 ? ["cel_moon_mirror","cel_wormhole","trap_steal","mirror","trap_destroy_all_atk","trap_bounce","trap_lock","counter_burn","trap_weaken","trap_weaken_all","negate","trap_heal","trap_draw"]
-                             : ["trap_destroy_all_atk","cel_wormhole","cel_moon_mirror","counter_burn","trap_draw","trap_heal","trap_weaken","negate","trap_lock","trap_weaken_all","mirror","trap_bounce","trap_steal"];
+    const prio = a.atk>=2000 ? ["cel_moon_mirror","cel_wormhole","trap_ambush","trap_freeze","trap_steal","mirror","trap_destroy_all_atk","trap_bounce","trap_lock","counter_burn","trap_weaken","trap_weaken_all","negate","trap_heal","trap_draw"]
+                             : ["trap_destroy_all_atk","cel_wormhole","cel_moon_mirror","trap_freeze","trap_ambush","counter_burn","trap_draw","trap_heal","trap_weaken","negate","trap_lock","trap_weaken_all","mirror","trap_bounce","trap_steal"];
     traps.sort((x,y)=>prio.indexOf(me.st[x].card.effect)-prio.indexOf(me.st[y].card.effect));
     return traps[0];
   },
@@ -3751,6 +4072,10 @@ const AI = {
       case "boost": return mc>=1;
       case "extra_summon": return false;   // wird nach dem Ausspielen gesondert genutzt
       case "cel_heaven_raid": return oc>=1;
+      case "discard_best": return op.hand.length>=2;
+      case "extra_attack": return me.mz.some(m=>m&&m.attacked&&m.atk>1500);
+      case "recover_spell": return true;
+      case "percent_burn": return op.lp>=2000;
       case "cel_starmap": return me.hand.length<=4;
       case "cel_event_horizon": return op.hand.length>=3;
       case "cel_shooting_star": return true;
@@ -4649,7 +4974,7 @@ Object.assign(Duel, {
       deck: own? p.deck.map(K).sort() : p.deck.length,
       extra: own? p.extra.map(K) : p.extra.length,
       grave: p.grave.map(K),
-      mz: p.mz.map(m=>m&&{k:(m.faceDown&&!own)?null:K(m.card), pos:m.pos, faceDown:m.faceDown, atk:m.atk, attacks:m.attacks, attacked:m.attacked, changed:m.changed, lockedUntil:m.lockedUntil}),
+      mz: p.mz.map(m=>m&&{k:(m.faceDown&&!own)?null:K(m.card), pos:m.pos, faceDown:m.faceDown, atk:m.atk, attacks:m.attacks, attacked:m.attacked, changed:m.changed, lockedUntil:m.lockedUntil, summonedTurn:m.summonedTurn}),
       st: p.st.map(x=>x&&{k: own?K(x.card):null})});
     return {turn:this.turn, active:this.active===this.AI?"me":"opp", ready:this.ready, over:this.over, me:pl(this.AI,true), opp:pl(this.P,false)};
   },
@@ -4958,6 +5283,20 @@ const Account = {
 $("colType").innerHTML=filterOptions(); $("admType").innerHTML=filterOptions();
 $("admTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>Admin.tab(s.dataset.t));
 DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins(); Account.load(); Prog.data(); UI.badges();
+/* Neuerscheinungen ankündigen (wöchentliche Karten, monatliche Story) */
+setTimeout(()=>{ try{
+  const seen=Store.get("seenRelease","2026-11-22"), today=todayISO();
+  const fresh=DB.cards.filter(c=>c.release && c.release>seen && c.release<=today);
+  const story=Story.keys().filter(k=>Story.data[k].release && Story.data[k].release>seen && Story.data[k].release<=today);
+  if(!fresh.length && !story.length) return;
+  Store.set("seenRelease",today);
+  const btns=story.map(k=>[`📖 Neue Story-Mission: „${Story.data[k].title}“ ${Story.stars(k)}`,()=>{ UI.closeModal(); Story.camp=k; UI.show("story"); },"red"]);
+  if(fresh.length) btns.push(["🛒 Zum Shop",()=>{ UI.closeModal(); UI.show("shop"); },"green"]);
+  UI.modal(null,btns,null,null,"Super!");
+  if(fresh.length) $("modalCard").innerHTML=`<div class="panel newlist"><b>🆕 ${fresh.length} neue Karten – ab sofort in allen Boostern</b>
+    <div class="nl">${fresh.map(c=>`<span>${FACTIONS[c.faction][1]} ${esc((c.art&&c.art.emoji)||"")} ${esc(c.name)}</span>`).join("")}</div></div>`;
+  banner("NEU!");
+}catch(e){ console.error(e); } },1800);
 // Konto: beim ersten Start anmelden/registrieren anbieten, sonst Spielstand abgleichen
 if(Account.enabled()){
   if(Account.loggedIn()) Account.syncOnStart();

@@ -377,7 +377,8 @@
   <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Admin</h2>
     <button class="small green" id="admNew" onclick="Admin.newCard()">＋ Karte</button></div>
   <div id="admGlobal" class="panel admglobal"></div>
-  <div class="tabs" id="admTabs"><span data-t="cards" class="on">Karten</span><span data-t="story">Story</span><span data-t="player">Spieler & Daten</span></div>
+  <div class="tabs" id="admTabs"><span data-t="cards" class="on">Karten</span><span data-t="story">Story</span><span data-t="player">Spieler & Daten</span><span data-t="analysis">📊 Analyse</span></div>
+  <div id="admAnalysis" style="display:none"></div>
   <div id="admCards">
     <div class="filterbar"><input id="admSearch" placeholder="Karte suchen…" oninput="Admin.renderList()">
       <select id="admType" onchange="Admin.renderList()"></select></div>

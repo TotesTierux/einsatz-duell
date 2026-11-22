@@ -273,6 +273,70 @@ Straßengang|bande|5|2100|1600|N|pierce|0|👥|bande+any
 """
 
 # v0.4: neue Effekte thematisch auf bestehende Karten verteilt (Name -> (Effekt, Wert))
+# ---------- Wöchentliche Neuerscheinungen (Release jeweils montags) ----------
+WEEKLY = [
+ ("2026-11-23", """
+p601|Streifenführerin Kowalczyk|streife|4|1500|1500|R|summon_vest|0|🦺
+p602|Profilerin Dr. Sandmann|kripo|5|1700|1600|R|summon_copy_atk|0|🧠
+p603|Bereitschaftsführer Yilmaz|bepo|3|1200|1500|N|summon_team_draw|2|📯
+""", """
+p604|Durchsuchung der Wohnung|spell|StPO|§ 102 StPO|R|discard_best|0|🔦
+p605|Fahrzeugsperre|trap|SOG|SOG|R|trap_freeze|500|🚧
+""", """
+v601|Steuerberater Schlitzohr|betrug|4|1300|1400|R|lifelink|0|🧾
+v602|Kronzeuge Kalle|hehler|3|1000|1200|N|death_discard|0|🗣️
+v603|Bandenspitzel Ratte|bande|3|1100|900|N|summon_team_draw|2|🐀
+""", """
+v604|Hinterhalt im Hinterhof|trap|Trick||R|trap_ambush|0|🌳
+v605|Steuertrick|spell|Trick||SR|percent_burn|25|🧮
+"""),
+ ("2026-11-30", """
+p606|Bußgeldstelle Frau Grimm|verkehr|4|1200|1800|R|hand_burn|100|📠
+p607|Hundeführer Bauer mit Kira|hunde|4|1600|1200|N|summon_team_draw|2|🐕‍🦺
+p608|Autobahnpolizei-Kommandant Hagen|verkehr|6|2400|1900|SR|lifelink|0|🛣️
+""", """
+p609|Beweismittel sichern|spell|StPO|§ 94 StPO|N|recover_spell|0|🧪
+p610|Steuerfahndung|spell|StPO|§ 208 AO|SR|percent_burn|25|💶
+""", """
+v606|Raser Kevin|raub|4|1500|900|N|pierce|0|🚗
+v607|Unfallflüchtiger Udo|dieb|3|1100|1000|N|summon_vest|0|💨
+v608|Schrottplatz-Hehler Jupp|hehler|5|1700|1700|R|summon_copy_atk|0|🔩
+""", """
+v609|Spurenbeseitigung|spell|Trick||N|recover_spell|0|🧽
+v610|Falsche Umleitung|trap|Trick||R|trap_freeze|500|↪️
+"""),
+ ("2026-12-07", """
+p611|Weihnachtsmarkt-Streife Holger|streife|3|1300|1100|N|summon_heal|400|🎄
+p612|Taschendieb-Fahnderin Ines|kripo|4|1600|1300|R|death_discard|0|🧤
+p613|Diensthund Krümel|hunde|2|1000|700|N|summon_vest|0|🐶
+""", """
+p614|Glühwein-Kontrolle|spell|SOG|SOG|N|discard_best|0|🍷
+p615|Zugriff am Glühweinstand|trap|SOG|SOG|R|trap_ambush|0|🎅
+""", """
+v611|Falscher Weihnachtsmann|betrug|4|1400|1300|R|hand_burn|100|🤶
+v612|Taschendiebin Elfie|dieb|2|900|600|N|summon_discard|1|🧝
+v613|Glühwein-Dealer Gerd|drogen|3|1100|1000|N|lifelink|0|🥃
+""", """
+v614|Geschenke-Klau|spell|Trick||R|discard_best|0|🎁
+v615|Schneeballschlacht|spell|Trick||N|extra_attack|0|❄️
+"""),
+ ("2026-12-14", """
+p616|Einsatzleiterin Brenner-Voss|bepo|6|2200|2400|SR|summon_team_draw|2|📋
+p617|Spurensicherin Lu|kripo|3|1100|1200|N|death_discard|0|🔬
+p618|Zivilfahnder Mertens|kripo|4|1700|1100|R|lifelink|0|🕶️
+""", """
+p619|Großlage-Funkspruch|spell|SOG|SOG|R|extra_attack|0|📡
+p620|Nagelgurt|trap|SOG|SOG|N|trap_freeze|400|📌
+""", """
+v616|Clan-Anwalt Dr. Brecht|betrug|6|2200|2200|SR|summon_vest|0|⚖️
+v617|Kurier auf dem E-Roller|drogen|2|1000|500|N|summon_team_draw|1|🛴
+v618|Inkasso-Ede|bande|5|1800|1600|R|hand_burn|100|💰
+""", """
+v619|Akten verschwinden lassen|spell|Trick||R|recover_spell|0|🗂️
+v620|Hinterhof-Falle|trap|Trick||N|trap_ambush|0|🏚️
+"""),
+]
+
 # Feinabstimmung nach der Balance-Simulation (überschreibt Werte einzelner Karten)
 BUFF_VER = 200
 BALANCE = {
@@ -381,6 +445,21 @@ def build():
       ("vc09","Identitätstausch",               "verbrecher","spell",  "Trick",    0, 0,    0,    "cel_lp_swap",       "🎭", ""),
       ("vc10","Geheimer Fluchttunnel",          "verbrecher","trap",   "Trick",    0, 0,    0,    "cel_wormhole",      "🚇", ""),
     ]
+    # ---------- Wöchentliche Neuerscheinungen: je 5 Karten pro Seite, erscheinen automatisch am Release-Tag ----------
+    # Charaktere: Name|Rolle|Stufe|ATK|DEF|Seltenheit|Effekt|Wert|Emoji   Maßnahmen: Name|Typ|Recht|Paragraf|Seltenheit|Effekt|Wert|Emoji
+    # (Verbrecher bis Stufe 5 erhalten automatisch +BUFF_VER ATK)
+    for rel, pol_c, pol_a, ver_c, ver_a in WEEKLY:
+        for fac,ctxt,atxt,pre in (("polizei",pol_c,pol_a,"p"),("verbrecher",ver_c,ver_a,"v")):
+            for r in rows(ctxt):
+                cid,name,role,lv,atk,df,rar,eff,val,emo=r
+                c1,c2=ROLE_COLORS[role]
+                cards.append(dict(id=cid,name=name,faction=fac,type="monster",attr=role,level=int(lv),atk=int(atk),def_=int(df),
+                    rarity=rar,effect=eff,val=int(val),starter=False,release=rel,art=dict(emoji=emo,c1=c1,c2=c2)))
+            for r in rows(atxt):
+                cid,name,typ,law,ref,rar,eff,val,emo=r
+                c1,c2=LAW_COLORS[law]
+                cards.append(dict(id=cid,name=name,faction=fac,type=typ,law=law,ref=ref,rarity=rar,effect=eff,val=int(val),
+                    starter=False,release=rel,art=dict(emoji=emo,c1=c1,c2=c2)))
     for cid,name,fac,typ,ar,lv,atk,df,eff,emo,ref in CEL:
         art=dict(emoji=emo,c1="#f5e9ff" if fac=="polizei" else "#ffe9f6",c2="#1b1446" if fac=="polizei" else "#2a0c33")
         if typ=="monster":

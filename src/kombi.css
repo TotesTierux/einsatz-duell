@@ -158,3 +158,17 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 .admglobal.ok{border-color:var(--green)}
 .admglobal.warn{border-color:var(--yellow)}
 .admglobal code{background:rgba(0,0,0,.3);padding:0 4px;border-radius:4px;word-break:break-all}
+.anrow{background:rgba(255,255,255,.07);border-radius:10px;padding:7px 9px;margin-bottom:6px;font-size:13px}
+.anrow button{margin-top:4px}
+.antab{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px}
+.antab th,.antab td{padding:4px 3px;border-bottom:1px solid rgba(255,255,255,.1);text-align:right}
+.antab th:first-child,.antab td:first-child{text-align:left}
+.antab td.hi{color:#ff7a7a;font-weight:700}.antab td.lo{color:#7ab8ff;font-weight:700}
+.newbadge{position:absolute;top:-6px;right:-6px;z-index:3;background:var(--red);color:#fff;border:2px solid var(--ink);border-radius:8px;font-size:11px;font-weight:900;padding:0 5px;transform:rotate(8deg)}
+/* Viele Handkarten: Karten rücken zusammen, damit alle sichtbar bleiben */
+.hand{--n:5}
+.hand .card,.hand .cardback{margin:0 min(-6px, calc(((100vw - 48px) / var(--n) - var(--w)) / 2))!important;position:relative}
+.hand .card:active,.hand .card.sel{z-index:5}
+.newlist{background:var(--paper);color:var(--ink);width:min(340px,90vw);margin:0 auto;font-size:13px}
+.newlist .nl{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-top:6px;max-height:42vh;overflow:auto}
+.newlist .nl span{line-height:1.25}

@@ -101,6 +101,19 @@ const EFFECTS = {
   trap_steal:    {types:["trap"], group:"Reaktion", label:"Angreifer übernehmen",           text:"Wenn der Gegner angreift: Übernimm den Angreifer.", val:false},
   trap_lock:     {types:["trap"], group:"Reaktion", label:"Abwehren + festhalten",          text:"Wenn der Gegner angreift: Angriff abwehren, gegnerische Charaktere können bis zu seinem nächsten Zug nicht angreifen.", val:false},
   trap_draw:     {types:["trap"], group:"Reaktion", label:"Abwehren + ziehen",              text:"Wenn der Gegner angreift: Angriff abwehren, ziehe {v} Karte(n).", val:true},
+  // ---------- Neue Effekte (Erweiterung 2) ----------
+  summon_vest:   {types:CH, group:"Beim Ausspielen", label:"Schutzweste",            text:"Beim Ausspielen: Dein stärkster Charakter übersteht das nächste Ausscheiden (einmalig).", val:false},
+  summon_copy_atk:{types:CH, group:"Beim Ausspielen", label:"Profiling",             text:"Beim Ausspielen: Übernimmt die ATK des stärksten gegnerischen Charakters, wenn sie höher ist.", val:false},
+  summon_team_draw:{types:CH, group:"Beim Ausspielen", label:"Teamgeist",            text:"Beim Ausspielen: Ziehe 1 Karte für jeden anderen eigenen Charakter derselben Art (max. {v}).", val:true},
+  lifelink:      {types:CH, group:"Im Kampf",        label:"Vermögensabschöpfung",   text:"Kampfschaden, den er dem Gegner zufügt, erhältst du als LP.", val:false},
+  hand_burn:     {types:CH, group:"Zugbeginn",       label:"Bußgeld",                text:"Zu Beginn jedes eigenen Zuges verliert der Gegner {v} LP pro Handkarte.", val:true},
+  death_discard: {types:CH, group:"Beim Ausscheiden",label:"Kronzeuge",              text:"Scheidet er aus, legt der Gegner 1 zufällige Handkarte ab.", val:false},
+  discard_best:  {types:["spell"], group:"Maßnahme", label:"Durchsuchung",           text:"Der Gegner legt seine stärkste Handkarte ab.", val:false},
+  extra_attack:  {types:["spell"], group:"Maßnahme", label:"Überstunden",            text:"Dein stärkster Charakter, der schon angegriffen hat, darf noch einmal angreifen.", val:false},
+  recover_spell: {types:["spell"], group:"Maßnahme", label:"Beweismittel sichern",   text:"Nimm die zuletzt abgelegte Maßnahme aus deinem Ablagestapel auf die Hand.", val:false},
+  percent_burn:  {types:["spell"], group:"Maßnahme", label:"Steuerprüfung",          text:"Der Gegner verliert {v} % seiner aktuellen LP.", val:true},
+  trap_ambush:   {types:["trap"],  group:"Reaktion", label:"Hinterhalt",             text:"Wenn der Gegner angreift: Dein stärkster Charakter stellt den Angreifer – wer weniger ATK hat, scheidet aus.", val:false},
+  trap_freeze:   {types:["trap"],  group:"Reaktion", label:"Fahrzeugsperre",         text:"Wenn der Gegner angreift: Angriff abwehren, der Angreifer verliert {v} ATK und greift 2 Züge nicht an.", val:true},
   // ---------- Celestial: einzigartige Effekte (nur auf Celestial-Karten) ----------
   cel_sun:          {types:CH, group:"Celestial", label:"✨ Gute Moral",       text:"Zugbeginn: Du erhältst 300 LP, alle eigenen Charaktere +100 ATK.", val:false},
   cel_supernova:    {types:CH, group:"Celestial", label:"✨ Großfahndung",         text:"Beim Ausspielen: Alle Gegner mit weniger ATK scheiden aus.", val:false},
@@ -309,6 +322,79 @@ Object.assign(STORY_DEFAULT, {
   ]},
 });
 
+/* Monatliche Story-Missionen: erscheinen automatisch am 1. des Monats (release) */
+Object.assign(STORY_DEFAULT, {
+  m2612: {side:"polizei", diff:2, release:"2026-12-01", title:"Operation Lametta",
+   desc:"Dezember-Mission: Auf dem Weihnachtsmarkt verschwinden Geldbörsen, Geschenke und sogar der Weihnachtsbaum. Hinter allem steckt eine Bande in roten Mänteln.", chapters:[
+    {id:"md1", title:"Glühwein und lange Finger", reward:450,
+     opp:{name:"Taschendiebin Elfie", emoji:"🧝", lp:5000, minLevel:2, maxLevel:6, maxRarity:"R", skills:{atk:1,lp:1}},
+     intro:"Weihnachtsmarkt-Streife Holger|🎄|Drei Geldbörsen in zehn Minuten. Und alle Opfer erinnern sich nur an … spitze Ohren.\nTaschendiebin Elfie|🧝|Frohe Weihnachten! Danke für die Spende!",
+     outro:"Taschendiebin Elfie|🧝|Ich arbeite nur für den Weihnachtsmann! Den falschen …\nWeihnachtsmarkt-Streife Holger|🎄|Ho-ho-hoffentlich finden wir ihn schnell."},
+    {id:"md2", title:"Der falsche Weihnachtsmann", reward:500,
+     opp:{name:"Falscher Weihnachtsmann", emoji:"🤶", lp:5500, minLevel:3, maxLevel:7, maxRarity:"SR", skills:{atk:1,lp:2}},
+     intro:"Falscher Weihnachtsmann|🤶|Warst du dieses Jahr auch brav? Dann gib mir dein Portemonnaie.\nTaschendieb-Fahnderin Ines|🧤|Der Bart ist aus Watte. Und die Geschenke sind aus fremden Taschen.",
+     outro:"Falscher Weihnachtsmann|🤶|Die Beute ist längst beim Glühwein-Dealer. Der verkauft sie unter dem Tresen.\nKK Mara|🕵️‍♀️|Ab zum Glühweinstand!"},
+    {id:"md3", title:"Hinter dem Tresen", reward:550,
+     opp:{name:"Glühwein-Dealer Gerd", emoji:"🥃", lp:6000, minLevel:3, maxLevel:8, maxRarity:"SR", skills:{atk:2,lp:2}},
+     intro:"Glühwein-Dealer Gerd|🥃|Einmal Glühwein mit Schuss? Oder lieber … mit Geschenk?\nDiensthund Krümel|🐶|Wuff! *schnüffelt am Tresen*",
+     outro:"Glühwein-Dealer Gerd|🥃|Der Chef sitzt im Lagerhaus am Hafen. Dort steht auch der geklaute Weihnachtsbaum.\nKHK Brandt|🕵️|Einen ganzen Baum? Die haben Nerven."},
+    {id:"md4", title:"Das Geschenkelager", reward:600,
+     opp:{name:"Hehlerin Rosi", emoji:"📦", lp:6500, minLevel:4, maxLevel:9, maxRarity:"SR", skills:{atk:2,lp:3,eff:1}},
+     intro:"Hehlerin Rosi|📦|Hier ist alles ordentlich eingepackt. Mit Schleife. Und ohne Kassenbon.\nEinsatzleiterin Brenner-Voss|📋|Lagerhalle umstellt. Zugriff!",
+     outro:"Hehlerin Rosi|📦|Der Grinch hat alles geplant! Er will Weihnachten für die ganze Stadt stehlen!\nPolizeipräsidentin Dr. Wolf|🎖️|Nicht in meiner Stadt."},
+    {id:"md5", title:"Finale: Der Grinch der Unterwelt", reward:900,
+     opp:{name:"Der Grinch der Unterwelt", emoji:"💚", lp:8000, minLevel:5, maxLevel:12, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Der Grinch der Unterwelt|💚|Lichterketten, Geschenke, Plätzchen – ich nehme ALLES!\nWeihnachtsmarkt-Streife Holger|🎄|Und wir nehmen dich mit. Festnahme!",
+     outro:"Der Grinch der Unterwelt|💚|Mein Herz … es wächst … drei Nummern …\nPolizeipräsidentin Dr. Wolf|🎖️|Operation Lametta erfolgreich. Frohe Weihnachten, alle zusammen!"},
+  ]},
+  m2701: {side:"verbrecher", diff:2, release:"2027-01-01", title:"Der Neujahrs-Coup",
+   desc:"Januar-Mission: In der Silvesternacht ist die ganze Stadt abgelenkt. Der perfekte Moment für den größten Coup des Jahres.", chapters:[
+    {id:"mj1", title:"Böller und Ablenkung", reward:450,
+     opp:{name:"Streifenpolizist Kai", emoji:"👮", lp:5000, minLevel:2, maxLevel:6, maxRarity:"R", skills:{atk:1,lp:1}},
+     intro:"Das Phantom|🦹‍♀️|Um Mitternacht schaut jeder in den Himmel. Nur wir schauen auf die Bank.\nStreifenpolizist Kai|👮|Moment mal – warum zünden Sie Raketen VOR der Bank?",
+     outro:"Das Phantom|🦹‍♀️|Ablenkung gelungen. Jetzt brauchen wir den Tresorplan."},
+    {id:"mj2", title:"Der Bauplan", reward:500,
+     opp:{name:"IT-Forensikerin Pia", emoji:"💻", lp:5500, minLevel:3, maxLevel:7, maxRarity:"SR", skills:{atk:1,lp:2}},
+     intro:"Darknet-Händler Null|🕸️|Ich hab den Plan. Aber die Forensik verfolgt meine Spuren.\nIT-Forensikerin Pia|💻|Eure VPN-Verbindung ist so löchrig wie ein Sieb.",
+     outro:"Darknet-Händler Null|🕸️|Plan gesichert. Der Tresor öffnet sich nur um 0:00 Uhr – Zeitschloss."},
+    {id:"mj3", title:"Die Straßensperre", reward:550,
+     opp:{name:"Autobahnpolizei-Kommandant Hagen", emoji:"🛣️", lp:6000, minLevel:3, maxLevel:8, maxRarity:"SR", skills:{atk:2,lp:2}},
+     intro:"Raser Kevin|🚗|Die Polizei sperrt alle Brücken. Festhalten!\nAutobahnpolizei-Kommandant Hagen|🛣️|Heute Nacht kommt hier niemand durch.",
+     outro:"Raser Kevin|🚗|Durch! Noch zehn Minuten bis Mitternacht!"},
+    {id:"mj4", title:"Zehn Minuten bis Mitternacht", reward:600,
+     opp:{name:"Zielfahnder Kowalski", emoji:"🎯", lp:6500, minLevel:4, maxLevel:9, maxRarity:"SR", skills:{atk:2,lp:3,eff:1}},
+     intro:"Zielfahnder Kowalski|🎯|Ich wusste, dass ihr heute zuschlagt. Ich habe Silvester abgesagt.\nTresorknacker Ohr|🔐|Psst! Ich höre das Zeitschloss ticken …",
+     outro:"Tresorknacker Ohr|🔐|Drei … zwei … eins … der Tresor ist offen!"},
+    {id:"mj5", title:"Finale: Prosit Neujahr", reward:900,
+     opp:{name:"SEK-Teamführer Brenner", emoji:"🪖", lp:8000, minLevel:5, maxLevel:12, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"SEK-Teamführer Brenner|🪖|Frohes neues Jahr. Sie sind festgenommen.\nDas Phantom|🦹‍♀️|Das Jahr fängt ja gut an. Für uns!",
+     outro:"Das Phantom|🦹‍♀️|Der Neujahrs-Coup ist gelungen. Was für ein Feuerwerk!\nHehlerin Rosi|📦|Die Unterwelt feiert dich – gutes neues Jahr, Boss!"},
+  ]},
+  m2702: {side:"polizei", diff:3, release:"2027-02-01", title:"Karneval der Masken",
+   desc:"Februar-Mission: Im Karnevalstrubel tragen alle Masken – auch eine Diebesbande, die es auf die Kronjuwelen der Stadt abgesehen hat.", chapters:[
+    {id:"mf1", title:"Alaaf und Helau", reward:600,
+     opp:{name:"Maskierter Räuber", emoji:"🎭", lp:6500, minLevel:4, maxLevel:8, maxRarity:"SR", skills:{atk:3,lp:3,eff:1}},
+     intro:"Streifenführerin Kowalczyk|🦺|Zehntausend Menschen, alle verkleidet. Wie sollen wir da einen Dieb finden?\nMaskierter Räuber|🎭|Gar nicht! Helau!",
+     outro:"Maskierter Räuber|🎭|Ich bin nur einer von vielen. Die Bande trägt goldene Masken."},
+    {id:"mf2", title:"Der Prunkwagen", reward:650,
+     opp:{name:"Steuerberater Schlitzohr", emoji:"🧾", lp:7000, minLevel:5, maxLevel:9, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Profilerin Dr. Sandmann|🧠|Der Prunkwagen ist zu schwer für Konfetti. Da ist etwas anderes drin.\nSteuerberater Schlitzohr|🧾|Nur Kamelle! Und ein paar … abgesetzte Ausgaben.",
+     outro:"Steuerberater Schlitzohr|🧾|Die Bande trifft sich im Rathauskeller. Die Kronjuwelen liegen direkt darüber."},
+    {id:"mf3", title:"Im Rathauskeller", reward:700,
+     opp:{name:"Clan-Anwalt Dr. Brecht", emoji:"⚖️", lp:7500, minLevel:5, maxLevel:10, maxRarity:"UR", skills:{atk:3,lp:4,eff:2}},
+     intro:"Clan-Anwalt Dr. Brecht|⚖️|Meine Mandanten feiern nur Karneval. Haben Sie einen Durchsuchungsbeschluss?\nKK Mara|🕵️‍♀️|Zufällig ja. Hier, mit Konfetti.",
+     outro:"Clan-Anwalt Dr. Brecht|⚖️|Ohne meinen Mandanten Inkasso-Ede sage ich gar nichts mehr."},
+    {id:"mf4", title:"Die goldene Maske", reward:800,
+     opp:{name:"Inkasso-Ede", emoji:"💰", lp:8500, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:4,lp:5,eff:2,hand:1}},
+     intro:"Inkasso-Ede|💰|Die Kronjuwelen sind meine Bezahlung. Die Stadt schuldet mir noch was.\nZivilfahnder Mertens|🕶️|Du schuldest uns eine Erklärung.",
+     outro:"Inkasso-Ede|💰|Die Prinzessin … sie ist der Kopf der Bande!\nKHK Brandt|🕵️|Die Karnevalsprinzessin?!"},
+    {id:"mf5", title:"Finale: Die Karnevalsprinzessin", reward:1300,
+     opp:{name:"Karnevalsprinzessin Diamanta", emoji:"👸", lp:10000, minLevel:6, maxLevel:12, maxRarity:"UR", skills:{atk:5,lp:5,eff:3,hand:1,second:1}},
+     intro:"Karnevalsprinzessin Diamanta|👸|Jedes Jahr winke ich vom Wagen. Dieses Jahr winke ich mit den Kronjuwelen!\nPolizeipräsidentin Dr. Wolf|🎖️|Aschermittwoch kommt früher als gedacht.",
+     outro:"Karnevalsprinzessin Diamanta|👸|Meine Krone … meine Juwelen … mein Karneval …\nPolizeipräsidentin Dr. Wolf|🎖️|Fall gelöst. Und jetzt: Kamelle für alle!"},
+  ]},
+});
+
 /* ============================ SPEICHER ============================ */
 const Store = {
   get(k,d){try{const v=localStorage.getItem("kd3_"+k);return v?JSON.parse(v):d}catch(e){return d}},
@@ -331,9 +417,13 @@ function normalizeCard(c){
   if(!EFFECTS[n.effect] || !EFFECTS[n.effect].types.includes(n.type)) n.effect = defaultEffect(n.type);
   if(n.type==="fusion" && n.materials.length<2) n.materials = [Object.keys(roles)[0],"any"];
   n.level = Math.max(1,Math.min(12,n.level)); n.atk=Math.max(0,Math.min(9999,n.atk)); n.def=Math.max(0,Math.min(9999,n.def));
+  if(c.release) n.release=String(c.release).slice(0,10);   // Erscheinungstag (wöchentliche Neuerscheinungen)
+  if(c.flavor) n.flavor=String(c.flavor).slice(0,140);
   return n;
 }
 
+function todayISO(d=new Date()){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
+function isNewCard(c){ if(!c||!c.release) return false; return (new Date()-new Date(c.release+"T00:00:00"))/864e5 < 14; }
 const DB = {
   cards: [],
   load(){
@@ -341,7 +431,10 @@ const DB = {
     const deleted = new Set(Store.get("deleted", [])), edited = new Set(Store.get("edited", []));
     const idx = new Map(cards.map((c,i)=>[c.id,i]));
     // Standardkarten aus Updates übernehmen – vom Admin bearbeitete oder gelöschte bleiben unangetastet
-    START_CARDS.forEach(c=>{ if(deleted.has(c.id)||edited.has(c.id)) return; if(idx.has(c.id)) cards[idx.get(c.id)]=c; else cards.push(c); });
+    const today=todayISO();
+    // Neuerscheinungen erst ab ihrem Release-Tag (wöchentliche Karten)
+    cards=cards.filter(c=>!c.release || c.release<=today);
+    START_CARDS.forEach(c=>{ if(c.release && c.release>today) return; if(deleted.has(c.id)||edited.has(c.id)) return; if(idx.has(c.id)) cards[idx.get(c.id)]=c; else cards.push(c); });
     this.cards = GlobalCards.overlay(cards.map(normalizeCard)); this.save();   // Änderungen des Admins vom Server
   },
   save(){ return Store.set("cards", this.cards); },
@@ -690,7 +783,7 @@ const UI = {
     const ownedCount=DB.cards.filter(c=>Player.has(c.id)).length;
     $("colCount").textContent=`${ownedCount}/${DB.cards.length}`;
     $("colList").innerHTML = list.map(c=>{const n=Player.has(c.id), g=Prog.collected(c.id), lv=Prog.cardLv(c.id), nx=Prog.nextAt(c.id), up=n&&Prog.canBoost(c.id);
-      return `<div class="ownwrap">${n?`<span class="cnt">×${n}</span>`:""}${up?`<span class="upg" title="Kann trainiert werden">⬆</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
+      return `<div class="ownwrap">${isNewCard(c)?`<span class="newbadge">NEU</span>`:""}${n?`<span class="cnt">×${n}</span>`:""}${up?`<span class="upg" title="Kann trainiert werden">⬆</span>`:""}${cardHTML(n?Prog.upgraded(c,lv):c,n?"":"owned0",`data-id="${c.id}"`)}
         ${n?`<div class="lvbar" title="Kartenstufe"><i style="width:${nx?Math.round(g/nx*100):100}%"></i><span>Lv${lv}${nx?` · ${g}/${nx}`:" MAX"}</span></div>`:""}</div>`}).join("") || `<p class="muted">Keine Karten gefunden.</p>`;
     $("colList").querySelectorAll(".card").forEach(el=>el.onclick=()=>this.cardInfo(el.dataset.id));
   },
@@ -751,7 +844,8 @@ const Admin = {
     $("admTabs").querySelectorAll("span").forEach(s=>s.classList.toggle("on",s.dataset.t===t));
     $("admCards").style.display=t==="cards"?"":"none"; $("admStory").style.display=t==="story"?"":"none"; $("admPlayer").style.display=t==="player"?"":"none";
     $("admNew").style.display=t==="cards"?"":"none";
-    if(t==="cards") this.renderList(); if(t==="story") StoryEd.renderList(); if(t==="player") this.renderPlayer();
+    $("admAnalysis").style.display=t==="analysis"?"":"none";
+    if(t==="cards") this.renderList(); if(t==="story") StoryEd.renderList(); if(t==="player") this.renderPlayer(); if(t==="analysis") Analysis.load();
   },
   renderList(){
     const q=$("admSearch").value.toLowerCase(), t=$("admType").value;
@@ -1067,18 +1161,21 @@ const Story = {
     // neue Standard-Kampagnen ergänzen, alte Spielstände bekommen Seite/Schwierigkeit
     Object.keys(STORY_DEFAULT).forEach(k=>{ const D=STORY_DEFAULT[k];
       if(!this.data[k]) this.data[k]=clone(D);
-      else ["side","diff","unlock"].forEach(x=>{ if(this.data[k][x]==null && D[x]!=null) this.data[k][x]=D[x]; }); });
+      else ["side","diff","unlock","release"].forEach(x=>{ if(this.data[k][x]==null && D[x]!=null) this.data[k][x]=D[x]; }); });
   },
   save(){ Store.set("story",this.data); },
-  keys(){ return Object.keys(this.data); },
+  keys(){ const t=todayISO(); return Object.keys(this.data).filter(k=>!this.data[k].release || this.data[k].release<=t); },
+  upcoming(){ const t=todayISO(); return Object.keys(this.data).filter(k=>this.data[k].release && this.data[k].release>t).sort((a,b)=>this.data[a].release<this.data[b].release?-1:1)[0]; },
   side(k){ return (this.data[k]&&this.data[k].side) || (FACTIONS[k]?k:"polizei"); },
   done(k){ const C=this.data[k]; return !!C && (Player.progress[k]||0)>=C.chapters.length && C.chapters.length>0; },
   locked(k){ const u=this.data[k]&&this.data[k].unlock; return !!u && this.data[u] && !this.done(u); },
   stars(k){ return "★".repeat((this.data[k]&&this.data[k].diff)||1); },
   render(){
-    if(!this.data[this.camp]) this.camp="polizei";
+    if(!this.data[this.camp] || !this.keys().includes(this.camp)) this.camp="polizei";
     $("storyTabs").innerHTML=this.keys().map(k=>`<span data-f="${k}" class="${k===this.camp?"on":""} ${this.locked(k)?"lk":""}">${FACTIONS[this.side(k)][1]} ${esc(this.data[k].title)} <small>${this.stars(k)}${this.locked(k)?" 🔒":this.done(k)?" ✅":""}</small></span>`).join("");
-    $("storyTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.camp=s.dataset.f;this.render()});
+    const up=this.upcoming(); if(up){ const d=new Date(this.data[up].release+"T00:00:00");
+      $("storyTabs").innerHTML+=`<span class="lk soon" title="erscheint bald">🔜 Neue Mission ab ${d.toLocaleDateString("de-DE",{day:"numeric",month:"long"})}</span>`; }
+    $("storyTabs").querySelectorAll("span[data-f]").forEach(s=>s.onclick=()=>{this.camp=s.dataset.f;this.render()});
     const k=this.camp, C=this.data[k], prog=Player.progress[k]||0, lock=this.locked(k);
     const diff=["","Normal","Schwer","Sehr schwer"][C.diff||1]||"Extrem";
     $("storyDesc").innerHTML=`<b>Schwierigkeit: ${this.stars(k)} ${diff}</b><br>${esc(C.desc)}`+
@@ -1180,7 +1277,7 @@ const Duel = {
     this.AI.handSize=HAND; if(on) Prog.apply(this.AI, on.guestSkills); else if(opts.oppSkills) Prog.apply(this.AI, opts.oppSkills);
     // jede Kartenkopie bekommt einen eindeutigen Schlüssel (für die Online-Übertragung)
     [[this.P,"h"],[this.AI,"g"]].forEach(([pl,pre])=>[...pl.deck,...pl.extra].forEach((c,i)=>c._k=pre+i));
-    this.gid=(this.gid||0)+1; this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
+    CardStats.begin(this); this._killer=null; this.gid=(this.gid||0)+1; this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
     $("reveal").classList.remove("show"); $("fx").innerHTML="";
     for(let i=0;i<Math.max(this.P.handSize||HAND,this.AI.handSize||HAND);i++){ if(i<(this.P.handSize||HAND)) this.draw(this.P,true); if(i<(this.AI.handSize||HAND)) this.draw(this.AI,true); }
     $("oppWho").textContent=`${opts.oppEmoji||FACTIONS[other][1]} ${this.AI.name}`;
@@ -1269,6 +1366,7 @@ const Duel = {
     if(this.host) Net.send({t:"end", w: p===this.P?"h":"g"});
     if(this.liveMid){ this._loser = p===this.P?"g":"h"; Spectate._lastPub=0; Spectate.publish(); setTimeout(()=>{ this.liveMid=null; },3000); }
     const won = p===(this.realP||this.P);
+    CardStats.finish(this, won);
     setTimeout(()=>Sound.play(won?"win":"lose"),300);
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
       setTimeout(async()=>{
@@ -1293,6 +1391,7 @@ const Duel = {
       if(c.effect==="growth"){ m.atk+=c.val; this.log(`${c.name} sammelt Erfahrung: +${c.val} ATK`); }
       if(c.effect==="turn_heal") this.heal(p,c.val);
       if(c.effect==="turn_burn") this.damage(o,c.val,c.name);
+      if(c.effect==="hand_burn" && o.hand.length) this.damage(o,c.val*o.hand.length,c.name);
       if(c.effect==="cel_sun"){ this.heal(p,300); p.mz.forEach(x=>x&&(x.atk+=100)); this.log(`${c.name}: Gute Moral auf der Wache – alle eigenen Charaktere +100 ATK`); }
       if(c.effect==="cel_meteor"){ const t=o.mz.map((x,i)=>x&&!this.isImmune(x)?i:-1).filter(i=>i>=0); if(t.length){ const z=t[Math.floor(Math.random()*t.length)], x=o.mz[z];
         x.atk=Math.max(0,x.atk-400); this.log(`Sprengfalle! ${x.card.name} −400 ATK`); if(x.atk<=0) this.destroy(o,z); } } });
@@ -1335,7 +1434,8 @@ const Duel = {
     return bi;
   },
   maxAttacks(m){ return m.card.effect==="double_attack"&&!m.faceDown?2:1; },
-  canAttack(m){ return m && m.pos==="atk" && !m.attacked && !(m.lockedUntil>=this.turn) && this.canBattle(); },
+  /* Regel: Wer in diesem Zug aufs Feld kommt (ausgespielt, beschworen, Fusion, zurückgeholt), greift erst ab dem nächsten eigenen Zug an */
+  canAttack(m){ return m && m.pos==="atk" && !m.attacked && !(m.lockedUntil>=this.turn) && m.summonedTurn!==this.turn && this.canBattle(); },
   /* Gültige Angriffsziele: Deckung zwingt den Angriff auf sich */
   validTargets(o){
     const guards=o.mz.map((m,i)=>m&&!m.faceDown&&(m.card.effect==="guard"||m.card.effect==="cel_gravity")?i:-1).filter(i=>i>=0);
@@ -1345,13 +1445,15 @@ const Duel = {
     return nb.length?nb:all;
   },
   /* Kampfschaden (Schutzengel halbiert) */
-  battleDamage(p,n,src){ if(p.mz.some(m=>m&&!m.faceDown&&m.card.effect==="cel_guardian")){ n=Math.ceil(n/2); this.log("Erste Hilfe: Kampfschaden halbiert"); } this.damage(p,n,src); },
+  battleDamage(p,n,src){ if(p.mz.some(m=>m&&!m.faceDown&&m.card.effect==="cel_guardian")){ n=Math.ceil(n/2); this.log("Erste Hilfe: Kampfschaden halbiert"); }
+    const before=p.lp; this.damage(p,n,src);
+    const k=this._lifelink; if(k && k.p!==p && before>p.lp){ this.heal(k.p,before-p.lp); this.log(`Vermögensabschöpfung: +${before-p.lp} LP`); } },
   canDirect(p, a){ const o=this.opp(p); return !this.monsterCount(o) || (a && a.card.effect==="direct" && !a.faceDown); },
 
   /* ---------- Feld-Hilfen ---------- */
   place(p, c, pos){
     const z=this.freeZone(p.mz); if(z<0) return -1;
-    p.mz[z]={card:c,pos,faceDown:pos==="def",atk:c.atk,attacks:0,attacked:false,changed:true,lockedUntil:0};
+    p.mz[z]={card:c,pos,faceDown:pos==="def",atk:c.atk,attacks:0,attacked:false,changed:true,lockedUntil:0,summonedTurn:this.turn};
     return z;
   },
   takeControl(from, z, to){
@@ -1368,6 +1470,8 @@ const Duel = {
   destroy(p,z,cause="effect"){
     const m=p.mz[z]; if(!m) return;
     if(cause==="battle" && m.card.effect==="cel_starshield" && !m.faceDown){ this.log(`${m.card.name}: Ballistischer Schild – bleibt im Einsatz!`); return; }
+    if(m.vest){ m.vest=false; this.log(`${m.card.name}: Die Schutzweste hat gehalten!`); this.bn("SCHUTZWESTE!"); return; }
+    CardStats.kill(this, p, this._killer);
     this.fxPoof(p,z);
     p.mz[z]=null; if(p===this.AI) Quests.track("destroy");
     if(m.card.effect==="cel_orbit" && !m.card._orbitUsed){ m.card._orbitUsed=true; (p.orbitBack=p.orbitBack||[]).push(m.card); this.log(`${m.card.name} wird abgeführt … plant aber schon den Ausbruch!`); return; }
@@ -1375,11 +1479,12 @@ const Duel = {
     p.grave.push(m.card); this.log(`${m.card.name} scheidet aus!`);
     if(m.card.effect==="revenge") this.damage(this.opp(p), m.card.val, m.card.name);
     if(m.card.effect==="last_draw") this.draw(p);
+    if(m.card.effect==="death_discard") this.discard(this.opp(p),1);
   },
 
   /* ---------- Effekte von Charakteren beim Ausspielen ---------- */
   monsterEffect(p,c){
-    const v=c.val, o=this.opp(p);
+    const v=c.val, o=this.opp(p); this._killer=c;
     switch(c.effect){
       case "summon_burn": this.damage(o,v,c.name); break;
       case "summon_heal": this.heal(p,v); break;
@@ -1395,6 +1500,10 @@ const Duel = {
       case "summon_flip_all": o.mz.forEach(m=>{ if(m&&m.faceDown){ m.faceDown=false; } }); this.log("Alle verdeckten Charaktere werden aufgedeckt!"); break;
       case "summon_lock": { const z=this.target(o,"strong"); if(z>=0){ o.mz[z].lockedUntil=this.turn+1; this.log(`${o.mz[z].card.name} wird festgehalten!`); } break; }
       case "summon_steal": { const z=this.target(o,"weak"); if(z>=0 && (!v||o.mz[z].atk<=v)) this.takeControl(o,z,p); else this.log("Niemand lässt sich überreden …"); break; }
+      case "summon_vest": { const ms=p.mz.filter(Boolean).sort((a,b)=>b.atk-a.atk); if(ms[0]){ ms[0].vest=true; this.log(`${ms[0].card.name} trägt jetzt eine Schutzweste`); } break; }
+      case "summon_copy_atk": { const me=p.mz.find(m=>m&&m.card===c), top=o.mz.filter(m=>m&&!m.faceDown).sort((a,b)=>b.atk-a.atk)[0];
+        if(me&&top&&top.atk>me.atk){ me.atk=top.atk; this.log(`${c.name} analysiert ${top.card.name}: ATK ${top.atk}`); } break; }
+      case "summon_team_draw": { const n=Math.min(v||2, p.mz.filter(m=>m&&m.card!==c&&m.card.attr===c.attr).length); for(let i=0;i<n;i++) this.draw(p); if(n) this.log(`Teamgeist: ${this.me(p,"du ziehst","zieht")} ${n} Karte(n)`); break; }
       // Celestial
       case "cel_supernova": { const me=p.mz.find(m=>m&&m.card===c), a=me?me.atk:c.atk; this.bn("GROSSFAHNDUNG!");
         o.mz.forEach((m,i)=>{ if(m&&!this.isImmune(m)&&m.atk<a) this.destroy(o,i); }); break; }
@@ -1421,6 +1530,7 @@ const Duel = {
     if(this.freeZone(p.mz)<0) return false;
     p.hand.splice(handIdx,1); p.summoned=true; this.place(p,c,pos);
     if(p===this.P){ Quests.track("summon"); if(c.rarity==="CE") Quests.track("celestial"); }
+    CardStats.play(this,p,c);
     Sound.play(c.rarity==="CE"&&pos==="atk"?"celestial":pos==="atk"?"summon":"set");
     if(pos==="atk"){ this.log(`${this.me(p,"Du schickst","schickt")} ${c.name} ins Feld!`);
       this.triggerSummon(p,c,`${p.name} schickt einen Charakter ins Feld!`, tributes.length?`Dafür räumen ${tributes.length} Charakter(e) das Feld.`:""); }
@@ -1505,6 +1615,10 @@ const Duel = {
       case "extra_summon": return p.summoned;
       case "reset_atk": return [...p.mz,...o.mz].some(m=>m&&m.atk!==m.card.atk);
       case "cel_heaven_raid": return o.mz.some(m=>m&&!this.isImmune(m));
+      case "discard_best": return o.hand.length>0;
+      case "extra_attack": return p.mz.some(m=>m&&m.attacked&&m.pos==="atk"&&!(m.lockedUntil>=this.turn)) && this.canBattle();
+      case "recover_spell": return p.grave.some(x=>x.type==="spell"&&x!==c&&x.effect!=="recover_spell");
+      case "percent_burn": return o.lp>0;
       case "cel_starmap": return p.hand.length-1<6 && p.deck.length>0;
       case "cel_event_horizon": case "cel_shooting_star": return o.hand.length>0;
       case "cel_lp_swap": return p.lp<o.lp;
@@ -1541,6 +1655,7 @@ const Duel = {
     }
     p.hand.splice(p.hand.indexOf(c),1); p.grave.push(c);
     if(p===this.P){ Quests.track("spell"); if(c.rarity==="CE") Quests.track("celestial"); }
+    this._killer=c; CardStats.play(this,p,c);
     await this.announce(p,c,`${p.name} setzt ${c.law==="Trick"?"einen Trick":"eine "+c.law+"-Maßnahme"} ein!`,this.spellPreview(p,c,targetZ));
     if(this.over) return false;
     this.bn(c.law==="Trick"?c.name+"!":c.law+"!"); this.fxStamp(c); Sound.play(c.rarity==="CE"?"celestial":c.law==="Trick"?"trick":"stamp");
@@ -1576,6 +1691,11 @@ const Duel = {
       case "revive_field": { const ms=p.grave.filter(x=>x.type==="monster").sort((a,b)=>b.atk-a.atk)[0]; p.grave.splice(p.grave.indexOf(ms),1); this.place(p,ms,"atk"); this.log(`${ms.name} ist zurück im Einsatz!`); break; }
       case "scapegoat": { let wi=-1,wv=1e9; p.mz.forEach((m,i)=>{ if(m&&m.atk<wv){wv=m.atk;wi=i} }); this.destroy(p,wi); this.damage(o,wv,c.name); break; }
       case "fusion": this.doFusion(p,fusionOpt); break;
+      case "discard_best": { const val=x=>x.type==="monster"||x.type==="fusion"?x.atk+x.level*100:RANK[x.rarity]*600+800;
+        const i=o.hand.reduce((bi,x,j,a)=>val(x)>val(a[bi])?j:bi,0); const x=o.hand.splice(i,1)[0]; o.grave.push(x); this.log(`Durchsuchung: ${x.name} wird sichergestellt!`); break; }
+      case "extra_attack": { const m=p.mz.filter(m=>m&&m.attacked&&m.pos==="atk").sort((a,b)=>b.atk-a.atk)[0]; if(m){ m.attacked=false; m.attacks=Math.max(0,m.attacks-1); this.log(`Überstunden: ${m.card.name} darf noch einmal angreifen!`); } break; }
+      case "recover_spell": { for(let i=p.grave.length-1;i>=0;i--){ const x=p.grave[i]; if(x.type==="spell"&&x!==c&&x.effect!=="recover_spell"){ p.grave.splice(i,1); p.hand.push(x); this.log(`Beweismittel gesichert: ${x.name} zurück auf die Hand`); break; } } break; }
+      case "percent_burn": this.damage(o,Math.max(100,Math.round(o.lp*(v||25)/100/50)*50),c.name); break;
       // Celestial
       case "cel_heaven_raid": o.mz.forEach((m,i)=>{ if(m&&!this.isImmune(m)) this.destroy(o,i); }); p.mz.forEach(m=>m&&(m.lockedUntil=this.turn)); this.log("Großrazzia! Deine Charaktere greifen in diesem Zug nicht mehr an."); break;
       case "cel_starmap": { let k=0; while(p.hand.length<6 && p.deck.length){ this.draw(p); k++; } this.log(`${this.me(p,"Du ziehst","zieht")} ${k} Karte(n)`); break; }
@@ -1604,7 +1724,7 @@ const Duel = {
       ti = r>=0 && r<traps.length ? traps[r] : -1;
     } else ti=AI.pickTrap(traps, attacker.mz[fromZ], d);
     if(ti<0) return false;
-    const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t); Sound.play("alarm");
+    const t=d.st[ti].card; d.st[ti]=null; d.grave.push(t); Sound.play("alarm"); this._killer=t; CardStats.play(this,d,t);
     const a=attacker.mz[fromZ];
     await this.announce(d,t,`${d.name} reagiert auf deinen Angriff!`,`Gegen: ${a?a.card.name:"deinen Angreifer"}`);
     if(this.over) return true;
@@ -1623,6 +1743,11 @@ const Duel = {
       case "trap_steal": if(imm||!this.takeControl(attacker,fromZ,d)) { if(!imm) this.destroy(attacker,fromZ); } break;
       case "trap_lock": attacker.mz.forEach(m=>m&&(m.lockedUntil=this.turn+2)); this.log("Angriff abgewehrt – alle Angreifer festgehalten!"); break;
       case "trap_draw": this.log("Angriff abgewehrt!"); for(let i=0;i<(t.val||1);i++) this.draw(d); break;
+      case "trap_ambush": { const ds=d.mz.map((m,i)=>m?{m,i}:null).filter(Boolean).sort((x,y)=>y.m.atk-x.m.atk)[0];
+        if(!a||!ds){ this.log("Hinterhalt ins Leere – Angriff abgewehrt"); break; }
+        this.log(`Hinterhalt! ${ds.m.card.name} (${ds.m.atk}) stellt ${a.card.name} (${a.atk})`);
+        if(ds.m.atk>a.atk && !imm){ this._killer=ds.m.card; this.destroy(attacker,fromZ); } else if(ds.m.atk<a.atk){ this._killer=a.card; this.destroy(d,ds.i); } else { if(!imm) this.destroy(attacker,fromZ); this.destroy(d,ds.i); } break; }
+      case "trap_freeze": this.log("Fahrzeugsperre! Angriff abgewehrt"); if(a&&!imm){ a.atk=Math.max(0,a.atk-(t.val||500)); a.lockedUntil=this.turn+3; } break;
       case "cel_moon_mirror": if(a&&!imm){ const atk=a.atk; this.destroy(attacker,fromZ); this.damage(attacker,atk,t.name); } else this.log("Immun – Angriff nur abgewehrt!"); break;
       case "cel_wormhole": if(a&&!imm){ attacker.mz[fromZ]=null; this.fxPoof(attacker,fromZ); if(a.card.type==="fusion") attacker.extra.push(a.card); else attacker.deck.splice(Math.floor(Math.random()*(attacker.deck.length+1)),0,a.card);
           this.log(`${a.card.name} verschwindet im Fluchttunnel!`); } else this.log("Immun – Angriff nur abgewehrt!"); this.draw(d); break;
@@ -1642,13 +1767,14 @@ const Duel = {
       if(!p.mz[fromZ]||p.mz[fromZ]!==a) return;
       a.attacks++; a.attacked = a.attacks>=this.maxAttacks(a);
       await this.fxAttack(p,fromZ,toZ);
+      this._lifelink = a.card.effect==="lifelink" ? {p} : null; this._killer=a.card;
       if(toZ==null){ if(p===this.P) Quests.track("direct"); this.battleDamage(o,a.atk,a.card.name); return; }
       const d=o.mz[toZ]; if(!d) return;
       if(d.faceDown){ d.faceDown=false; this.log(`${d.card.name} wird aufgedeckt!`); this.render(); await sleep(600); }
       let won=false;
       if(d.pos==="atk"){
         if(a.atk>d.atk){ this.destroy(o,toZ,"battle"); this.battleDamage(o,a.atk-d.atk,a.card.name); won=o.mz[toZ]!==d; }
-        else if(a.atk<d.atk){ this.destroy(p,fromZ,"battle"); this.battleDamage(p,d.atk-a.atk,d.card.name); }
+        else if(a.atk<d.atk){ this._killer=d.card; this._lifelink = d.card.effect==="lifelink" ? {p:o} : null; this.destroy(p,fromZ,"battle"); this.battleDamage(p,d.atk-a.atk,d.card.name); }
         else { this.destroy(o,toZ,"battle"); this.destroy(p,fromZ,"battle"); this.log("Beide scheiden aus!"); }
       } else {
         const df=d.card.def;
@@ -1773,6 +1899,7 @@ const Duel = {
     if(this.canAttack(m)) acts.push([`💥 Angreifen${m.card.effect==="double_attack"?` (${2-m.attacks}×)`:""}`,()=>{this.mode={type:"attack",from:z};this.log(this.canDirect(this.P,m)&&this.monsterCount(this.AI)?"Ziel wählen – oder Direktangriff!":"Wähle ein Ziel");this.render()},"red"]);
     if(!m.changed && !m.attacks) acts.push([m.pos==="atk"?"🛡️ In Verteidigung":"⚔️ In Angriff",()=>this.changePos(this.P,z),"blue"]);
     if(m.lockedUntil>=this.turn) acts.push(["⛓️ Festgehalten – kann nicht angreifen",null,"ghost"]);
+    else if(m.summonedTurn===this.turn && m.pos==="atk") acts.push(["💤 Gerade eingesetzt – greift ab der nächsten Runde an",null,"ghost"]);
     else if(!this.canBattle() && m.pos==="atk") acts.push(["Im ersten Zug kein Angriff",null,"ghost"]);
     UI.modal(m.card,acts.filter(a=>a[1]).length?acts.filter(a=>a[1]):acts,m);
   },
@@ -1804,7 +1931,7 @@ const Duel = {
       if(m){ const pc=(m.pos==="def"?"def":"")+(m.attacked?" used":"");
         inner = m.faceDown ? `<div class="cardback ${pc}"></div>` : cardHTML(m.card,pc,"",m);
         const badges=[]; if(!m.faceDown){ if(m.card.effect==="guard") badges.push("🛡️"); if(m.card.effect==="immune") badges.push("✨"); if(m.card.effect==="double_attack") badges.push("⚔️²"); if(m.card.effect==="direct") badges.push("🎯"); }
-        if(m.lockedUntil>=this.turn) badges.push("⛓️");
+        if(m.lockedUntil>=this.turn) badges.push("⛓️"); else if(m.summonedTurn===this.turn) badges.push("💤");
         if(badges.length) inner+=`<span class="zbadge">${badges.join("")}</span>`; }
       return `<div class="${cls}" data-z="${i}">${inner}</div>`;
     }).join("");
@@ -1826,6 +1953,7 @@ const Duel = {
     this.renderST(A,$("oppST"),false); this.renderMZ(A,$("oppMZ"),false);
     this.renderMZ(P,$("myMZ"),true); this.renderST(P,$("myST"),true);
     const my=this.myTurn();
+    $("myHand").style.setProperty("--n",Math.max(1,P.hand.length)); $("oppHand")&&$("oppHand").style.setProperty("--n",Math.max(1,this.AI.hand.length));
     $("myHand").innerHTML=P.hand.map((c,i)=>{
       let playable=false;
       if(my){ if(c.type==="monster") playable=!P.summoned&&this.tributesNeeded(c)<=this.monsterCount(P)&&(this.tributesNeeded(c)>0||this.freeZone(P.mz)>=0);
@@ -1849,8 +1977,8 @@ const AI = {
     const D=Duel;
     if(!a) return traps[0];
     // starke Angreifer lieber ausschalten/übernehmen, schwache nur abwehren
-    const prio = a.atk>=2000 ? ["cel_moon_mirror","cel_wormhole","trap_steal","mirror","trap_destroy_all_atk","trap_bounce","trap_lock","counter_burn","trap_weaken","trap_weaken_all","negate","trap_heal","trap_draw"]
-                             : ["trap_destroy_all_atk","cel_wormhole","cel_moon_mirror","counter_burn","trap_draw","trap_heal","trap_weaken","negate","trap_lock","trap_weaken_all","mirror","trap_bounce","trap_steal"];
+    const prio = a.atk>=2000 ? ["cel_moon_mirror","cel_wormhole","trap_ambush","trap_freeze","trap_steal","mirror","trap_destroy_all_atk","trap_bounce","trap_lock","counter_burn","trap_weaken","trap_weaken_all","negate","trap_heal","trap_draw"]
+                             : ["trap_destroy_all_atk","cel_wormhole","cel_moon_mirror","trap_freeze","trap_ambush","counter_burn","trap_draw","trap_heal","trap_weaken","negate","trap_lock","trap_weaken_all","mirror","trap_bounce","trap_steal"];
     traps.sort((x,y)=>prio.indexOf(me.st[x].card.effect)-prio.indexOf(me.st[y].card.effect));
     return traps[0];
   },
@@ -1871,6 +1999,10 @@ const AI = {
       case "boost": return mc>=1;
       case "extra_summon": return false;   // wird nach dem Ausspielen gesondert genutzt
       case "cel_heaven_raid": return oc>=1;
+      case "discard_best": return op.hand.length>=2;
+      case "extra_attack": return me.mz.some(m=>m&&m.attacked&&m.atk>1500);
+      case "recover_spell": return true;
+      case "percent_burn": return op.lp>=2000;
       case "cel_starmap": return me.hand.length<=4;
       case "cel_event_horizon": return op.hand.length>=3;
       case "cel_shooting_star": return true;
@@ -2769,7 +2901,7 @@ Object.assign(Duel, {
       deck: own? p.deck.map(K).sort() : p.deck.length,
       extra: own? p.extra.map(K) : p.extra.length,
       grave: p.grave.map(K),
-      mz: p.mz.map(m=>m&&{k:(m.faceDown&&!own)?null:K(m.card), pos:m.pos, faceDown:m.faceDown, atk:m.atk, attacks:m.attacks, attacked:m.attacked, changed:m.changed, lockedUntil:m.lockedUntil}),
+      mz: p.mz.map(m=>m&&{k:(m.faceDown&&!own)?null:K(m.card), pos:m.pos, faceDown:m.faceDown, atk:m.atk, attacks:m.attacks, attacked:m.attacked, changed:m.changed, lockedUntil:m.lockedUntil, summonedTurn:m.summonedTurn}),
       st: p.st.map(x=>x&&{k: own?K(x.card):null})});
     return {turn:this.turn, active:this.active===this.AI?"me":"opp", ready:this.ready, over:this.over, me:pl(this.AI,true), opp:pl(this.P,false)};
   },
@@ -3078,6 +3210,20 @@ const Account = {
 $("colType").innerHTML=filterOptions(); $("admType").innerHTML=filterOptions();
 $("admTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>Admin.tab(s.dataset.t));
 DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins(); Account.load(); Prog.data(); UI.badges();
+/* Neuerscheinungen ankündigen (wöchentliche Karten, monatliche Story) */
+setTimeout(()=>{ try{
+  const seen=Store.get("seenRelease","2026-11-22"), today=todayISO();
+  const fresh=DB.cards.filter(c=>c.release && c.release>seen && c.release<=today);
+  const story=Story.keys().filter(k=>Story.data[k].release && Story.data[k].release>seen && Story.data[k].release<=today);
+  if(!fresh.length && !story.length) return;
+  Store.set("seenRelease",today);
+  const btns=story.map(k=>[`📖 Neue Story-Mission: „${Story.data[k].title}“ ${Story.stars(k)}`,()=>{ UI.closeModal(); Story.camp=k; UI.show("story"); },"red"]);
+  if(fresh.length) btns.push(["🛒 Zum Shop",()=>{ UI.closeModal(); UI.show("shop"); },"green"]);
+  UI.modal(null,btns,null,null,"Super!");
+  if(fresh.length) $("modalCard").innerHTML=`<div class="panel newlist"><b>🆕 ${fresh.length} neue Karten – ab sofort in allen Boostern</b>
+    <div class="nl">${fresh.map(c=>`<span>${FACTIONS[c.faction][1]} ${esc((c.art&&c.art.emoji)||"")} ${esc(c.name)}</span>`).join("")}</div></div>`;
+  banner("NEU!");
+}catch(e){ console.error(e); } },1800);
 // Konto: beim ersten Start anmelden/registrieren anbieten, sonst Spielstand abgleichen
 if(Account.enabled()){
   if(Account.loggedIn()) Account.syncOnStart();

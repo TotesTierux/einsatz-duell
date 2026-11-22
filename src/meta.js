@@ -274,3 +274,100 @@ const GlobalCards = {
   },
 };
 setTimeout(()=>{ try{ GlobalCards.start(); }catch(e){} },1500);
+
+/* ============================ KARTEN-STATISTIK (für die Admin-Analyse) ============================
+   Pro Duell wird gezählt: welche Karten ein Spieler eingesetzt hat, wie viele gegnerische Charaktere
+   sie ausgeschaltet haben und ob das Duell gewonnen wurde. Am Ende wird das als Zähler auf den
+   Server addiert (stats/cards/{id}: games, won, kills, uses). Gezählt werden nur echte Spieler.
+   ================================================================================================ */
+const CardStats = {
+  cur:null,
+  tracked(D,p){ if(!D || D.autoP || D.spectate || D.client) return false; return D.host ? true : p===D.P; },
+  begin(D){ this.cur={pl:new Map(), kills:{}, uses:{}}; },
+  bucket(p){ if(!this.cur) this.begin(); let b=this.cur.pl.get(p); if(!b){ b=new Set(); this.cur.pl.set(p,b); } return b; },
+  play(D,p,c){ if(!c||!c.id||!this.tracked(D,p)) return; this.bucket(p).add(c.id); this.cur.uses[c.id]=(this.cur.uses[c.id]||0)+1; },
+  kill(D,victimOwner,killer){
+    if(!killer||!killer.id||!this.cur) return; const k=D.opp(victimOwner);
+    if(!this.tracked(D,k)) return;
+    // Killer muss dem Gegner des Opfers gehören (eigene Verluste zählen nicht)
+    const own=[...k.mz.filter(Boolean).map(m=>m.card),...k.grave,...k.hand,...k.st.filter(Boolean).map(s=>s.card)].includes(killer);
+    if(!own) return; this.cur.kills[killer.id]=(this.cur.kills[killer.id]||0)+1;
+  },
+  finish(D,won){
+    const cur=this.cur; this.cur=null; if(!cur||!cur.pl.size) return;
+    const inc=n=>({".sv":{increment:n}}), up={};
+    cur.pl.forEach((ids,p)=>{ const w = (p===(D.realP||D.P)) ? won : !won;
+      ids.forEach(id=>{ up[`${id}/games`]=inc(1); if(w) up[`${id}/won`]=inc(1); }); });
+    Object.entries(cur.kills).forEach(([id,n])=>up[`${id}/kills`]=inc(n));
+    Object.entries(cur.uses).forEach(([id,n])=>up[`${id}/uses`]=inc(n));
+    up["_total/games"]=inc(1);
+    // lokal mitzählen (Analyse ohne Server / Admin-Gerät)
+    const L=Store.get("cardStats",{}); Object.entries(up).forEach(([k,v])=>{ const [id,f]=k.split("/"); L[id]=L[id]||{}; L[id][f]=(L[id][f]||0)+v[".sv"].increment; }); Store.set("cardStats",L);
+    if(Cloud.enabled()) Cloud.req("stats/cards","PATCH",up).catch(e=>console.warn("Statistik:",e));
+  },
+};
+
+/* ---------------- Admin: Analyse & Balancing-Vorschläge ---------------- */
+const Analysis = {
+  data:null, src:"server", sort:"games",
+  async load(){
+    $("admAnalysis").innerHTML=`<p class="muted">Lade Statistik …</p>`;
+    let d=null;
+    if(Cloud.enabled()){ try{ d=await Cloud.req("stats/cards"); this.src="server"; }catch(e){ d=null; } }
+    if(!d){ d=Store.get("cardStats",{}); this.src="lokal"; }
+    this.data=d||{}; this.render();
+  },
+  rows(){
+    const d=this.data||{}, total=(d._total&&d._total.games)||0, base={};
+    ["polizei","verbrecher"].forEach(f=>{ let g=0,w=0; Object.entries(d).forEach(([id,s])=>{ const c=DB.byId(id); if(c&&c.faction===f){ g+=s.games||0; w+=s.won||0; } }); base[f]=g?w/g:.5; });
+    return {total, base, list:Object.entries(d).filter(([id])=>id!=="_total").map(([id,s])=>{ const c=DB.byId(id); if(!c) return null;
+      const g=s.games||0, wr=g?(s.won||0)/g:0; return {c, games:g, won:s.won||0, wr, kills:s.kills||0, kpg:g?(s.kills||0)/g:0, uses:s.uses||0, delta:g?wr-base[c.faction]:0}; }).filter(Boolean)};
+  },
+  /* Vorschlag pro Karte: ab 30 Spielen belastbar, ab 15 vorsichtig */
+  suggest(r, total){
+    const c=r.c, isChar=c.type==="monster"||c.type==="fusion", dz=r.delta*100, sure=r.games>=30, min=r.games>=15;
+    const step=v=>Math.min(400,Math.max(100,Math.round(Math.abs(v)/4)*100));
+    if(min && dz>8){ if(isChar) return {text:`zu stark (+${dz.toFixed(0)} % Siegquote) → ATK −${step(dz)}`, patch:{atk:Math.max(0,c.atk-step(dz))}, sure};
+      if(c.val && EFFECTS[c.effect]&&EFFECTS[c.effect].val) return {text:`zu stark (+${dz.toFixed(0)} %) → Wert ${c.val} → ${Math.max(1,Math.round(c.val*.8/(c.val>=50?50:1))*(c.val>=50?50:1))}`, patch:{val:Math.max(1,Math.round(c.val*.8/(c.val>=50?50:1))*(c.val>=50?50:1))}, sure};
+      return {text:`zu stark (+${dz.toFixed(0)} %) → Seltenheit erhöhen (seltener im Booster)`, patch:c.rarity!=="UR"&&c.rarity!=="CE"?{rarity:{N:"R",R:"SR",SR:"UR"}[c.rarity]}:null, sure}; }
+    if(min && dz<-8){ if(isChar) return {text:`zu schwach (${dz.toFixed(0)} % Siegquote) → ATK +${step(dz)}`, patch:{atk:c.atk+step(dz)}, sure};
+      if(c.val && EFFECTS[c.effect]&&EFFECTS[c.effect].val) return {text:`zu schwach (${dz.toFixed(0)} %) → Wert ${c.val} → ${Math.round(c.val*1.25/(c.val>=50?50:1))*(c.val>=50?50:1)}`, patch:{val:Math.round(c.val*1.25/(c.val>=50?50:1))*(c.val>=50?50:1)}, sure};
+      return {text:`zu schwach (${dz.toFixed(0)} %) → Effekt überdenken`, patch:null, sure}; }
+    if(total>=100 && r.games < total*.01 && isChar && (c.level||0)>=5) return {text:"wird kaum gespielt → Stufe −1 (leichter auszuspielen)", patch:{level:c.level-1}, sure:false};
+    if(isChar && r.games>=20 && r.kpg>=1.6) return {text:`sehr viele Kills (${r.kpg.toFixed(1)} pro Spiel) → ATK −100 beobachten`, patch:{atk:c.atk-100}, sure:false};
+    return null;
+  },
+  render(){
+    const {total, base, list}=this.rows(), el=$("admAnalysis");
+    const key={games:r=>r.games, kills:r=>r.kills, kpg:r=>r.kpg, wr:r=>r.games>=10?r.wr:-1, delta:r=>Math.abs(r.delta)*(r.games>=15?1:0)}[this.sort];
+    list.sort((a,b)=>key(b)-key(a));
+    const sug=list.map(r=>({r,s:this.suggest(r,total)})).filter(x=>x.s).sort((a,b)=>Math.abs(b.r.delta)-Math.abs(a.r.delta));
+    el.innerHTML=`
+      <div class="panel"><b>📊 Erfasste Duelle: ${total}</b> <small class="muted">(Quelle: ${this.src==="server"?"alle Spieler über den Server":"nur dieses Gerät"})</small><br>
+        Siegquote Polizei ${Math.round(base.polizei*100)} % · Verbrecher ${Math.round(base.verbrecher*100)} %
+        <div class="row" style="margin-top:6px"><button class="small ghost" onclick="Analysis.load()">🔄 Aktualisieren</button></div></div>
+      <h3 class="qh">⚖️ Balancing-Vorschläge</h3>
+      ${sug.length?sug.slice(0,25).map(({r,s})=>`<div class="anrow"><b>${esc(r.c.name)}</b> <small class="muted">${r.games} Spiele</small><br>
+        <span>${s.sure?"":"⚠️ wenige Daten · "}${esc(s.text)}</span>
+        ${s.patch?`<button class="small ${s.sure?"green":"ghost"}" data-apply="${r.c.id}">Übernehmen</button>`:""}</div>`).join("")
+        :`<p class="muted">Noch keine auffälligen Karten. Vorschläge erscheinen ab ca. 15 Spielen pro Karte.</p>`}
+      <h3 class="qh">🃏 Kartennutzung</h3>
+      <div class="row" style="flex-wrap:wrap;gap:4px">${[["games","Meist gespielt"],["kills","Meiste Kills"],["kpg","Kills/Spiel"],["wr","Siegquote"],["delta","Auffällig"]].map(([k,l])=>`<button class="small ${this.sort===k?"red":"ghost"}" data-sort="${k}">${l}</button>`).join("")}</div>
+      <table class="antab"><tr><th>Karte</th><th>Spiele</th><th>Kills</th><th>K/S</th><th>Sieg</th></tr>
+      ${list.slice(0,80).map(r=>`<tr><td>${esc((r.c.art&&r.c.art.emoji)||"")} ${esc(r.c.name)}</td><td>${r.games}</td><td>${r.kills}</td><td>${r.kpg.toFixed(1)}</td>
+        <td class="${r.games>=15&&r.delta>.08?"hi":r.games>=15&&r.delta<-.08?"lo":""}">${r.games?Math.round(r.wr*100)+" %":"–"}</td></tr>`).join("")}</table>`;
+    el.querySelectorAll("[data-sort]").forEach(b=>b.onclick=()=>{ this.sort=b.dataset.sort; this.render(); });
+    el.querySelectorAll("[data-apply]").forEach(b=>b.onclick=()=>this.apply(b.dataset.apply));
+  },
+  async apply(id){
+    const r=this.rows().list.find(x=>x.c.id===id); if(!r) return; const s=this.suggest(r,this.rows().total); if(!s||!s.patch) return;
+    if(!await UI.ask(`„${r.c.name}“ ändern: ${s.text}?`)) return;
+    const d=normalizeCard(Object.assign(clone(r.c),s.patch)), i=DB.cards.findIndex(c=>c.id===id);
+    if(START_CARDS.some(c=>c.id===id)){ const ed=Store.get("edited",[]); if(!ed.includes(id)){ ed.push(id); Store.set("edited",ed); } }
+    DB.cards[i]=d; DB.save();
+    const ok=await GlobalCards.publish(d); toast(ok?`${d.name} angepasst – an alle Spieler verteilt`:`${d.name} angepasst (nur auf diesem Gerät)`);
+    // Statistik der Karte zurücksetzen, damit die neue Version frisch bewertet wird
+    if(ok) Cloud.req(`stats/cards/${id}`,"DELETE").catch(()=>{});
+    this.load();
+  },
+};
