@@ -342,7 +342,7 @@ const DB = {
     const idx = new Map(cards.map((c,i)=>[c.id,i]));
     // Standardkarten aus Updates übernehmen – vom Admin bearbeitete oder gelöschte bleiben unangetastet
     START_CARDS.forEach(c=>{ if(deleted.has(c.id)||edited.has(c.id)) return; if(idx.has(c.id)) cards[idx.get(c.id)]=c; else cards.push(c); });
-    this.cards = cards.map(normalizeCard); this.save();
+    this.cards = GlobalCards.overlay(cards.map(normalizeCard)); this.save();   // Änderungen des Admins vom Server
   },
   save(){ return Store.set("cards", this.cards); },
   byId(id){ return this.cards.find(c=>c.id===id); },
@@ -627,7 +627,7 @@ const UI = {
     $(id).classList.add("active"); this.current=id; window.scrollTo(0,0); this.coins(); fitSoon();
     Sound.music(id==="duel"||id==="kombi"?"battle":"menu"); Sound.renderButtons();
     if(id==="collection") this.renderCollection();
-    if(id==="admin") Admin.tab(Admin.curTab);
+    if(id==="admin"){ Admin.tab(Admin.curTab); GlobalCards.renderAdmin(); }
     if(id==="deck") Deck.render();
     if(id==="shop") Shop.render();
     if(id==="story") Story.render();
@@ -847,7 +847,7 @@ const Admin = {
     const i=DB.cards.findIndex(c=>c.id===d.id);
     if(START_CARDS.some(c=>c.id===d.id)){ const ed=Store.get("edited",[]); if(!ed.includes(d.id)){ ed.push(d.id); Store.set("edited",ed); } }
     if(i>=0) DB.cards[i]=d; else { DB.cards.push(d); if(!Player.has(d.id)) Player.add(d.id,3); Player.save(); }
-    if(DB.save()){ toast("Gespeichert: "+d.name); UI.show("admin"); }
+    if(DB.save()){ GlobalCards.publish(d).then(ok=>toast(ok?"Gespeichert und an alle Spieler verteilt: "+d.name:"Gespeichert (nur auf diesem Gerät): "+d.name)); UI.show("admin"); }
   },
   duplicate(){ this.sync(); const c=clone(this.draft); c.id=uid(); c.starter=false; c.name=(c.name+" II").slice(0,40); this.open(c,true); },
   async remove(){
@@ -856,7 +856,7 @@ const Admin = {
     DB.cards=DB.cards.filter(c=>c.id!==id); DB.save();
     if(START_CARDS.some(c=>c.id===id)){ const del=Store.get("deleted",[]); del.push(id); Store.set("deleted",del); }
     delete Player.owned[id]; Player.syncPrints(); Player.save(); Deck.prune();
-    toast("Gelöscht"); UI.show("admin");
+    GlobalCards.publishDelete(id).then(ok=>toast(ok?"Gelöscht – für alle Spieler":"Gelöscht (nur auf diesem Gerät)")); UI.show("admin");
   },
   cancel(){ UI.show("admin"); },
   exportJSON(){
@@ -870,12 +870,13 @@ const Admin = {
       if(!await UI.ask(`${arr.length} Karten${j.story?" und Story":""} importieren? (Gleiche IDs werden ersetzt)`)) return;
       arr.forEach(c=>{const i=DB.cards.findIndex(x=>x.id===c.id); if(i>=0)DB.cards[i]=c; else {DB.cards.push(c); if(!Player.has(c.id)) Player.add(c.id,3);} });
       if(j.story&&j.story.polizei&&j.story.verbrecher){ Story.data=j.story; Story.save(); }
-      DB.save(); Player.save(); this.renderList(); toast("Import fertig"); }).catch(()=>toast("Datei ungültig"));
+      DB.save(); Player.save(); this.renderList(); GlobalCards.publishMany(arr).then(ok=>toast(ok?"Import fertig – an alle Spieler verteilt":"Import fertig (nur auf diesem Gerät)")); }).catch(()=>toast("Datei ungültig"));
     input.value="";
   },
   async changePin(){ const p=await UI.ask("Neue Admin-PIN (mind. 4 Zeichen)","password"); if(p&&p.length>=4){Store.set("pin",p);toast("PIN geändert")} else if(p!==null) toast("Zu kurz"); },
   async resetAll(){ if(!await UI.ask("Alle Karten auf die Standardkarten zurücksetzen? Eigene Karten gehen verloren!")) return;
-    DB.cards=START_CARDS.map(normalizeCard); DB.save(); Store.set("deleted",[]); Store.set("edited",[]); Deck.prune(); this.renderList(); toast("Zurückgesetzt"); },
+    const ok=await GlobalCards.publishReset(); Store.set("globalCards",null); GlobalCards.data={c:{},del:{}};
+    DB.cards=START_CARDS.map(normalizeCard); DB.save(); Store.set("deleted",[]); Store.set("edited",[]); Deck.prune(); this.renderList(); toast(ok?"Zurückgesetzt – für alle Spieler":"Zurückgesetzt"); },
 };
 
 /* ============================ STORY-EDITOR ============================ */

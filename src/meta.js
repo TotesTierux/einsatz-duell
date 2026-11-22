@@ -193,3 +193,84 @@ const Refine = {
 };
 
 setTimeout(()=>{ try{ Cosmetic.apply(); UI.badges(); }catch(e){ console.error(e); } },0);
+
+/* ============================ KARTENÄNDERUNGEN FÜR ALLE (Admin → Server) ============================
+   Der Admin speichert geänderte, neue und gelöschte Karten unter global/cards in der Realtime Database.
+   Jede App lädt diese Änderungen beim Start und bekommt neue sofort per EventSource.
+   Schreiben darf nur, wer in der Datenbank unter admins/{Konto-ID} = true eingetragen ist.
+   ================================================================================================= */
+const GlobalCards = {
+  data:{c:{},del:{}}, es:null, admin:null, _gen:0,
+  cache(){ const d=Store.get("globalCards",null); if(d) this.data={c:d.c||{},del:d.del||{}}; return this.data; },
+  /* Server-Änderungen über die lokalen Karten legen (wird von DB.load aufgerufen) */
+  overlay(cards){
+    const d=this.cache(), del=new Set(Object.keys(d.del||{}));
+    cards=cards.filter(c=>!del.has(c.id));
+    Object.values(d.c||{}).forEach(js=>{ try{ const c=normalizeCard(typeof js==="string"?JSON.parse(js):js); if(del.has(c.id)) return;
+      const i=cards.findIndex(x=>x.id===c.id); if(i>=0) cards[i]=c; else cards.push(c); }catch(e){} });
+    return cards;
+  },
+  apply(){
+    Store.set("globalCards",this.data);
+    DB.load();
+    if(UI.current==="collection") UI.renderCollection();
+    if(UI.current==="admin" && typeof Admin!=="undefined" && Admin.renderList) Admin.renderList();
+    if(UI.current==="deck") Deck.render();
+  },
+  async start(){
+    if(!Cloud.enabled()) return;
+    const gen=++this._gen; let t; try{ t=await Cloud.token(); }catch(e){ return setTimeout(()=>gen===this._gen&&this.start(),30000); }
+    if(gen!==this._gen) return;
+    try{ this.es&&this.es.close(); }catch(e){}
+    const es=new EventSource(`${Cloud.url()}/global/cards.json?auth=${encodeURIComponent(t)}`); this.es=es;
+    const on=e=>{ try{ const d=JSON.parse(e.data); if(!d) return; this.onEvent(e.type,d); }catch(err){ console.error(err); } };
+    es.addEventListener("put",on); es.addEventListener("patch",on);
+    const again=()=>{ try{ es.close(); }catch(e){} if(gen===this._gen) setTimeout(()=>this.start(),5000); };
+    es.addEventListener("auth_revoked",again); es.addEventListener("cancel",again); es.onerror=()=>{ if(es.readyState===2) again(); };
+  },
+  onEvent(type,d){
+    const parts=(d.path||"/").split("/").filter(Boolean);
+    if(!parts.length){ if(type==="put") this.data={c:(d.data&&d.data.c)||{},del:(d.data&&d.data.del)||{}};
+      else { Object.entries(d.data||{}).forEach(([k,v])=>{ this.data[k]=v||{}; }); } }
+    else { const [k,id]=parts; this.data[k]=this.data[k]||{};
+      if(id==null){ if(type==="put") this.data[k]=d.data||{}; else Object.entries(d.data||{}).forEach(([i,v])=>{ if(v==null) delete this.data[k][i]; else this.data[k][i]=v; }); }
+      else if(d.data==null) delete this.data[k][id]; else this.data[k][id]=d.data; }
+    clearTimeout(this._t); this._t=setTimeout(()=>{ const before=this._applied; this.apply(); if(before) toast("🔄 Karten wurden vom Admin aktualisiert"); this._applied=true; },300);
+  },
+  uid(){ return (Account.user&&Account.user.uid) || (Store.get("anon",null)||{}).uid || null; },
+  async checkAdmin(){
+    const id=this.uid(); if(!id||!Cloud.enabled()){ this.admin=false; return false; }
+    try{ this.admin = (await Cloud.req(`admins/${id}`))===true; }catch(e){ this.admin=false; }
+    return this.admin;
+  },
+  /* ---------- Admin: veröffentlichen ---------- */
+  async publish(card){
+    if(!this.admin) return false;
+    try{ await Cloud.req(`global/cards/c/${card.id}`,"PUT",JSON.stringify(card)); await Cloud.req(`global/cards/del/${card.id}`,"DELETE"); return true; }
+    catch(e){ toast("⚠️ Server: Änderung nur lokal gespeichert"); return false; }
+  },
+  async publishDelete(id){
+    if(!this.admin) return false;
+    try{ await Cloud.req(`global/cards/del/${id}`,"PUT",true); await Cloud.req(`global/cards/c/${id}`,"DELETE"); return true; }catch(e){ return false; }
+  },
+  async publishMany(cards){
+    if(!this.admin) return false; const c={}; cards.forEach(x=>c[x.id]=JSON.stringify(x));
+    try{ await Cloud.req("global/cards/c","PATCH",c); return true; }catch(e){ return false; }
+  },
+  async publishReset(){ if(!this.admin) return false; try{ await Cloud.req("global/cards","DELETE"); return true; }catch(e){ return false; } },
+  /* Hinweisfeld im Admin-Bereich */
+  async renderAdmin(){
+    const el=$("admGlobal"); if(!el) return;
+    if(!Cloud.enabled()){ el.innerHTML="⚠️ Kein Server konfiguriert – Änderungen gelten nur auf diesem Gerät."; return; }
+    el.innerHTML="🌐 Prüfe Admin-Rechte auf dem Server …";
+    const ok=await this.checkAdmin(), id=this.uid();
+    el.className="panel admglobal "+(ok?"ok":"warn");
+    el.innerHTML = ok ? "🌐 <b>Server-Admin aktiv:</b> Jede gespeicherte, neue oder gelöschte Karte kommt sofort bei allen Spielern an."
+      : `⚠️ <b>Änderungen gelten bisher nur auf diesem Gerät.</b> Damit sie bei allen Spielern ankommen, trage deine Konto-ID in Firebase als Admin ein
+         (Realtime Database → Daten → <code>admins</code> → <code>${esc(id||"(erst einloggen)")}</code> = <code>true</code>).
+         ${Account.user?"":"<br>Melde dich dafür zuerst mit deinem Konto an (👤 Konto)."}
+         ${id?`<br><button class="small ghost" onclick="UI.copy?UI.copy('${id}'):navigator.clipboard.writeText('${id}');toast('Konto-ID kopiert')">📋 Konto-ID kopieren</button>`:""}
+         <button class="small ghost" onclick="GlobalCards.renderAdmin()">🔄 Erneut prüfen</button>`;
+  },
+};
+setTimeout(()=>{ try{ GlobalCards.start(); }catch(e){} },1500);
