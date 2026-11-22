@@ -485,7 +485,7 @@ const Player = {
   /* angezeigte Stufe: selbst gewählt, sonst die beste */
   display(id){ const s=this.show[id]; return s&&this.printsOf(id)[s] ? s : this.bestPrint(id); },
   remove(id,pr="C",n=1){ const p=this.prints[id]; if(!p||!(p[pr]>=n)) return false; p[pr]-=n; if(!p[pr]) delete p[pr]; this.owned[id]-=n; if(this.owned[id]<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } return true; },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],kombi:this.kombi,boost:this.boost,packs:this.packs,quests:this.quests,cosmetics:this.cosmetics}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],boost:this.boost,packs:this.packs,quests:this.quests,cosmetics:this.cosmetics}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1,pr="C"){ this.owned[id]=(this.owned[id]||0)+n; const p=this.prints[id]||(this.prints[id]={}); p[pr]=(p[pr]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -718,7 +718,7 @@ const UI = {
   show(id){
     document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
     $(id).classList.add("active"); this.current=id; window.scrollTo(0,0); this.coins(); fitSoon();
-    Sound.music(id==="duel"||id==="kombi"?"battle":"menu"); Sound.renderButtons();
+    Sound.music(id==="duel"?"battle":"menu"); Sound.renderButtons();
     if(id==="collection") this.renderCollection();
     if(id==="admin"){ Admin.tab(Admin.curTab); GlobalCards.renderAdmin(); }
     if(id==="deck") Deck.render();
@@ -729,9 +729,9 @@ const UI = {
     if(id==="tour") Tour.render();
     if(id==="quests") Quests.render();
     if(id==="shop") Cosmetic.render();
-    if(id==="kombi") Kombi.render();
     if(id==="trade") Trade.render();
     if(id==="account") Account.render();
+    if(id==="social") Social.render(true);
     if(id==="home") this.badges();
   },
   coins(){ ["homeCoins","shopCoins","openCoins"].forEach(i=>{const e=$(i); if(e) e.textContent="🪙 "+Player.coins}); },
@@ -741,6 +741,7 @@ const UI = {
     const me=$("homeMe"); if(me) me.innerHTML=`${acc}👤 ${esc(nick)} · 👮${pp.lv} · 🦹${pv.lv}${sp?'<span class="dot"></span>':""}`;
     const b=$("btnProfile"); if(b) b.innerHTML=`⭐ Laufbahn${sp?` (${sp})`:""}`;
     const q=$("btnQuests"); if(q && typeof Quests!=="undefined"){ const n=Quests.claimable(); q.innerHTML=`📋 Aufträge${n?` <span class="qdot">${n}</span>`:""}`; }
+    const so=$("btnSocial"); if(so && typeof Social!=="undefined"){ const n=Social.reqs.length+Social.invites.length; so.innerHTML=`👥 Freunde &amp; Orga${n?` <span class="qdot">${n}</span>`:""}`; }
   },
   back(){ // Android-Zurück-Taste
     if($("reveal").classList.contains("show")){return true}
@@ -751,7 +752,6 @@ const UI = {
     if(this.current==="duel"){Duel.quit();return true}
     if(this.current==="opening"){this.show("shop");return true}
     if(this.current==="tour"){Tour.leave();return true}
-    if(this.current==="kombi"){Kombi.leave();return true}
     if(this.current==="trade"){Trade.leave();return true}
     if(this.current!=="home"){this.show("home");return true}
     return false;
@@ -763,6 +763,13 @@ const UI = {
     const x=document.createElement("button");x.textContent=closeLabel||"Schließen";x.className="ghost";x.onclick=()=>this.closeModal();a.appendChild(x);
     this._onClose=onClose||null;
     $("modal").classList.add("show");
+  },
+  /* Hinweis-Dialog mit eigenem Text und Knöpfen (ohne extra „Schließen“) */
+  dialog(html, actions, onClose){
+    $("modalCard").innerHTML=`<div class="panel" style="background:var(--paper);color:var(--ink);font-weight:700;font-size:18px;text-align:center;width:min(320px,86vw);margin:0">${html}</div>`;
+    const a=$("modalActs"); a.innerHTML="";
+    (actions||[]).forEach(([label,fn,cls])=>{const b=document.createElement("button");b.textContent=label;b.className=cls||"";b.onclick=()=>{this._onClose=null;this.closeModal();fn&&fn()};a.appendChild(b)});
+    this._onClose=onClose||null; $("modal").classList.add("show");
   },
   /* Eigener Dialog statt prompt/confirm. Promise: true/false bzw. Text/null */
   /* Texteingabe mit Vorgabe (null = abgebrochen) */
@@ -779,6 +786,8 @@ const UI = {
     });
   },
   closeModal(){$("modal").classList.remove("show"); const f=this._onClose; this._onClose=null; f&&f();},
+  /* Sammlung bzw. Deck-Editor nach Training/Kriminaltechnik neu zeichnen */
+  refreshCards(){ Deck.prune(); if(this.current==='deck') Deck.render(); else this.renderCollection(); },
   renderCollection(){
     const q=$("colSearch").value.toLowerCase(), t=$("colType").value, o=$("colOwned").value;
     const list=DB.cards.filter(c=>matchFilter(c,t)&&c.name.toLowerCase().includes(q)&&(!o||(o==="own"?Player.has(c.id):o==="fancy"?PRINT[Player.bestPrint(c.id)||"C"].rank>=3:!Player.has(c.id))));
@@ -807,7 +816,7 @@ const UI = {
         else acts.push([ok?`Für +${t+1} fehlen ${k.coins-Player.coins} 🪙`:`Für +${t+1} brauchst du ${k.copies} doppelte Exemplare (du hast ${Math.max(0,spare)})`,null,"ghost"]);
       }
     }
-    PRINTS.filter(x=>p[x.k]&&x.k!==cur).reverse().forEach(x=>acts.push([`✨ Als ${x.name} anzeigen`,()=>{ Player.show[id]=x.k; Player.save(); this.renderCollection(); setTimeout(()=>this.cardInfo(id),50); },"blue"]));
+    PRINTS.filter(x=>p[x.k]&&x.k!==cur).reverse().forEach(x=>acts.push([`✨ Als ${x.name} anzeigen`,()=>{ Player.show[id]=x.k; Player.save(); this.refreshCards(); setTimeout(()=>this.cardInfo(id),50); },"blue"]));
     this.modal(Prog.upgraded(c,lv), acts);
   },
   async doBoost(id){
@@ -815,7 +824,7 @@ const UI = {
     if(!await UI.ask(`${k.copies} doppelte${k.copies>1?"":"s"} Exemplar${k.copies>1?"e":""} von „${c.name}“ und ${k.coins} Münzen einsetzen? Die Karte bekommt dauerhaft ${Prog.boostText(c,1)}. Deine Kartenstufe bleibt erhalten.`)) return setTimeout(()=>this.cardInfo(id),50);
     if(!Prog.boost(id)) return toast("Training nicht möglich");
     banner(`+${t+1} TRAINIERT!`); toast(`${c.name}: ${Prog.boostText(c,t+1)}`);
-    this.renderCollection(); setTimeout(()=>this.cardInfo(id),400);
+    this.refreshCards(); setTimeout(()=>this.cardInfo(id),400);
   },
   async openAdmin(){
     const pin = Store.get("pin","1234");
@@ -1096,6 +1105,9 @@ const Deck = {
     $("deckSlots").querySelectorAll("[data-i]").forEach(s=>s.onclick=()=>this.select(s.dataset.i));
     $("deckSlots").querySelectorAll("[data-new]").forEach(s=>s.onclick=()=>this.create(false));
     $("deckCount").textContent=`${this.list.length}/${this.MAX}`;
+    { const L=this.list.map(id=>DB.byId(id)).filter(Boolean), n=t=>L.filter(c=>c.type===t).length, ok=this.valid();
+      const mon=n("monster"), hi=L.filter(c=>c.type==="monster"&&c.level>=5).length;
+      $("deckStats").innerHTML=`<b class="${ok?"ok":"bad"}">🃏 ${L.length}/${this.MAX}</b><span>👤 Monster <b>${mon}</b>${hi?` <small>(${hi}× ★5+)</small>`:""}</span><span>✨ Zauber <b>${n("spell")}</b></span><span>🪤 Fallen <b>${n("trap")}</b></span>${L.length<this.MIN?`<small class="bad">noch ${this.MIN-L.length} bis spielbereit</small>`:""}`; }
     $("deckCount").style.color = this.valid()?"var(--green)":"var(--red)";
     const fd=this.fusionDeck(this.faction);
     $("deckInfo").textContent=`⭐ = dieses Deck nimmst du ins Duell (antippen zum Wechseln). 20–40 Karten, max. 3 Kopien (nur so viele, wie du besitzt). Fusionsdeck: ${fd.length} Fusion(en) – wird automatisch aus deiner Sammlung gefüllt.`;
@@ -1106,10 +1118,12 @@ const Deck = {
     $("deckList").innerHTML=list.map(c=>{const n=this.count(c.id);
       if(c.type==="fusion") return `<div class="deckitem"><span class="cnt" style="background:var(--purple)">${Math.min(3,Player.has(c.id))}</span>${cardHTML(Prog.upgraded(c),"",`data-id="${c.id}"`)}</div>`;
       return `<div class="deckitem">${n?`<span class="cnt">${n}</span>`:""}${cardHTML(Prog.upgraded(c),"",`data-id="${c.id}"`)}
-      <div class="ctrl"><button class="red" data-sub="${c.id}">−</button><span class="muted" style="align-self:center">/${this.limit(c.id)}</span><button class="green" data-add="${c.id}">＋</button></div></div>`}).join("")
+      <div class="ctrl"><button class="red" data-sub="${c.id}">−</button><span class="muted" style="align-self:center">/${this.limit(c.id)}</span><button class="green" data-add="${c.id}">＋</button></div>
+      ${Prog.boostable(c)||Refine.next(Player.display(c.id))?`<button class="small ${Prog.canBoost(c.id)?"blue":"ghost"} dkup" data-up="${c.id}">⬆ Verbessern${Prog.canBoost(c.id)?" ✓":""}${Prog.boostOf(c.id)?` (+${Prog.boostOf(c.id)})`:""}</button>`:""}</div>`}).join("")
       || `<p class="muted">${f==="fusion"?"Noch keine Fusionen – im Shop gibt es welche!":"Keine passenden Karten in deiner Sammlung."}</p>`;
     $("deckList").querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>this.add(b.dataset.add));
     $("deckList").querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>this.sub(b.dataset.sub));
+    $("deckList").querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>UI.cardInfo(b.dataset.up));
     $("deckList").querySelectorAll(".card").forEach(el=>el.onclick=()=>UI.cardInfo(el.dataset.id));
   },
 };
@@ -1406,7 +1420,8 @@ const Duel = {
         if(onEnd) await onEnd(won);
         if(UI.current!=="duel") return;
         if(this.online && Tour.active()) return UI.modal(null,[["🏆 Zum Turnier",()=>{Net.endDuelConn(Duel.matchConn||null);UI.show("tour")},"red"]]);
-        const again = this.online ? ["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"] : this.opts.oppName ? ["📖 Zur Story",()=>UI.show("story"),"red"] : ["Nochmal",()=>UI.startDuel(),"red"];
+        if(this.online) return Rematch.offer();
+        const again = this.opts.oppName ? ["📖 Zur Story",()=>UI.show("story"),"red"] : ["Nochmal",()=>UI.startDuel(),"red"];
         UI.modal(null,[again,["Hauptmenü",()=>UI.show("home"),"blue"]]);
       },1300); },300);
   },
@@ -2208,6 +2223,7 @@ const Net = {
     if(c!==this.conn) return;
     this.conn=null;
     if(UI.current==="duel" && Duel.online && !Duel.over){ toast("Verbindung zum Gegner verloren"); Duel.opponentLeft(); }
+    else if(UI.current==="duel" && Duel.online && Duel.over) Rematch.onOpp(false);
     else if(UI.current==="online") Lobby.error("Verbindung getrennt");
   },
   onClose(){ this.onConnClose(this.conn); },
@@ -2253,6 +2269,8 @@ const Net = {
       case "reply": { const f=this.pend[m.id]; delete this.pend[m.id]; f&&f(m.val); break; }
       // ---- beide ----
       case "quit": if(UI.current==="duel" && !Duel.over){ toast("Der Gegner hat aufgegeben"); Duel.opponentLeft(); } break;
+      case "rematch": Rematch.onOpp(true); break;
+      case "rematch_no": Rematch.onOpp(false); break;
     }
   },
   /* Aktion des Gastes beim Gastgeber ausführen (nur wenn der Gast wirklich am Zug ist) */
@@ -2322,6 +2340,8 @@ const Cloud = {
     a={uid:j.localId||j.user_id, idToken:j.idToken||j.id_token, refreshToken:j.refreshToken||j.refresh_token, exp:Date.now()+((+(j.expiresIn||j.expires_in)||3600)-120)*1000};
     Store.set("anon",a); return a.idToken;
   },
+  /* eigene Nutzer-ID (Konto oder anonym) – nach token() verfügbar */
+  async uid(){ await this.token(); const c=this.cfg(); if(c&&c.uid) return c.uid; if(Account.user&&Account.user.uid) return Account.user.uid; const a=Store.get("anon",null); return a&&a.uid; },
   async req(path,method="GET",body,query=""){
     const t=await this.token();
     const r=await fetch(`${this.url()}/${path}.json?auth=${encodeURIComponent(t)}${query}`,{method, headers:body!==undefined?{"Content-Type":"application/json"}:{}, body:body!==undefined?JSON.stringify(body):undefined});
@@ -3031,14 +3051,44 @@ Object.assign(Duel, {
     if(this.over && this._ended) return; this.over=true; this._ended=true; this.closeReveal(); this.render();
     setTimeout(()=>{ banner(won?(this.side==="polizei"?"FALL GELÖST!":"ENTKOMMEN!"):(this.side==="polizei"?"ENTKOMMEN…":"GESCHNAPPT!"));
       setTimeout(()=>{ Prog.reward(this.side, won?ONLINE_WIN:ONLINE_LOSS, won?150:60); Rewards.result("online",won); Tour.duelEnded(won, this.P&&this.P.lp, this.AI&&this.AI.lp); if(UI.current!=="duel") return;
-        UI.modal(null, Tour.active() ? [["🏆 Zum Turnier",()=>{Net.endDuelConn(Duel.matchConn||null);UI.show("tour")},"red"]]
-          : [["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },1300); },300);
+        if(Tour.active()) UI.modal(null,[["🏆 Zum Turnier",()=>{Net.endDuelConn(Duel.matchConn||null);UI.show("tour")},"red"]]);
+        else Rematch.offer(); },1300); },300);
   },
   opponentLeft(){
     if(this.over) return;
     if(this.host){ this.win(this.P); } else { this.endClient(true); }
   },
 });
+
+/* ---------- Revanche: nach einem Online-Duell im selben Raum weiterspielen (kein neuer Code nötig) ---------- */
+const Rematch = {
+  me:false, opp:null,
+  oppName(){ return esc((Duel.AI&&Duel.AI.name)||"Dein Gegner"); },
+  offer(){
+    this.me=false; if(this.opp===false) return this.gone();
+    UI.dialog(`🔁 Noch eine Runde?<br><small style="font-weight:400">${this.opp?`<b>${this.oppName()}</b> möchte noch eine Runde spielen!`:`Gleicher Raum, gleicher Gegner – kein neuer Code nötig.`}</small>`,
+      [["🔁 Noch eine Runde",()=>this.want(),"green"],["🌐 Online-Lobby",()=>this.leave("online"),"red"],["Hauptmenü",()=>this.leave("home"),"blue"]]);
+  },
+  want(){
+    this.me=true; Net.send({t:"rematch"});
+    if(this.opp) return this.go();
+    UI.dialog(`⏳ Warte auf ${this.oppName()} …<br><small style="font-weight:400">Sobald dein Gegner auch „Noch eine Runde“ wählt, geht es los.</small>`,
+      [["Abbrechen",()=>this.leave("online"),"ghost"]]);
+  },
+  onOpp(yes){
+    if(!(Duel.online && Duel.over && !Tour.active())) return;
+    this.opp=yes;
+    if(!yes){ if(UI.current==="duel") this.gone(); return; }
+    if(this.me) this.go(); else { toast(`${(Duel.AI&&Duel.AI.name)||"Dein Gegner"} möchte noch eine Runde!`); if($("modal").classList.contains("show")) this.offer(); }
+  },
+  gone(){ this.me=false; this.opp=null; UI.dialog(`👋 ${this.oppName()} hat den Raum verlassen.`, [["🌐 Online-Lobby",()=>{Net.close();UI.show("online")},"red"],["Hauptmenü",()=>{Net.close();UI.show("home")},"blue"]]); },
+  go(){
+    this.me=false; this.opp=null; Duel._ended=false; UI.closeModal(); toast("Revanche! Neue Runde startet …");
+    // Der Gastgeber startet wie beim ersten Beitritt neu: welcome → Gast schickt Deck → Duell startet
+    if(Net.role==="host") setTimeout(()=>Net.send({t:"welcome",name:Net.name,side:Net.side,v:window.APP_VERSION||"dev"}),400);
+  },
+  leave(to){ Net.send({t:"rematch_no"}); this.me=false; this.opp=null; setTimeout(()=>{ Net.close(); UI.show(to); },150); },
+};
 
 /* ---------- Lobby ---------- */
 const Lobby = {
@@ -3123,7 +3173,7 @@ const Account = {
   setSession(j){
     this.user = {uid:j.localId||j.user_id, email:j.email||(this.user&&this.user.email), idToken:j.idToken||j.id_token,
       refreshToken:j.refreshToken||j.refresh_token, exp:Date.now()+((+(j.expiresIn||j.expires_in)||3600)-60)*1000};
-    this.persist();
+    this.persist(); this.resetSocial();
   },
   async token(){
     if(!this.loggedIn()) throw new Error("NOT_LOGGED_IN");
@@ -3146,11 +3196,13 @@ const Account = {
     try{ return await this.pull(true); }catch(e){ this.lastSyncError=e.message; return "nosync"; }
   },
   async resetPassword(email){ await this.call(this.idt()+"sendOobCode?key="+FIREBASE.apiKey, {requestType:"PASSWORD_RESET", email}); },
-  logout(){ this.user=null; this.persist(); UI.badges(); },
+  logout(){ this.user=null; this.persist(); UI.badges(); this.resetSocial(); },
+  /* Anderes Konto → andere Freunde/Organisation */
+  resetSocial(){ if(typeof Social==="undefined") return; Social.me=null; Social.clan=null; Social.clanId=null; Social.friends=[]; Social.reqs=[]; Social.invites=[]; Store.set("clanCache",null); setTimeout(()=>Social.start(),500); },
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, boost:Player.boost, packs:Player.packs, quests:Player.quests, cosmetics:Player.cosmetics, decks:Deck.lists, deckSets:Deck.sets, deckActive:Deck.active, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], boost:Player.boost, packs:Player.packs, quests:Player.quests, cosmetics:Player.cosmetics, decks:Deck.lists, deckSets:Deck.sets, deckActive:Deck.active, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -3168,11 +3220,11 @@ const Account = {
     if(!r.ok) throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status));
     const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
     const d = JSON.parse(raw);
-    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.kombi=d.kombi||Player.kombi; Player.packs=d.packs||Player.packs; Player.quests=d.quests||Player.quests; Player.cosmetics=d.cosmetics||Player.cosmetics; setTimeout(()=>Cosmetic.apply(),0); Player.syncPrints();
+    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.packs=d.packs||Player.packs; Player.quests=d.quests||Player.quests; Player.cosmetics=d.cosmetics||Player.cosmetics; setTimeout(()=>Cosmetic.apply(),0); Player.syncPrints();
     if(d.deckSets){ Object.keys(FACTIONS).forEach(f=>{ if(Array.isArray(d.deckSets[f])) Deck.sets[f]=d.deckSets[f]; }); if(d.deckActive) Deck.active={...Deck.active,...d.deckActive}; Deck.prune(); }
     else if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
     if(d.nick) Store.set("nick", d.nick);
-    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],kombi:Player.kombi,boost:Player.boost,packs:Player.packs,quests:Player.quests,cosmetics:Player.cosmetics}); Deck.save();
+    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],boost:Player.boost,packs:Player.packs,quests:Player.quests,cosmetics:Player.cosmetics}); Deck.save();
     UI.coins(); UI.badges(); return "loaded";
   },
   /* nach jeder Änderung am Spielstand: verzögert hochladen */
@@ -3258,6 +3310,8 @@ $("acPrivacy").href=(window.APP_SITE||"")+"/datenschutz.html";
 $("colType").innerHTML=filterOptions(); $("admType").innerHTML=filterOptions();
 $("admTabs").querySelectorAll("span").forEach(s=>s.onclick=()=>Admin.tab(s.dataset.t));
 DB.load(); Player.load(); Story.load(); Deck.load(); UI.coins(); Account.load(); Prog.data(); UI.badges();
+setTimeout(()=>CardStats.send(),4000);
+setTimeout(()=>{ if(typeof Social!=="undefined") Social.start().then(()=>Social.loadInvites(true)).then(()=>Social.loadReqs()).then(()=>{ Social.flush(); UI.badges(); }); },2500);   // liegengebliebene Statistik-Meldungen nachschicken
 /* Neuerscheinungen ankündigen (wöchentliche Karten, monatliche Story) */
 setTimeout(()=>{ try{
   const seen=Store.get("seenRelease","2026-11-22"), today=todayISO();

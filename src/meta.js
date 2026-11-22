@@ -4,7 +4,7 @@
    Cosmetic – Kartenrücken und Spielfelder zum Kaufen (rein optisch, Moneysink)
    Refine   – Seltenheitsstufe eines Exemplars gegen Münzen veredeln (Moneysink)
    ========================================================================================== */
-const DROP_CHANCE = {ki:.06, story:.10, story_hard:.15, online:.12, kombi1:.15, kombi2:.08};
+const DROP_CHANCE = {ki:.06, story:.10, story_hard:.15, online:.12};
 const DROP_PACKS  = [["pol",30],["ver",30],["mix",25],["fus",10],["prem",5]];
 
 /* Aufträge: Text je nach gespielter Seite (p = Polizei, v = Verbrecher) */
@@ -17,7 +17,6 @@ const QUEST_POOL = {
     {id:"d_dmg",     ev:"damage",     n:8000, p:"Bring den Gegner um 8.000 LP in Bedrängnis",           v:"Mach der Polizei 8.000 LP Ärger",                   coins:150, xp:60},
     {id:"d_story",   ev:"story_win",  n:1,    p:"Schließe 1 Ermittlungsakte ab (Story-Kapitel)",        v:"Schreib 1 Kapitel Unterwelt-Geschichte (Story)",    coins:150, xp:60},
     {id:"d_online",  ev:"online_play",n:1,    p:"Übernimm 1 Amtshilfe-Einsatz (Online-Duell)",          v:"Leg dich 1× mit einem echten Gegner an (Online)",   coins:200, xp:80},
-    {id:"d_kombi",   ev:"kombi_play", n:1,    p:"Leite 1 Kombi-Einsatz",                                v:"Mische 1× beim Kombi-Einsatz mit",                  coins:150, xp:60},
     {id:"d_booster", ev:"booster",    n:2,    p:"Sichte 2 neue Personalakten (Booster öffnen)",         v:"Räume 2 Beutesäcke aus (Booster öffnen)",           coins:100, xp:40},
     {id:"d_fusion",  ev:"fusion",     n:1,    p:"Stelle 1 Sondereinheit zusammen (Fusion)",             v:"Schmiede 1 neue Bande (Fusion)",                    coins:150, xp:60},
     {id:"d_direct",  ev:"direct",     n:3,    p:"Greife 3× direkt zu (Direktangriff)",                  v:"Schlag 3× direkt zu (Direktangriff)",               coins:120, xp:50},
@@ -27,7 +26,6 @@ const QUEST_POOL = {
     {id:"w_win",     ev:"win",        n:15,    p:"Wochenbilanz: 15 Fälle aufgeklärt (Siege)",          v:"Wochenbilanz: 15 Coups gelandet (Siege)",            coins:1000, xp:400, pack:"mix"},
     {id:"w_story",   ev:"story_win",  n:5,     p:"Schließe 5 Ermittlungsakten ab (Story-Kapitel)",      v:"Schreib 5 Kapitel Unterwelt-Geschichte (Story)",     coins:900,  xp:350},
     {id:"w_online",  ev:"online_win", n:5,     p:"Gewinne 5 Amtshilfe-Einsätze (Online-Siege)",         v:"Gewinne 5 Straßenduelle (Online-Siege)",             coins:1200, xp:450, pack:"prem"},
-    {id:"w_kombi",   ev:"kombi_top",  n:3,     p:"Werde 3× bester oder zweitbester Einsatzleiter (Kombi)", v:"Lande 3× auf Platz 1 oder 2 im Kombi-Einsatz",   coins:1000, xp:400},
     {id:"w_dmg",     ev:"damage",     n:60000, p:"Großlage: 60.000 LP Druck auf die Unterwelt",         v:"Großangriff: 60.000 LP Schaden bei der Polizei",     coins:900,  xp:350},
     {id:"w_spend",   ev:"coins_spent",n:5000,  p:"Investiere 5.000 Münzen in die Ausstattung",          v:"Wasche 5.000 Münzen (ausgeben)",                     coins:800,  xp:300},
     {id:"w_train",   ev:"train",      n:2,     p:"Schicke 2 Kollegen zur Fortbildung (Training)",       v:"Schick 2 Leute ins Training",                        coins:700,  xp:300},
@@ -42,16 +40,15 @@ const QUEST_REROLL = 200;
 
 const Rewards = {
   side(){ return Store.get("lastSide","polizei"); },
-  /* nach einem Spiel: mode = ki | story | online | kombi; extra.hard / extra.place */
+  /* nach einem Spiel: mode = ki | story | online | tour; extra.hard */
   result(mode, won, extra={}){
     Quests.track("play_any");
-    if(mode!=="kombi"){ Quests.track("play"); if(won) Quests.track("win"); }
+    Quests.track("play"); if(won) Quests.track("win");
     if(mode==="story" && won) Quests.track("story_win");
     if(mode==="online"){ Quests.track("online_play"); if(won) Quests.track("online_win"); }
-    if(mode==="kombi"){ Quests.track("kombi_play"); if(extra.place<=2) Quests.track("kombi_top"); }
+    if(typeof Social!=="undefined") Social.onResult(mode, won, extra);
     let key=null;
-    if(mode==="kombi") key = extra.place===1?"kombi1":extra.place===2?"kombi2":null;
-    else if(won) key = mode==="story"&&extra.hard?"story_hard":mode;
+    if(won) key = mode==="story"&&extra.hard?"story_hard":mode;
     const ch=key?DROP_CHANCE[key]:0;
     if(ch && Math.random()<ch*(1+.1*Prog.skill(this.side(),"luck"))) setTimeout(()=>this.givePack(this.pickPack(),this.side()!=="verbrecher"?"Beim Einsatz sichergestellt:":"Fette Beute nach dem Coup:"),2200);
   },
@@ -71,6 +68,8 @@ const Quests = {
   pick(kind,n,exclude=[]){ return shuffle(QUEST_POOL[kind].filter(q=>!exclude.includes(q.id))).slice(0,n).map(q=>({id:q.id,p:0,claimed:false})); },
   state(){
     const Q=Player.quests=Player.quests||{};
+    // Aufträge, die es nicht mehr gibt (z. B. vom entfernten Kombi-Einsatz), austauschen
+    ["daily","weekly"].forEach(k=>{ if(Q[k]) Q[k]=Q[k].map(q=>QUEST_POOL[k].some(x=>x.id===q.id)?q:this.pick(k,1,Q[k].map(x=>x.id))[0]); });
     if(Q.day!==this.day()){ Q.day=this.day(); Q.daily=this.pick("daily",3); Q.dailyBonus=false; Q.rerolled=false; }
     if(Q.week!==this.week()){ Q.week=this.week(); Q.weekly=this.pick("weekly",3); Q.weeklyBonus=false; }
     return Q;
@@ -188,7 +187,7 @@ const Refine = {
     if(!await UI.ask(`Die Kriminaltechnik bereitet ein Exemplar „${c.name}“ von ${PRINT[k].name} zu ${PRINT[nx].name} auf. Kosten: ${cost.toLocaleString("de-DE")} Münzen.`)) return setTimeout(()=>UI.cardInfo(id),50);
     if(!Player.remove(id,k,1)) return toast("Veredeln nicht möglich");
     Player.add(id,1,nx); Player.show[id]=nx; Player.coins-=cost; Quests.track("coins_spent",cost); Player.save(); UI.coins();
-    banner(`${PRINT[nx].name.toUpperCase()}!`); UI.renderCollection(); setTimeout(()=>UI.cardInfo(id),500);
+    banner(`${PRINT[nx].name.toUpperCase()}!`); UI.refreshCards(); setTimeout(()=>UI.cardInfo(id),500);
   },
 };
 
@@ -282,8 +281,9 @@ setTimeout(()=>{ try{ GlobalCards.start(); }catch(e){} },1500);
    ================================================================================================ */
 const CardStats = {
   cur:null,
+  /* Offline: eigene Seite. Online rechnet nur der Gastgeber – er meldet beide Seiten (der Gast würde sonst doppelt zählen) */
   tracked(D,p){ if(!D || D.autoP || D.spectate || D.client) return false; return D.host ? true : p===D.P; },
-  begin(D){ this.cur={pl:new Map(), kills:{}, uses:{}}; },
+  begin(D){ this.cur={pl:new Map(), kills:{}, uses:{}}; this.last=null; },
   bucket(p){ if(!this.cur) this.begin(); let b=this.cur.pl.get(p); if(!b){ b=new Set(); this.cur.pl.set(p,b); } return b; },
   play(D,p,c){ if(!c||!c.id||!this.tracked(D,p)) return; this.bucket(p).add(c.id); this.cur.uses[c.id]=(this.cur.uses[c.id]||0)+1; },
   kill(D,victimOwner,killer){
@@ -293,8 +293,13 @@ const CardStats = {
     const own=[...k.mz.filter(Boolean).map(m=>m.card),...k.grave,...k.hand,...k.st.filter(Boolean).map(s=>s.card)].includes(killer);
     if(!own) return; this.cur.kills[killer.id]=(this.cur.kills[killer.id]||0)+1;
   },
+  last:null,
   finish(D,won){
     const cur=this.cur; this.cur=null; if(!cur||!cur.pl.size) return;
+    { const mine=cur.pl.get(D.realP||D.P)||new Set(); let kills=0, cel=0;
+      Object.entries(cur.kills).forEach(([id,n])=>{ if(mine.has(id)||(DB.byId(id)&&DB.byId(id).faction===D.side)) kills+=n; });
+      Object.entries(cur.uses).forEach(([id,n])=>{ const c=DB.byId(id); if(c&&c.rarity==="CE"&&c.faction===D.side) cel+=n; });
+      this.last={kills, cel}; }
     const inc=n=>({".sv":{increment:n}}), up={};
     cur.pl.forEach((ids,p)=>{ const w = (p===(D.realP||D.P)) ? won : !won;
       ids.forEach(id=>{ up[`${id}/games`]=inc(1); if(w) up[`${id}/won`]=inc(1); }); });
@@ -303,17 +308,34 @@ const CardStats = {
     up["_total/games"]=inc(1);
     // lokal mitzählen (Analyse ohne Server / Admin-Gerät)
     const L=Store.get("cardStats",{}); Object.entries(up).forEach(([k,v])=>{ const [id,f]=k.split("/"); L[id]=L[id]||{}; L[id][f]=(L[id][f]||0)+v[".sv"].increment; }); Store.set("cardStats",L);
-    if(Cloud.enabled()) Cloud.req("stats/cards","PATCH",up).catch(e=>console.warn("Statistik:",e));
+    this.send(up);
+  },
+  /* An den Server schicken; klappt es nicht (offline, Regel fehlt), später erneut versuchen */
+  async send(up){
+    const Q=Store.get("statsQueue",[]); if(up) Q.push(up); Store.set("statsQueue",Q.slice(-50));
+    if(!Cloud.enabled()||this._sending||!Q.length) return; this._sending=true;
+    try{
+      const uid=await Cloud.uid();
+      while(true){ const q=Store.get("statsQueue",[]); if(!q.length) break;
+        await Cloud.req("stats/cards","PATCH",q[0]); Store.set("statsQueue",q.slice(1)); }
+      if(uid && !Store.get("statsSeen",false)){ await Cloud.req("stats/players/"+uid,"PUT",{".sv":"timestamp"}); Store.set("statsSeen",true); }
+      this.lastError=null;
+    }catch(e){ this.lastError=e.message; console.warn("Statistik:",e.message); }
+    finally{ this._sending=false; }
   },
 };
 
 /* ---------------- Admin: Analyse & Balancing-Vorschläge ---------------- */
 const Analysis = {
   data:null, src:"server", sort:"games",
-  async load(){
-    $("admAnalysis").innerHTML=`<p class="muted">Lade Statistik …</p>`;
-    let d=null;
-    if(Cloud.enabled()){ try{ d=await Cloud.req("stats/cards"); this.src="server"; }catch(e){ d=null; } }
+  players:0, err:null,
+  async load(local){
+    $("admAnalysis").innerHTML=`<p class="muted">Lade Statistik aller Spieler …</p>`;
+    CardStats.send();                                  // eigene offene Meldungen zuerst nachschicken
+    this.err=null; let d=null;
+    if(!local && Cloud.enabled()){ try{ d=await Cloud.req("stats/cards")||{}; this.src="server";
+        try{ this.players=Object.keys(await Cloud.req("stats/players","GET",undefined,"&shallow=true")||{}).length; }catch(e){ this.players=0; } }
+      catch(e){ this.err=e.message; d=null; } }
     if(!d){ d=Store.get("cardStats",{}); this.src="lokal"; }
     this.data=d||{}; this.render();
   },
@@ -343,9 +365,10 @@ const Analysis = {
     list.sort((a,b)=>key(b)-key(a));
     const sug=list.map(r=>({r,s:this.suggest(r,total)})).filter(x=>x.s).sort((a,b)=>Math.abs(b.r.delta)-Math.abs(a.r.delta));
     el.innerHTML=`
-      <div class="panel"><b>📊 Erfasste Duelle: ${total}</b> <small class="muted">(Quelle: ${this.src==="server"?"alle Spieler über den Server":"nur dieses Gerät"})</small><br>
+      ${this.err?`<div class="panel" style="border-color:var(--red)">⚠️ Server-Statistik nicht lesbar (${esc(this.err)}). ${/401|403/.test(this.err)?"In Firebase fehlen die Regeln für <b>stats</b> oder dein Konto steht nicht unter <b>admins</b> – siehe database.rules.json.":"Keine Verbindung zum Server."} Unten siehst du nur die Duelle dieses Geräts.</div>`:""}
+      <div class="panel"><b>📊 Erfasste Duelle: ${total}</b> <small class="muted">(Quelle: ${this.src==="server"?`alle Spieler über den Server${this.players?` · ${this.players} Spieler`:""}`:"nur dieses Gerät"})</small><br>
         Siegquote Polizei ${Math.round(base.polizei*100)} % · Verbrecher ${Math.round(base.verbrecher*100)} %
-        <div class="row" style="margin-top:6px"><button class="small ghost" onclick="Analysis.load()">🔄 Aktualisieren</button></div></div>
+        <div class="row" style="margin-top:6px"><button class="small ghost" onclick="Analysis.load()">🔄 Aktualisieren</button>${CardStats.lastError?`<small class="muted">Eigene Meldungen warten: ${Store.get("statsQueue",[]).length}</small>`:""}</div></div>
       <h3 class="qh">⚖️ Balancing-Vorschläge</h3>
       ${sug.length?sug.slice(0,25).map(({r,s})=>`<div class="anrow"><b>${esc(r.c.name)}</b> <small class="muted">${r.games} Spiele</small><br>
         <span>${s.sure?"":"⚠️ wenige Daten · "}${esc(s.text)}</span>

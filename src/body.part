@@ -147,8 +147,10 @@
       <button class="blue" onclick="UI.startDuel()">⚔️ Gegen KI</button>
       <button class="blue" onclick="UI.show('online')" style="background:#a463ff;color:#fff">🌐 Online</button>
     </div>
-    <button class="kb-home" onclick="UI.show('kombi')">🧩 Kombi-Einsatz <small>NEU</small></button>
-    <button class="ghost" id="btnQuests" onclick="UI.show('quests')">📋 Aufträge</button>
+    <div class="two">
+      <button class="ghost" id="btnQuests" onclick="UI.show('quests')">📋 Aufträge</button>
+      <button class="ghost" id="btnSocial" onclick="UI.show('social')">👥 Freunde &amp; Orga</button>
+    </div>
     <div class="two">
       <button class="green" onclick="UI.show('shop')">🛒 Shop</button>
       <button onclick="UI.show('deck')">🃏 Deck</button>
@@ -171,11 +173,11 @@
   <div id="questMain"></div>
 </section>
 
-<!-- ================= KOMBI-EINSATZ ================= -->
-<section id="kombi" class="screen">
-  <div class="topbar"><button class="small ghost" onclick="Kombi.leave()">◀</button><h2 id="kbTitle">Kombi-Einsatz</h2></div>
-  <div class="kb-bar" id="kbBar"></div>
-  <div id="kbMain"></div>
+<!-- ================= FREUNDE & ORGANISATION ================= -->
+<section id="social" class="screen">
+  <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Freunde &amp; Organisation</h2></div>
+  <div class="tabs" id="socTabs"><span data-t="friends" onclick="Social.show('friends')">👥 Freunde</span><span data-t="clan" onclick="Social.show('clan')">🏢 Organisation</span></div>
+  <div id="socMain"></div>
 </section>
 
 <!-- ================= STORY ================= -->
@@ -506,6 +508,7 @@
     <span class="deckcount" id="deckCount">0/40</span></div>
   <div class="tabs" id="deckFaction"></div>
   <div class="tabs deckslots" id="deckSlots"></div>
+  <div class="deckstats" id="deckStats"></div>
   <div class="panel"><p class="muted" style="margin:0" id="deckInfo"></p>
     <div class="row" style="margin-top:8px"><button class="small blue" onclick="Deck.auto()">🎲 Automatisch</button><button class="small red" onclick="Deck.clear()">Leeren</button></div>
     <div class="row" style="margin-top:6px"><button class="small" onclick="Deck.rename()">✏️ Umbenennen</button><button class="small" onclick="Deck.create(true)">📄 Kopieren</button><button class="small ghost" onclick="Deck.remove()">🗑 Löschen</button></div></div>

@@ -9,6 +9,31 @@
       ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
       ".write": "auth != null"
     },
-    "admins": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": false } }
+    "admins": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": false } },
+
+    "profiles": { ".read": "auth != null", "$uid": { ".write": "auth != null && auth.uid === $uid" } },
+    "fcodes": { ".read": "auth != null", "$code": { ".write": "auth != null && (!data.exists() || data.val() === auth.uid)" } },
+    "freq": { "$to": { ".read": "auth != null && auth.uid === $to",
+      "$from": { ".write": "auth != null && (auth.uid === $from || auth.uid === $to)" } } },
+    "friends": { "$uid": { ".read": "auth != null && auth.uid === $uid",
+      "$fid": { ".write": "auth != null && (auth.uid === $uid || auth.uid === $fid)" } } },
+    "invites": { "$to": { ".read": "auth != null && auth.uid === $to",
+      "$from": { ".write": "auth != null && (auth.uid === $from || auth.uid === $to)" } } },
+
+    "clannames": { ".read": "auth != null",
+      "$n": { ".write": "auth != null && (!data.exists() || root.child('clans').child(data.val()).child('owner').val() === auth.uid)" } },
+    "clanlist": { ".read": "auth != null",
+      "$cid": { ".write": "auth != null && (root.child('clans').child($cid).child('members').child(auth.uid).exists() || root.child('clans').child($cid).child('owner').val() === auth.uid)" } },
+    "clans": { ".read": "auth != null",
+      "$cid": {
+        ".write": "auth != null && (!data.exists() || data.child('owner').val() === auth.uid)",
+        "members": { "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "!newData.exists() || newData.child('role').val() === 'member' || !root.child('clans').child($cid).exists() || root.child('clans').child($cid).child('owner').val() === auth.uid" } },
+        "q": { ".write": "auth != null && root.child('clans').child($cid).child('members').child(auth.uid).exists()" },
+        "done": { ".write": "auth != null && root.child('clans').child($cid).child('members').child(auth.uid).exists()" },
+        "contrib": { "$w": { "$uid": { ".write": "auth != null && auth.uid === $uid" } } }
+      }
+    }
   }
 }
