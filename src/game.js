@@ -1179,7 +1179,7 @@ const Duel = {
     this.AI.handSize=HAND; if(on) Prog.apply(this.AI, on.guestSkills); else if(opts.oppSkills) Prog.apply(this.AI, opts.oppSkills);
     // jede Kartenkopie bekommt einen eindeutigen Schlüssel (für die Online-Übertragung)
     [[this.P,"h"],[this.AI,"g"]].forEach(([pl,pre])=>[...pl.deck,...pl.extra].forEach((c,i)=>c._k=pre+i));
-    this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
+    this.gid=(this.gid||0)+1; this.turn=0; this.over=false; this.mode=null; this.busy=false; this.ready=false; this.history=[]; this._ann=null;
     $("reveal").classList.remove("show"); $("fx").innerHTML="";
     for(let i=0;i<Math.max(this.P.handSize||HAND,this.AI.handSize||HAND);i++){ if(i<(this.P.handSize||HAND)) this.draw(this.P,true); if(i<(this.AI.handSize||HAND)) this.draw(this.AI,true); }
     $("oppWho").textContent=`${opts.oppEmoji||FACTIONS[other][1]} ${this.AI.name}`;
@@ -1199,8 +1199,9 @@ const Duel = {
     if(overlay){ this._stuck=0; return; }
     if(this._revealDone){ this._revealDone(); }                 // unsichtbare, offene Ansage auflösen
     const mine=this.active===this.P, idle=Date.now()-(this._lastRender||0);
-    if(mine && !this.myTurn() && idle>9000){                   // eigener Zug hängt
-      console.warn("Watchdog: Zug freigegeben"); this.busy=false; this.waiting=false; this.ready=true; this._ann=null; this.render();
+    if(mine && !this.myTurn()){ this._stuck=(this._stuck||0)+1; } else this._stuck=0;
+    if(mine && this._stuck>=3){                                // 9 s gesperrt ohne offenes Fenster
+      console.warn("Watchdog: Zug freigegeben"); this._stuck=0; this.busy=false; this.waiting=false; this.ready=true; this._ann=null; this.render();
     } else if(!mine && !this.online && idle>15000){            // KI-Zug hängt
       console.warn("Watchdog: KI-Zug beendet"); this.busy=false; this._ann=null; this.endTurn(true);
     }
@@ -1299,10 +1300,20 @@ const Duel = {
     banner(p===this.P?"DEIN ZUG!":"GEGNER!"); Sound.play("turn");
     this.mode=null; this.ready=true; this.render();
     if(p===this.AI && this.host) return;   // Gast ist am Zug – Aktionen kommen über Net
-    if(p===this.P && this.autoP){ this.busy=true; await sleep(300); try{ await AI.playAs(p); }catch(e){ console.error(e); } await this.idle(); this.busy=false; if(!this.over) this.endTurn(true); return; }
-    if(p===this.AI){ this.busy=true; await sleep(1100); try{ await AI.play(); }catch(e){ console.error(e); } await this.idle(); this.busy=false; if(!this.over) this.endTurn(true); }
+    if(p===this.P && this.autoP){ const gid=this.gid; this.busy=true; await sleep(300); if(gid!==this.gid) return; try{ await AI.playAs(p); }catch(e){ console.error(e); } await this.idle(); this.busy=false; if(!this.over) this.endTurn(true); return; }
+    if(p===this.AI){ const gid=this.gid, turn=this.turn; this.busy=true; await sleep(1100);
+      if(gid!==this.gid) return; try{ await AI.play(); }catch(e){ console.error(e); } await this.idle();
+      if(gid!==this.gid || this.turn!==turn || this.active!==p) return;   // Duell neu gestartet oder Zug schon beendet
+      this.busy=false; if(!this.over) this.endTurn(true); }
   },
   endTurn(fromAI){
+    if(this.spectate) return;
+    if(!fromAI && this.active===this.P && !this.over && !this.myTurn()){
+      const overlay=$("reveal").classList.contains("show")||$("modal").classList.contains("show");
+      const stuckFor=Date.now()-(this._blockSince||Date.now());
+      if(!overlay && stuckFor>2500){ console.warn("Zug beenden: Sperre aufgehoben"); this.busy=false; this.waiting=false; this.ready=true; this._ann=null; }
+      else { toast("Einen Moment – die letzte Aktion läuft noch"); return; }
+    }
     if(this.client){ if(this.myTurn()) this.sendAct("endTurn",[]); return; }
     if(this.over) return;
     if(!fromAI && (this.active!==this.P || this.busy)) return;
@@ -1823,7 +1834,9 @@ const Duel = {
     $("myHand").querySelectorAll(".card").forEach(el=>el.onclick=()=>this.tapHand(+el.dataset.i));
     const am = this.mode&&this.mode.type==="attack" ? P.mz[this.mode.from] : null;
     $("btnDirect").classList.toggle("show", !!(am && this.canDirect(P,am)));
-    $("btnEnd").disabled=!my;
+    const myTurnNow = !this.spectate && this.active===this.P && !this.over;
+    if(myTurnNow && !my){ if(!this._blockSince) this._blockSince=Date.now(); } else this._blockSince=0;
+    $("btnEnd").disabled=!myTurnNow; $("btnEnd").classList.toggle("wait", myTurnNow && !my);
     $("btnEnd").style.visibility=this.spectate?"hidden":"";
     if(this.spectate) $("myHand").innerHTML=P.hand.map(()=>`<div class="cardback"></div>`).join("");
   },

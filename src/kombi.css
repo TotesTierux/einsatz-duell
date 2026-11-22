@@ -153,3 +153,4 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 .tm .tw{margin-left:6px;padding:2px 8px;font-size:14px}
 .sndbtn{padding:4px 9px;font-size:18px;margin-right:6px;background:var(--paper)}
 .sndbtn.off{opacity:.55}
+#btnEnd.wait{opacity:.6}
