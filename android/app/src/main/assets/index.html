@@ -503,6 +503,10 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 .newlist{background:var(--paper);color:var(--ink);width:min(340px,90vw);margin:0 auto;font-size:13px}
 .newlist .nl{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-top:6px;max-height:42vh;overflow:auto}
 .newlist .nl span{line-height:1.25}
+
+.deckslots{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch}
+.deckslots span{white-space:nowrap;flex:0 0 auto}
+.deckslots small{font-size:11px;margin-left:3px}
 </style>
 </head>
 <body>
@@ -877,8 +881,10 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
   <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Mein Deck</h2>
     <span class="deckcount" id="deckCount">0/40</span></div>
   <div class="tabs" id="deckFaction"></div>
+  <div class="tabs deckslots" id="deckSlots"></div>
   <div class="panel"><p class="muted" style="margin:0" id="deckInfo"></p>
-    <div class="row" style="margin-top:8px"><button class="small blue" onclick="Deck.auto()">🎲 Automatisch</button><button class="small red" onclick="Deck.clear()">Leeren</button></div></div>
+    <div class="row" style="margin-top:8px"><button class="small blue" onclick="Deck.auto()">🎲 Automatisch</button><button class="small red" onclick="Deck.clear()">Leeren</button></div>
+    <div class="row" style="margin-top:6px"><button class="small" onclick="Deck.rename()">✏️ Umbenennen</button><button class="small" onclick="Deck.create(true)">📄 Kopieren</button><button class="small ghost" onclick="Deck.remove()">🗑 Löschen</button></div></div>
   <div class="filterbar"><input id="deckSearch" placeholder="Suchen…" oninput="Deck.render()">
     <select id="deckFilter" onchange="Deck.render()"><option value="">Meine Karten</option><option value="in">Im Deck</option><option value="fusion">Fusionsdeck</option></select></div>
   <div id="deckList" class="cardlist"></div>
@@ -2840,6 +2846,8 @@ const UI = {
     $("modal").classList.add("show");
   },
   /* Eigener Dialog statt prompt/confirm. Promise: true/false bzw. Text/null */
+  /* Texteingabe mit Vorgabe (null = abgebrochen) */
+  prompt(text, def=""){ const p=this.ask(text,"text"); setTimeout(()=>{ const i=$("askIn"); if(i){ i.value=def; i.maxLength=24; i.select(); } },60); return p; },
   ask(text, input){
     return new Promise(res=>{
       $("modalCard").innerHTML=`<div class="panel" style="background:var(--paper);color:var(--ink);font-weight:700;font-size:18px;text-align:center;width:min(300px,85vw);margin:0">${esc(text)}${input?`<input id="askIn" type="${input}" style="margin-top:12px">`:""}</div>`;
@@ -3089,17 +3097,41 @@ const StoryEd = {
 
 /* ============================ DECK ============================ */
 const Deck = {
-  MIN:20, MAX:40, COPIES:3, FUSION_MAX:15, lists:{polizei:[],verbrecher:[]}, faction:"polizei",
-  get list(){ return this.lists[this.faction]; },
-  set list(v){ this.lists[this.faction]=v; },
-  load(){ const l=Store.get("decks",{}); Object.keys(FACTIONS).forEach(f=>this.lists[f]=l[f]||[]); this.prune(); },
-  save(){ Store.set("decks",this.lists); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  MIN:20, MAX:40, COPIES:3, FUSION_MAX:15, SLOTS:10, faction:"polizei",
+  /* Mehrere gespeicherte Decks pro Partei: sets[f] = [{name, cards:[ids]}], active[f] = Index des Einsatz-Decks */
+  sets:{polizei:[],verbrecher:[]}, active:{polizei:0,verbrecher:0},
+  /* lists[f] = Karten des aktiven Decks (wird von Duell, Online und Cloud benutzt) */
+  get lists(){ const o={}; Object.keys(FACTIONS).forEach(f=>o[f]=this.cur(f).cards); return o; },
+  set lists(v){ Object.keys(FACTIONS).forEach(f=>{ if(Array.isArray(v&&v[f])) this.cur(f).cards=v[f]; }); },
+  cur(f=this.faction){ const a=this.sets[f]; if(!a.length) a.push({name:"Deck 1",cards:[]}); if(!(this.active[f]<a.length)) this.active[f]=0; return a[this.active[f]]; },
+  get list(){ return this.cur().cards; },
+  set list(v){ this.cur().cards=v; },
+  load(){
+    const sets=Store.get("deckSets",null), act=Store.get("deckActive",{});
+    if(sets) Object.keys(FACTIONS).forEach(f=>{ this.sets[f]=(sets[f]||[]).filter(d=>d&&Array.isArray(d.cards)); this.active[f]=act[f]||0; });
+    else { const l=Store.get("decks",{}); Object.keys(FACTIONS).forEach(f=>{ this.sets[f]=[{name:"Deck 1",cards:l[f]||[]}]; this.active[f]=0; }); }   // altes Format übernehmen
+    this.prune();
+  },
+  save(){ Store.set("deckSets",this.sets); Store.set("deckActive",this.active); Store.set("decks",this.lists); if(typeof Account!=="undefined") Account.scheduleSave(); },
   /* Karten entfernen, die gelöscht, falsch zugeordnet oder nicht (mehr) im Besitz sind */
   prune(){
-    Object.keys(FACTIONS).forEach(f=>{ const cnt={};
-      this.lists[f]=this.lists[f].filter(id=>{const c=DB.byId(id); if(!c||c.faction!==f||c.type==="fusion") return false;
-        cnt[id]=(cnt[id]||0)+1; return cnt[id]<=Math.min(this.maxCopies(id),Player.has(id)); }); });
+    Object.keys(FACTIONS).forEach(f=>{ this.cur(f); this.sets[f].forEach(d=>{ const cnt={};
+      d.cards=d.cards.filter(id=>{const c=DB.byId(id); if(!c||c.faction!==f||c.type==="fusion") return false;
+        cnt[id]=(cnt[id]||0)+1; return cnt[id]<=Math.min(this.maxCopies(id),Player.has(id)); }); }); });
     this.save();
+  },
+  /* ---------- Deck-Verwaltung ---------- */
+  select(i){ this.active[this.faction]=+i; this.save(); this.render(); toast("Einsatz-Deck: "+this.cur().name); },
+  async create(copy){
+    const a=this.sets[this.faction]; if(a.length>=this.SLOTS) return toast("Maximal "+this.SLOTS+" Decks pro Seite");
+    const name=await UI.prompt(copy?"Name der Kopie:":"Name des neuen Decks:", copy?this.cur().name+" (Kopie)":"Deck "+(a.length+1)); if(name==null) return;
+    a.push({name:(name.trim()||"Deck "+(a.length+1)).slice(0,24), cards:copy?[...this.list]:[]}); this.active[this.faction]=a.length-1; this.save(); this.render();
+  },
+  async rename(){ const n=await UI.prompt("Neuer Name:", this.cur().name); if(n==null||!n.trim()) return; this.cur().name=n.trim().slice(0,24); this.save(); this.render(); },
+  async remove(){
+    const a=this.sets[this.faction]; if(a.length<=1) return toast("Das letzte Deck kann nicht gelöscht werden – leere es stattdessen");
+    if(!await UI.ask(`Deck „${this.cur().name}“ löschen?`)) return;
+    a.splice(this.active[this.faction],1); this.active[this.faction]=0; this.save(); this.render();
   },
   maxCopies(id){ const c=DB.byId(id); return c&&c.rarity==="CE"?1:this.COPIES; },   // Celestial: einzigartig, nur 1× pro Deck
   limit(id){ return Math.min(this.maxCopies(id), Player.has(id)); },
@@ -3138,10 +3170,16 @@ const Deck = {
   render(){
     $("deckFaction").innerHTML=Object.keys(FACTIONS).map(f=>`<span data-f="${f}" class="${f===this.faction?"on":""}">${FACTIONS[f][1]} ${FACTIONS[f][0]} (${this.lists[f].length})</span>`).join("");
     $("deckFaction").querySelectorAll("span").forEach(s=>s.onclick=()=>{this.faction=s.dataset.f;this.render()});
+    const a=this.sets[this.faction]; this.cur();
+    $("deckSlots").innerHTML=a.map((d,i)=>{ const ok=d.cards.length>=this.MIN&&d.cards.length<=this.MAX;
+      return `<span data-i="${i}" class="${i===this.active[this.faction]?"on":""}">${i===this.active[this.faction]?"⭐ ":""}${esc(d.name)} <small style="color:${ok?"var(--green)":"var(--red)"}">${d.cards.length}</small></span>`; }).join("")
+      + (a.length<this.SLOTS?`<span data-new="1">＋ Neu</span>`:"");
+    $("deckSlots").querySelectorAll("[data-i]").forEach(s=>s.onclick=()=>this.select(s.dataset.i));
+    $("deckSlots").querySelectorAll("[data-new]").forEach(s=>s.onclick=()=>this.create(false));
     $("deckCount").textContent=`${this.list.length}/${this.MAX}`;
     $("deckCount").style.color = this.valid()?"var(--green)":"var(--red)";
     const fd=this.fusionDeck(this.faction);
-    $("deckInfo").textContent=`20–40 Karten, max. 3 Kopien (nur so viele, wie du besitzt). Fusionsdeck: ${fd.length} Fusion(en) – wird automatisch aus deiner Sammlung gefüllt.`;
+    $("deckInfo").textContent=`⭐ = dieses Deck nimmst du ins Duell (antippen zum Wechseln). 20–40 Karten, max. 3 Kopien (nur so viele, wie du besitzt). Fusionsdeck: ${fd.length} Fusion(en) – wird automatisch aus deiner Sammlung gefüllt.`;
     const q=$("deckSearch").value.toLowerCase(), f=$("deckFilter").value;
     let list;
     if(f==="fusion") list=DB.ofFaction(this.faction).filter(c=>c.type==="fusion"&&Player.has(c.id));
@@ -5193,7 +5231,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, boost:Player.boost, packs:Player.packs, quests:Player.quests, cosmetics:Player.cosmetics, decks:Deck.lists, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], kombi:Player.kombi, boost:Player.boost, packs:Player.packs, quests:Player.quests, cosmetics:Player.cosmetics, decks:Deck.lists, deckSets:Deck.sets, deckActive:Deck.active, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -5212,7 +5250,8 @@ const Account = {
     const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
     const d = JSON.parse(raw);
     Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.kombi=d.kombi||Player.kombi; Player.packs=d.packs||Player.packs; Player.quests=d.quests||Player.quests; Player.cosmetics=d.cosmetics||Player.cosmetics; setTimeout(()=>Cosmetic.apply(),0); Player.syncPrints();
-    if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
+    if(d.deckSets){ Object.keys(FACTIONS).forEach(f=>{ if(Array.isArray(d.deckSets[f])) Deck.sets[f]=d.deckSets[f]; }); if(d.deckActive) Deck.active={...Deck.active,...d.deckActive}; Deck.prune(); }
+    else if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
     if(d.nick) Store.set("nick", d.nick);
     Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],kombi:Player.kombi,boost:Player.boost,packs:Player.packs,quests:Player.quests,cosmetics:Player.cosmetics}); Deck.save();
     UI.coins(); UI.badges(); return "loaded";

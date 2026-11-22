@@ -172,3 +172,7 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 .newlist{background:var(--paper);color:var(--ink);width:min(340px,90vw);margin:0 auto;font-size:13px}
 .newlist .nl{display:grid;grid-template-columns:1fr 1fr;gap:3px 8px;margin-top:6px;max-height:42vh;overflow:auto}
 .newlist .nl span{line-height:1.25}
+
+.deckslots{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch}
+.deckslots span{white-space:nowrap;flex:0 0 auto}
+.deckslots small{font-size:11px;margin-left:3px}

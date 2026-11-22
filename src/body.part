@@ -505,8 +505,10 @@
   <div class="topbar"><button class="small ghost" onclick="UI.show('home')">◀</button><h2>Mein Deck</h2>
     <span class="deckcount" id="deckCount">0/40</span></div>
   <div class="tabs" id="deckFaction"></div>
+  <div class="tabs deckslots" id="deckSlots"></div>
   <div class="panel"><p class="muted" style="margin:0" id="deckInfo"></p>
-    <div class="row" style="margin-top:8px"><button class="small blue" onclick="Deck.auto()">🎲 Automatisch</button><button class="small red" onclick="Deck.clear()">Leeren</button></div></div>
+    <div class="row" style="margin-top:8px"><button class="small blue" onclick="Deck.auto()">🎲 Automatisch</button><button class="small red" onclick="Deck.clear()">Leeren</button></div>
+    <div class="row" style="margin-top:6px"><button class="small" onclick="Deck.rename()">✏️ Umbenennen</button><button class="small" onclick="Deck.create(true)">📄 Kopieren</button><button class="small ghost" onclick="Deck.remove()">🗑 Löschen</button></div></div>
   <div class="filterbar"><input id="deckSearch" placeholder="Suchen…" oninput="Deck.render()">
     <select id="deckFilter" onchange="Deck.render()"><option value="">Meine Karten</option><option value="in">Im Deck</option><option value="fusion">Fusionsdeck</option></select></div>
   <div id="deckList" class="cardlist"></div>
