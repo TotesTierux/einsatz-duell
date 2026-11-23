@@ -703,7 +703,8 @@ function cardHTML(c, extra="", attrs="", live){
   const isM = isChar(c);
   const stars = isM ? "★".repeat(Math.min(c.level,12)) : "";
   const icon = isM ? ROLES[c.faction][c.attr][1] : LAWS[c.law][2];
-  const art = `<img src="${artSrc(c)}" alt="" loading="lazy">`;
+  // Ganzes Bild zeigen (nicht abschneiden): scharf eingepasst, dahinter dieselbe Grafik unscharf als Füllung
+  const _src=artSrc(c), art = `<img class="abg" src="${_src}" alt="" loading="lazy"><img class="afg" src="${_src}" alt="" loading="lazy">`;
   const atk = live ? live.atk : c.atk;
   const atkStyle = live && live.atk!==c.atk ? ` style="color:${live.atk>c.atk?"#0a7a2f":"#c00"}"` : '';
   const typeLine = isM ? `[${c.type==="fusion"?"Fusion/":""}${FACTIONS[c.faction][0]}/${ROLES[c.faction][c.attr][0]}]` : `[${c.law}-${TYPES[c.type]}${c.ref&&c.ref!==c.law?" · "+esc(c.ref):""}]`;
