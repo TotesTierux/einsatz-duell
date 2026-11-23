@@ -696,11 +696,14 @@ new MutationObserver(fitSoon).observe(document.body,{childList:true,subtree:true
 window.addEventListener("resize",()=>{ document.querySelectorAll(".card .nmt,.card .tx").forEach(t=>delete t.dataset.fitw); fitSoon(); });
 /* live = Feldzustand (z. B. veränderte ATK) */
 function flavorHTML(c){ const f=flavorOf(c); if(!f) return ""; const q=/^[„"«]/.test(f); return `<div class="flv">${q?"":"„"}${esc(f)}${q?"":"“"}</div>`; }
+/* Kartenbild: eigenes Admin-Bild → Gemini-Bild (art/<id>.webp) → gezeichnetes Comic-Bild */
+const _artSet=new Set(window.ART_IDS||[]);
+function artSrc(c){ if(c.art&&c.art.img) return c.art.img; if(_artSet.has(c.id)) return "art/"+c.id+".webp"; return Art.svg(c); }
 function cardHTML(c, extra="", attrs="", live){
   const isM = isChar(c);
   const stars = isM ? "★".repeat(Math.min(c.level,12)) : "";
   const icon = isM ? ROLES[c.faction][c.attr][1] : LAWS[c.law][2];
-  const art = c.art.img ? `<img src="${c.art.img}" alt="">` : esc(c.art.emoji||"❓");
+  const art = `<img src="${artSrc(c)}" alt="" loading="lazy">`;
   const atk = live ? live.atk : c.atk;
   const atkStyle = live && live.atk!==c.atk ? ` style="color:${live.atk>c.atk?"#0a7a2f":"#c00"}"` : '';
   const typeLine = isM ? `[${c.type==="fusion"?"Fusion/":""}${FACTIONS[c.faction][0]}/${ROLES[c.faction][c.attr][0]}]` : `[${c.law}-${TYPES[c.type]}${c.ref&&c.ref!==c.law?" · "+esc(c.ref):""}]`;
@@ -708,7 +711,7 @@ function cardHTML(c, extra="", attrs="", live){
   const frame = isM ? "f-"+c.faction : "l-"+c.law;
   const nf = nameFit(c.name);
   return `<div class="card ${c.type} ${frame} r-${c.rarity} p-${c._print||"C"} ${extra}" ${attrs}>
-    <div class="nm ${nf.two?"two":""}"><span class="nmt" style="font-size:${nf.fs}em">${esc(hyph(c.name))}</span><span class="at">${icon}</span></div>
+    <div class="nm ${nf.two?"two":""}"><span class="nmt" style="font-size:${nf.fs}em">${esc(hyph(c.name))}</span></div>
     <div class="lv">${isM?stars:`<span class="lawtag">${c.law}${c.type==="trap"?" · Reaktion":""}</span>`}</div>
     <div class="art" style="--c1:${c.art.c1};--c2:${c.art.c2}">${art}<span class="rar"><i class="gem" style="background:${RARITY_GEM[c.rarity]||"#999"}"></i>${c._print&&c._print!=="C"?PRINT[c._print].short:""}${c._lv>1?` Lv${c._lv}`:""}${c._plus?` <b class="plus">+${c._plus}</b>`:""}</span></div>
     <div class="tx"><b>${typeLine}</b> ${mat}${esc(cardText(c))}</div>
