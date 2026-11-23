@@ -136,9 +136,6 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 .deckstats b.ok{color:var(--green)} .deckstats .bad{color:var(--red)}
 .deckstats small{opacity:.75}
 
-/* Kartenbild vollständig zeigen: vorne eingepasst (contain), hinten unscharf als Rand-Füllung */
-.card .art img.afg{object-fit:contain;z-index:1}
-.card .art img.abg{object-fit:cover;filter:blur(5px) saturate(1.1) brightness(.8);transform:scale(1.2)}
 
 /* ---------- Druck-Effekte über dem ganzen Bild (neu: liegen über dem Kartenbild, keine Balken) ---------- */
 .card .art::before,.card .art::after{z-index:2}
@@ -159,3 +156,8 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 @keyframes sparkle{0%,100%{opacity:.55;filter:brightness(1)}50%{opacity:1;filter:brightness(1.6)}}
 /* Legendary: Goldrahmen + aufsteigende Funken */
 .card.p-LG .art{box-shadow:0 0 0 calc(var(--w)*.012) #ffd23f,0 0 calc(var(--w)*.06) #ff9d2e}
+
+/* Info-Zeilen im Karten-Dialog: kompakter Text statt Knöpfe */
+.modal .modinfo{background:#2a1d4f;border:2px solid rgba(255,255,255,.18);border-radius:12px;padding:8px 12px;font-size:14px;line-height:1.35;color:#fff8e7}
+.modal .modinfo div+div{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.12)}
+.modal .acts button{padding:10px 12px;font-size:16px}

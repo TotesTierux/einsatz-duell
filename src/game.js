@@ -704,7 +704,7 @@ function cardHTML(c, extra="", attrs="", live){
   const stars = isM ? "★".repeat(Math.min(c.level,12)) : "";
   const icon = isM ? ROLES[c.faction][c.attr][1] : LAWS[c.law][2];
   // Ganzes Bild zeigen (nicht abschneiden): scharf eingepasst, dahinter dieselbe Grafik unscharf als Füllung
-  const _src=artSrc(c), art = `<img class="abg" src="${_src}" alt="" loading="lazy"><img class="afg" src="${_src}" alt="" loading="lazy">`;
+  const art = `<img src="${artSrc(c)}" alt="" loading="lazy">`;
   const atk = live ? live.atk : c.atk;
   const atkStyle = live && live.atk!==c.atk ? ` style="color:${live.atk>c.atk?"#0a7a2f":"#c00"}"` : '';
   const typeLine = isM ? `[${c.type==="fusion"?"Fusion/":""}${FACTIONS[c.faction][0]}/${ROLES[c.faction][c.attr][0]}]` : `[${c.law}-${TYPES[c.type]}${c.ref&&c.ref!==c.law?" · "+esc(c.ref):""}]`;
@@ -771,7 +771,10 @@ const UI = {
   modal(card, actions, live, onClose, closeLabel){
     $("modalCard").innerHTML = card ? (card==="back" ? `<div class="cardback" style="--w:min(62vw,40vh,260px)"></div>` : cardHTML(card,"","",live)+flavorHTML(card)) : "";
     const a = $("modalActs"); a.innerHTML="";
-    (actions||[]).forEach(([label,fn,cls])=>{const b=document.createElement("button");b.textContent=label;b.className=cls||"";b.onclick=()=>{this._onClose=null;this.closeModal();fn&&fn()};a.appendChild(b)});
+    // Reine Info-Zeilen (ohne Aktion) als kompakter Text statt als Knöpfe
+    const infos=(actions||[]).filter(x=>!x[1]);
+    if(infos.length){ const d=document.createElement("div"); d.className="modinfo"; d.innerHTML=infos.map(x=>`<div>${esc(x[0])}</div>`).join(""); a.appendChild(d); }
+    (actions||[]).filter(x=>x[1]).forEach(([label,fn,cls])=>{const b=document.createElement("button");b.textContent=label;b.className=cls||"";b.onclick=()=>{this._onClose=null;this.closeModal();fn&&fn()};a.appendChild(b)});
     const x=document.createElement("button");x.textContent=closeLabel||"Schließen";x.className="ghost";x.onclick=()=>this.closeModal();a.appendChild(x);
     this._onClose=onClose||null;
     $("modal").classList.add("show");
@@ -815,20 +818,23 @@ const UI = {
     const c=DB.byId(id), n=Player.has(id), lv=Prog.cardLv(id), nx=Prog.nextAt(id);
     if(!n) return this.modal(c,[["Noch nicht in deiner Sammlung",null,"ghost"]]);
     const p=Player.printsOf(id), cur=Player.display(id);
-    const acts=[[`Kartenstufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} bei ${nx} Exemplaren`:" · Maximum"}`,null,"ghost"],
-      [`Exemplare: ${PRINTS.filter(x=>p[x.k]).map(x=>`${x.name} ×${p[x.k]}`).join(", ")}`,null,"ghost"]];
+    const acts=[[`Stufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} ab ${nx} Exemplaren`:" · Maximum"}`,null],
+      [`Exemplare: ${PRINTS.filter(x=>p[x.k]).map(x=>`${x.name} ×${p[x.k]}`).join(", ")}`,null]];
     { const k=Player.display(id), nx=Refine.next(k);
-      if(nx) acts.push([`🔬 Kriminaltechnik: ${PRINT[k].name} → ${PRINT[nx].name} (${REFINE_COST[k].toLocaleString("de-DE")} 🪙)`,()=>Refine.run(id),Player.coins>=REFINE_COST[k]?"blue":"ghost"]); }
+      if(nx) acts.push(Player.coins>=REFINE_COST[k] ? [`🔬 Kriminaltechnik → ${PRINT[nx].name} (${REFINE_COST[k].toLocaleString("de-DE")} 🪙)`,()=>Refine.run(id),"blue"]
+        : [`Kriminaltechnik → ${PRINT[nx].name}: ${REFINE_COST[k].toLocaleString("de-DE")} 🪙`,null]); }
     if(Prog.boostable(c)){
       const t=Prog.boostOf(id), k=Prog.boostCost(id), word=c.faction==="polizei"?"Fortbildung":"Training";
-      acts.push([`⬆ ${word} +${t}/${BOOST_MAX}${t?` · ${Prog.boostText(c,t)}`:""}`,null,"ghost"]);
       if(t<BOOST_MAX){
         const spare=n-1, ok=spare>=k.copies, rich=Player.coins>=k.coins;
-        if(ok&&rich) acts.push([`⬆ Auf +${t+1} trainieren: ${k.copies} doppelte${k.copies>1?"":"s"} Exemplar${k.copies>1?"e":""} + ${k.coins} 🪙 → ${Prog.boostText(c,1)}`,()=>this.doBoost(id),"green"]);
-        else acts.push([ok?`Für +${t+1} fehlen ${k.coins-Player.coins} 🪙`:`Für +${t+1} brauchst du ${k.copies} doppelte Exemplare (du hast ${Math.max(0,spare)})`,null,"ghost"]);
-      }
+        if(ok&&rich) acts.push([`⬆ ${word} +${t+1}: ${k.copies}× doppelt + ${k.coins} 🪙 → ${Prog.boostText(c,1)}`,()=>this.doBoost(id),"green"]);
+        else acts.push([`${word} +${t}/${BOOST_MAX}${t?` (${Prog.boostText(c,t)})`:""} – für +${t+1} ${ok?`fehlen ${k.coins-Player.coins} 🪙`:`fehlen ${k.copies-Math.max(0,spare)} doppelte Exemplare`}`,null]);
+      } else acts.push([`${word} +${t}/${BOOST_MAX}: ${Prog.boostText(c,t)} (Maximum)`,null]);
     }
-    PRINTS.filter(x=>p[x.k]&&x.k!==cur).reverse().forEach(x=>acts.push([`✨ Als ${x.name} anzeigen`,()=>{ Player.show[id]=x.k; Player.save(); this.refreshCards(); setTimeout(()=>this.cardInfo(id),50); },"blue"]));
+    // Anzeige wechseln: ein Knopf, der reihum durch die eigenen Druckstufen schaltet
+    { const own=PRINTS.filter(x=>p[x.k]).map(x=>x.k);
+      if(own.length>1){ const nk=own[(own.indexOf(cur)+1)%own.length];
+        acts.push([`✨ Anzeige: ${PRINT[nk].name}`,()=>{ Player.show[id]=nk; Player.save(); this.refreshCards(); setTimeout(()=>this.cardInfo(id),50); },"blue"]); } }
     this.modal(Prog.upgraded(c,lv), acts);
   },
   async doBoost(id){
