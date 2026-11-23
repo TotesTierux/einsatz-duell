@@ -113,7 +113,7 @@ h1,h2,h3{font-family:var(--comic);letter-spacing:2px;margin:0}
 .card.p-LG .art::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:radial-gradient(circle,#ffe08a 0 1.5px,transparent 2px) 10% 100%/22% 30%,radial-gradient(circle,#ff9d2e 0 1.2px,transparent 1.8px) 60% 100%/28% 34%,radial-gradient(circle,#fff3b0 0 1px,transparent 1.6px) 85% 100%/18% 26%;
   animation:embers 2.2s linear infinite;mix-blend-mode:screen}
-.card.p-LG .rar::before{content:"👑";margin-right:1px}
+.card.p-LG .rar::before{content:"★";margin-right:1px;color:#ffd23f}
 @keyframes embers{from{background-position:10% 110%,60% 120%,85% 105%}to{background-position:14% -30%,56% -40%,88% -35%}}
 .prname{font-family:var(--comic);letter-spacing:1px;font-size:14px;text-align:center;margin-top:4px}
 .pn-R{color:#d9dee4}.pn-SP{color:#fff}.pn-SE{background:linear-gradient(90deg,#ff5a7a,#ffd300,#00e08a,#3fa9ff,#c06bff);-webkit-background-clip:text;color:transparent}
