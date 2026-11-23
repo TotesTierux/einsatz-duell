@@ -54,7 +54,8 @@ const Social = {
   /* Profil aktualisieren (zuletzt online, Nickname, Organisation) */
   async touch(full){
     if(!this.me) return;
-    const up={seen:{".sv":"timestamp"}, nick:this.nick()||"Spieler", code:this.code||"", side:Store.get("lastSide","polizei")};
+    const nick=this.nick()||"Spieler";
+    const up={seen:{".sv":"timestamp"}, nick, nickLower:nick.toLowerCase(), code:this.code||"", side:Store.get("lastSide","polizei"), reg:Account.loggedIn()};
     await Cloud.req("profiles/"+this.me,"PATCH",up).catch(()=>{});
     if(full){ this.prof=await Cloud.req("profiles/"+this.me).catch(()=>null)||{}; this.clanId=this.prof.clan||null; }
   },
@@ -92,10 +93,44 @@ const Social = {
     try{
       const fid=await Cloud.req("fcodes/"+code); if(!fid) return toast("Kein Spieler mit diesem Code gefunden");
       if(this.friends.some(f=>f.uid===fid)) return toast("Ihr seid schon befreundet");
-      const theirReq=this.reqs.find(r=>r.uid===fid); if(theirReq) return this.accept(fid);
-      await Cloud.req(`freq/${fid}/${this.me}`,"PUT",{nick:this.nick()||"Spieler", t:{".sv":"timestamp"}});
-      $("soCode").value=""; toast("Anfrage gesendet ✉️");
+      $("soCode").value=""; await this.request(fid);
     }catch(e){ toast(this.err(e)); }
+  },
+  /* Freundschaftsanfrage direkt an eine Nutzer-ID (aus Code oder Spielerliste) */
+  async request(fid){
+    if(fid===this.me) return toast("Das bist du selbst 😉");
+    if(this.friends.some(f=>f.uid===fid)) return toast("Ihr seid schon befreundet");
+    if(this.reqs.find(r=>r.uid===fid)) return this.accept(fid);
+    try{
+      await Cloud.req(`freq/${fid}/${this.me}`,"PUT",{nick:this.nick()||"Spieler", t:{".sv":"timestamp"}});
+      const sent=Store.get("sentReq",{}); sent[fid]=Date.now(); Store.set("sentReq",sent);
+      toast("Anfrage gesendet ✉️"); if(UI.current==="social") this.render();
+    }catch(e){ toast(this.err(e)); }
+  },
+  /* ---------- Spieler finden: registrierte Spieler, zuletzt aktive zuerst ---------- */
+  players:null, pq:"",
+  async loadPlayers(){
+    let d=null;
+    try{ d=await Cloud.req("profiles","GET",undefined,'&orderBy="seen"&limitToLast=200'); }
+    catch(e){ d=await Cloud.req("profiles").catch(()=>null); }      // ohne Index: alles laden
+    this.players=Object.entries(d||{}).map(([uid,p])=>({uid,...p})).filter(p=>p.uid!==this.me && p.reg && p.nick)
+      .sort((a,b)=>(b.seen||0)-(a.seen||0));
+  },
+  async searchPlayers(){
+    const q=($("soFind")?$("soFind").value:"").trim().toLowerCase(); this.pq=q;
+    if(q.length>=2){ try{ const d=await Cloud.req("profiles","GET",undefined,`&orderBy="nickLower"&startAt=${encodeURIComponent(JSON.stringify(q))}&endAt=${encodeURIComponent(JSON.stringify(q+"\uf8ff"))}&limitToFirst=50`);
+        const extra=Object.entries(d||{}).map(([uid,p])=>({uid,...p})).filter(p=>p.uid!==this.me&&p.reg&&p.nick);
+        const have=new Set((this.players||[]).map(p=>p.uid)); this.players=[...(this.players||[]),...extra.filter(p=>!have.has(p.uid))]; }catch(e){} }
+    this.render();
+  },
+  playerList(){
+    const q=this.pq, sent=Store.get("sentReq",{}), fr=new Set(this.friends.map(f=>f.uid)), inc=new Set(this.reqs.map(r=>r.uid));
+    const L=(this.players||[]).filter(p=>!q||String(p.nick).toLowerCase().includes(q)).slice(0,60);
+    if(!this.players) return `<p class="muted">Lade Spieler …</p>`;
+    if(!L.length) return `<p class="muted">${q?"Kein Spieler mit diesem Namen gefunden.":"Noch keine registrierten Spieler sichtbar."}</p>`;
+    return L.map(p=>`<div class="sorow">${this.dot(p)}<b>${esc(p.nick)}</b>${p.clanTag?` <small class="muted">[${esc(p.clanTag)}]</small>`:""}<span class="sp"></span>
+      ${fr.has(p.uid)?`<small class="muted">✓ Freund</small>`:inc.has(p.uid)?`<button class="small green" data-act="accept|${p.uid}">Annehmen</button>`
+        :sent[p.uid]?`<small class="muted">✉️ gesendet</small>`:`<button class="small blue" data-act="request|${p.uid}">＋ Anfrage</button>`}</div>`).join("");
   },
   async accept(fid){
     const r=this.reqs.find(x=>x.uid===fid)||{};
@@ -306,10 +341,11 @@ const Social = {
     if(!this.ok()){ el.innerHTML=`<p class="muted">Freunde und Organisationen brauchen eine Internetverbindung zum Spielserver.</p>`; return; }
     if(!this.me){ el.innerHTML=`<p class="muted">Verbinde …</p>`; await this.start(); if(!this.me){ el.innerHTML=`<p class="muted">⚠️ Keine Verbindung zum Server.</p>`; return; } }
     if(full){ el.innerHTML=`<p class="muted">Lade …</p>`;
-      await Promise.all([this.loadFriends(), this.loadReqs(), this.loadInvites(), this.touch(true).then(()=>this.loadClan())]);
+      await Promise.all([this.loadFriends(), this.loadReqs(), this.loadInvites(), this.touch(true).then(()=>this.loadClan()), this.loadPlayers().catch(()=>{})]);
       if(!this.clanId) await this.loadList(); else this.loadMemberStatus(); this.flush(); }
     el.innerHTML = this.tab==="friends" ? this.htmlFriends() : this.htmlClan();
     el.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const [fn,...a]=b.dataset.act.split("|"); this[fn](...a); });
+    const fi=$("soFind"); if(fi){ fi.onkeydown=e=>{ if(e.key==="Enter") this.searchPlayers(); }; fi.oninput=()=>{ this.pq=fi.value.trim().toLowerCase(); $("soPlayers").innerHTML=this.playerList(); $("soPlayers").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const [fn,...a]=b.dataset.act.split("|"); this[fn](...a); }); }; }
     if(this.tab==="clan" && !this.clan){
       el.querySelectorAll("[data-em]").forEach(s=>s.onclick=()=>{ this._emblem=s.dataset.em; el.querySelectorAll("[data-em]").forEach(x=>x.classList.toggle("on",x===s)); });
       el.querySelectorAll("[data-cs]").forEach(s=>s.onclick=()=>{ this._side=s.dataset.cs; el.querySelectorAll("[data-cs]").forEach(x=>x.classList.toggle("on",x===s)); });
@@ -331,8 +367,12 @@ const Social = {
     <div class="panel"><h3 class="qh">👥 Freunde (${this.friends.length})</h3>
       ${this.friends.length?this.friends.map(f=>`<div class="sorow">${this.dot(f)}<b>${esc(f.nick)}</b>${f.clanTag?` <small class="muted">[${esc(f.clanTag)}]</small>`:""}<span class="sp"></span>
         <button class="small red" data-act="challenge|${f.uid}|${esc(f.nick)}">⚔️ Duell</button><button class="small ghost" data-act="unfriend|${f.uid}">✕</button></div>`).join("")
-        :`<p class="muted">Noch keine Freunde. Schick deinen Code herum!</p>`}
-    </div>`;
+        :`<p class="muted">Noch keine Freunde. Schick deinen Code herum – oder such unten nach Spielern.</p>`}
+    </div>
+    <div class="panel"><h3 class="qh">🔎 Spieler finden</h3>
+      <p class="muted" style="margin-top:0">Registrierte Spieler, zuletzt aktive zuerst.</p>
+      <div class="row"><input id="soFind" placeholder="Name suchen …" value="${esc(this.pq)}" style="flex:1"><button class="small blue" data-act="searchPlayers">Suchen</button></div>
+      <div id="soPlayers">${this.playerList()}</div></div>`;
   },
   htmlClan(){
     if(!this.clan){

@@ -11,7 +11,7 @@
     },
     "admins": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": false } },
 
-    "profiles": { ".read": "auth != null", "$uid": { ".write": "auth != null && auth.uid === $uid" } },
+    "profiles": { ".read": "auth != null", ".indexOn": ["seen", "nickLower"], "$uid": { ".write": "auth != null && auth.uid === $uid" } },
     "fcodes": { ".read": "auth != null", "$code": { ".write": "auth != null && (!data.exists() || data.val() === auth.uid)" } },
     "freq": { "$to": { ".read": "auth != null && auth.uid === $to",
       "$from": { ".write": "auth != null && (auth.uid === $from || auth.uid === $to)" } } },
