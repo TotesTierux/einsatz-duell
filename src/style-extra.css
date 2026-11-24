@@ -161,3 +161,10 @@ body.bt-all #duel{background:radial-gradient(circle at 20% 15%,#3fa9ff44 0 8%,#0
 .modal .modinfo{background:#2a1d4f;border:2px solid rgba(255,255,255,.18);border-radius:12px;padding:8px 12px;font-size:14px;line-height:1.35;color:#fff8e7}
 .modal .modinfo div+div{margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,.12)}
 .modal .acts button{padding:10px 12px;font-size:16px}
+
+/* Hinweise & Geheimakten */
+.clues{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.clues span{flex:1;min-width:64px;background:rgba(0,0,0,.25);border:2px solid rgba(255,255,255,.2);border-radius:10px;padding:4px 6px;text-align:center;display:flex;flex-direction:column}
+.clues b{font-size:18px}.clues small{font-size:11px;opacity:.8}
+#storyTabs span.secret{background:linear-gradient(135deg,#3a2a12,#7a5a1a);color:#ffe08a;border-color:#ffd23f}
+#storyTabs span.secret.on{background:linear-gradient(135deg,#ffd23f,#ff9d2e);color:#1b1035}

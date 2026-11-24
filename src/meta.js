@@ -47,6 +47,7 @@ const Rewards = {
     if(mode==="story" && won) Quests.track("story_win");
     if(mode==="online"){ Quests.track("online_play"); if(won) Quests.track("online_win"); }
     if(typeof Social!=="undefined") Social.onResult(mode, won, extra);
+    if(typeof Clues!=="undefined") Clues.drop(mode, won, extra);
     let key=null;
     if(won) key = mode==="story"&&extra.hard?"story_hard":mode;
     const ch=key?DROP_CHANCE[key]:0;

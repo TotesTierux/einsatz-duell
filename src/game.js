@@ -419,6 +419,7 @@ function normalizeCard(c){
   n.level = Math.max(1,Math.min(12,n.level)); n.atk=Math.max(0,Math.min(9999,n.atk)); n.def=Math.max(0,Math.min(9999,n.def));
   if(c.release) n.release=String(c.release).slice(0,10);   // Erscheinungstag (wöchentliche Neuerscheinungen)
   if(c.flavor) n.flavor=String(c.flavor).slice(0,140);
+  if(c.akte) n.akte=true;                                  // Geheimakten-Belohnung: nicht in Boostern
   return n;
 }
 
@@ -469,7 +470,7 @@ const Player = {
     if(!d){ this.coins=500; this.owned={}; this.progress={polizei:0,verbrecher:0};
       DB.cards.filter(c=>c.starter).forEach(c=>this.owned[c.id]=2); this.save(); }
     else Object.assign(this, d);
-    this.prints=this.prints||{}; this.show=this.show||{}; this.boost=this.boost||{}; this.syncPrints();
+    this.prints=this.prints||{}; this.show=this.show||{}; this.boost=this.boost||{}; this.clues=this.clues||{}; this.secret=this.secret||{opened:{},done:{}}; this.syncPrints();
   },
   /* Stufen-Zähler mit der Anzahl abgleichen (alte Spielstände: alles Common) */
   syncPrints(){
@@ -485,7 +486,7 @@ const Player = {
   /* angezeigte Stufe: selbst gewählt, sonst die beste */
   display(id){ const s=this.show[id]; return s&&this.printsOf(id)[s] ? s : this.bestPrint(id); },
   remove(id,pr="C",n=1){ const p=this.prints[id]; if(!p||!(p[pr]>=n)) return false; p[pr]-=n; if(!p[pr]) delete p[pr]; this.owned[id]-=n; if(this.owned[id]<=0){ delete this.owned[id]; delete this.prints[id]; delete this.show[id]; } return true; },
-  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],boost:this.boost,packs:this.packs,quests:this.quests,cosmetics:this.cosmetics}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
+  save(){ Store.set("player",{coins:this.coins,owned:this.owned,prints:this.prints,show:this.show,progress:this.progress,prog:this.prog,trophies:this.trophies||[],boost:this.boost,packs:this.packs,quests:this.quests,cosmetics:this.cosmetics,clues:this.clues,secret:this.secret}); UI.coins(); if(typeof Account!=="undefined") Account.scheduleSave(); },
   has(id){ return this.owned[id]||0; },
   add(id,n=1,pr="C"){ this.owned[id]=(this.owned[id]||0)+n; const p=this.prints[id]||(this.prints[id]={}); p[pr]=(p[pr]||0)+n; },
   earn(n){ this.coins+=n; this.save(); if(n>0) toast(`+🪙${n}`); },
@@ -816,7 +817,7 @@ const UI = {
   /* Karte in der Sammlung: Kartenstufe, Seltenheitsstufen und Anzeige wählen */
   cardInfo(id){
     const c=DB.byId(id), n=Player.has(id), lv=Prog.cardLv(id), nx=Prog.nextAt(id);
-    if(!n) return this.modal(c,[["Noch nicht in deiner Sammlung",null,"ghost"]]);
+    if(!n) return this.modal(c,[[c.akte?"🗂️ Geheimakten-Karte: nur als Belohnung der Geheimakten in der Story erhältlich":"Noch nicht in deiner Sammlung",null,"ghost"]]);
     const p=Player.printsOf(id), cur=Player.display(id);
     const acts=[[`Stufe ${lv}: ${Prog.bonusText(c,lv)}${nx?` · Stufe ${lv+1} ab ${nx} Exemplaren`:" · Maximum"}`,null],
       [`Exemplare: ${PRINTS.filter(x=>p[x.k]).map(x=>`${x.name} ×${p[x.k]}`).join(", ")}`,null]];
@@ -1180,7 +1181,7 @@ const Shop = {
     const p=PACKS.find(x=>x.id===id); if(!p) return;
     if(free && !((Player.packs||{})[id]>0)) free=false;
     if(!free && Player.coins<p.price) return toast("Nicht genug Münzen – gewinne Duelle!");
-    const pool=DB.cards.filter(c=>!p.faction||c.faction===p.faction);
+    const pool=DB.cards.filter(c=>(!p.faction||c.faction===p.faction) && !c.akte);
     if(!pool.length) return toast("Keine Karten für diesen Booster");
     Sound.play("coin");
     if(free){ Player.packs[id]--; if(!Player.packs[id]) delete Player.packs[id]; }
@@ -1235,11 +1236,14 @@ const Story = {
   locked(k){ const u=this.data[k]&&this.data[k].unlock; return !!u && this.data[u] && !this.done(u); },
   stars(k){ return "★".repeat((this.data[k]&&this.data[k].diff)||1); },
   render(){
-    if(!this.data[this.camp] || !this.keys().includes(this.camp)) this.camp="polizei";
-    $("storyTabs").innerHTML=this.keys().map(k=>`<span data-f="${k}" class="${k===this.camp?"on":""} ${this.locked(k)?"lk":""}">${FACTIONS[this.side(k)][1]} ${esc(this.data[k].title)} <small>${this.stars(k)}${this.locked(k)?" 🔒":this.done(k)?" ✅":""}</small></span>`).join("");
+    if(this.camp!=="__secret" && (!this.data[this.camp] || !this.keys().includes(this.camp))) this.camp="polizei";
+    const ct=Clues.total();
+    $("storyTabs").innerHTML=`<span data-f="__secret" class="${this.camp==="__secret"?"on":""} secret">🗂️ Geheimakten <small>🔍${ct}</small></span>`+
+      this.keys().map(k=>`<span data-f="${k}" class="${k===this.camp?"on":""} ${this.locked(k)?"lk":""}">${FACTIONS[this.side(k)][1]} ${esc(this.data[k].title)} <small>${this.stars(k)}${this.locked(k)?" 🔒":this.done(k)?" ✅":""}</small></span>`).join("");
     const up=this.upcoming(); if(up){ const d=new Date(this.data[up].release+"T00:00:00");
       $("storyTabs").innerHTML+=`<span class="lk soon" title="erscheint bald">🔜 Neue Mission ab ${d.toLocaleDateString("de-DE",{day:"numeric",month:"long"})}</span>`; }
     $("storyTabs").querySelectorAll("span[data-f]").forEach(s=>s.onclick=()=>{this.camp=s.dataset.f;this.render()});
+    if(this.camp==="__secret") return Secret.render();
     const k=this.camp, C=this.data[k], prog=Player.progress[k]||0, lock=this.locked(k);
     const diff=["","Normal","Schwer","Sehr schwer"][C.diff||1]||"Extrem";
     $("storyDesc").innerHTML=`<b>Schwierigkeit: ${this.stars(k)} ${diff}</b><br>${esc(C.desc)}`+
@@ -3220,7 +3224,7 @@ const Account = {
 
   /* ---------- Cloud-Spielstand ---------- */
   docUrl(){ return `https://firestore.googleapis.com/v1/projects/${FIREBASE.projectId}/databases/(default)/documents/users/${this.user.uid}`; },
-  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], boost:Player.boost, packs:Player.packs, quests:Player.quests, cosmetics:Player.cosmetics, decks:Deck.lists, deckSets:Deck.sets, deckActive:Deck.active, nick:Store.get("nick","")}; },
+  snapshot(){ return {coins:Player.coins, owned:Player.owned, prints:Player.prints, show:Player.show, progress:Player.progress, prog:Player.prog, trophies:Player.trophies||[], boost:Player.boost, packs:Player.packs, quests:Player.quests, cosmetics:Player.cosmetics, clues:Player.clues, secret:Player.secret, decks:Deck.lists, deckSets:Deck.sets, deckActive:Deck.active, nick:Store.get("nick","")}; },
   async pushNow(){
     if(!this.enabled()||!this.loggedIn()) return;
     const t = await this.token(), data=this.snapshot(), now=Date.now();
@@ -3238,11 +3242,11 @@ const Account = {
     if(!r.ok) throw new Error((j.error&&(j.error.status||j.error.message))||("HTTP_"+r.status));
     const raw = j.fields&&j.fields.data&&j.fields.data.stringValue; if(!raw) { await this.pushNow(); return "uploaded"; }
     const d = JSON.parse(raw);
-    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.packs=d.packs||Player.packs; Player.quests=d.quests||Player.quests; Player.cosmetics=d.cosmetics||Player.cosmetics; setTimeout(()=>Cosmetic.apply(),0); Player.syncPrints();
+    Player.coins=d.coins??Player.coins; Player.owned=d.owned||Player.owned; Player.progress=d.progress||Player.progress; Player.prog=d.prog||Player.prog; Player.trophies=d.trophies||Player.trophies||[]; Player.prints=d.prints||{}; Player.show=d.show||{}; Player.boost=d.boost||Player.boost||{}; Player.packs=d.packs||Player.packs; Player.quests=d.quests||Player.quests; Player.cosmetics=d.cosmetics||Player.cosmetics; Player.clues=d.clues||Player.clues; Player.secret=d.secret||Player.secret; setTimeout(()=>Cosmetic.apply(),0); Player.syncPrints();
     if(d.deckSets){ Object.keys(FACTIONS).forEach(f=>{ if(Array.isArray(d.deckSets[f])) Deck.sets[f]=d.deckSets[f]; }); if(d.deckActive) Deck.active={...Deck.active,...d.deckActive}; Deck.prune(); }
     else if(d.decks){ Deck.lists=d.decks; Deck.prune(); }
     if(d.nick) Store.set("nick", d.nick);
-    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],boost:Player.boost,packs:Player.packs,quests:Player.quests,cosmetics:Player.cosmetics}); Deck.save();
+    Prog.data(); Store.set("player",{coins:Player.coins,owned:Player.owned,prints:Player.prints,show:Player.show,progress:Player.progress,prog:Player.prog,trophies:Player.trophies||[],boost:Player.boost,packs:Player.packs,quests:Player.quests,cosmetics:Player.cosmetics,clues:Player.clues,secret:Player.secret}); Deck.save();
     UI.coins(); UI.badges(); return "loaded";
   },
   /* nach jeder Änderung am Spielstand: verzögert hochladen */

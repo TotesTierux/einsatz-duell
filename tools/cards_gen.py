@@ -466,6 +466,19 @@ def build():
             cards.append(dict(id=cid,name=name,faction=fac,type="monster",attr=ar,level=lv,atk=atk,rarity="CE",effect=eff,val=0,starter=False,art=art,def_=df))
         else:
             cards.append(dict(id=cid,name=name,faction=fac,type=typ,law=ar,ref=ref or ar,rarity="CE",effect=eff,val=0,starter=False,art=art))
+    # ---------- Geheimakten-Karten: nur als Belohnung der Geheimakten (nicht in Boostern) ----------
+    AKTE = [
+      ("pa01","Cold-Case-Ermittlerin Hartmann","polizei","kripo",7,2700,2500,"summon_revive",0,"🗂️"),
+      ("pa02","Phantomjäger Graumann",         "polizei","kripo",8,3100,2400,"summon_bounce",0,"🕯️"),
+      ("pa03","Sonderermittler Falkenauge",    "polizei","sek",  9,3300,2800,"double_attack",0,"🦅"),
+      ("va01","Archivdieb Staubfinger",        "verbrecher","dieb",  7,2700,2300,"summon_discard",1,"📚"),
+      ("va02","Meisterfälscher Kopierer",      "verbrecher","betrug",8,3100,2500,"lifelink",0,"🖨️"),
+      ("va03","Schattenkanzler Nox",           "verbrecher","bande", 9,3300,2700,"double_attack",0,"🌘"),
+    ]
+    for cid,name,fac,role,lv,atk,df,eff,val,emo in AKTE:
+        c1,c2=ROLE_COLORS[role]
+        cards.append(dict(id=cid,name=name,faction=fac,type="monster",attr=role,level=lv,atk=atk,def_=df,rarity="UR",effect=eff,val=val,
+                          starter=False,akte=True,art=dict(emoji=emo,c1=c1,c2=c2)))
     import re
     effects=set(re.findall(r"^\s+([a-z_]+):\s*\{types:", open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),"src/game.js"),encoding="utf-8").read(), re.M))
     names={c["name"] for c in cards}

@@ -307,5 +307,12 @@ vc07:"Schredder, Feuer, Säure – Beweise? Welche Beweise?",
 vc08:"Rempeln, lächeln, weg. Zwei Brieftaschen in drei Sekunden.",
 vc09:"Neuer Name, neuer Pass, neues Leben. Deins.",
 vc10:"Hinter dem Kühlschrank geht's direkt in die Kanalisation.",
+// Geheimakten-Karten
+pa01:"Kein Fall ist zu alt. Nur der Kaffee in ihrer Thermoskanne.",
+pa02:"Er jagt Leute, die es offiziell gar nicht gibt. Bisher mit Erfolg.",
+pa03:"Sieht aus 300 Metern, ob dein Schuh offen ist. Und deine Ausrede auch.",
+va01:"Wo andere Akten ablegen, legt er sie ab – bei sich zu Hause.",
+va02:"Sein Lieblingsbild hängt im Museum. Das Original hängt in seiner Küche.",
+va03:"Regiert die Unterwelt so leise, dass selbst die Unterwelt es nicht merkt.",
 };
 function flavorOf(c){ return (c && (c.flavor || FLAVOR[c.id])) || ""; }
