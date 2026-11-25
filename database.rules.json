@@ -20,6 +20,8 @@
     "invites": { "$to": { ".read": "auth != null && auth.uid === $to",
       "$from": { ".write": "auth != null && (auth.uid === $from || auth.uid === $to)" } } },
 
+    "clanInv": { "$to": { ".read": "auth != null && auth.uid === $to",
+      "$cid": { ".write": "auth != null && (auth.uid === $to || root.child('clans').child($cid).child('members').child(auth.uid).exists())" } } },
     "clannames": { ".read": "auth != null",
       "$n": { ".write": "auth != null && (!data.exists() || root.child('clans').child(data.val()).child('owner').val() === auth.uid)" } },
     "clanlist": { ".read": "auth != null",

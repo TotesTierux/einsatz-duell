@@ -71,6 +71,7 @@ const Social = {
       this._es.push(es); };
     open("invites/"+this.me, ()=>this.loadInvites(true));
     open("freq/"+this.me, ()=>this.loadReqs(true));
+    open("clanInv/"+this.me, ()=>this.loadClanInv(true));
   },
   /* ---------- Freunde ---------- */
   async loadReqs(live){
@@ -242,10 +243,11 @@ const Social = {
       await this.loadClan(); this.render();
     }catch(e){ toast(this.err(e)); }
   },
-  async join(cid){
+  async join(cid, invited){
     try{
       const c=await Cloud.req("clans/"+cid); if(!c) return toast("Organisation gibt es nicht mehr");
-      if(!c.open) return toast("Diese Organisation nimmt gerade niemanden auf");
+      if(!c.open && !invited) return toast("Diese Organisation nimmt gerade niemanden auf");
+      if(this.clanId && this.clanId!==cid) return toast("Verlasse zuerst deine jetzige Organisation");
       const n=Object.keys(c.members||{}).length; if(n>=CLAN_MAX) return toast(`Voll (${CLAN_MAX} Mitglieder)`);
       await Cloud.req(`clans/${cid}/members/${this.me}`,"PUT",{nick:this.nick()||"Spieler", role:"member", joined:{".sv":"timestamp"}});
       await Cloud.req("clanlist/"+cid,"PATCH",{n:n+1}).catch(()=>{});
@@ -284,6 +286,38 @@ const Social = {
       await Cloud.req(`clans/${this.clanId}/owner`,"PUT",uid); await this.loadClan(); this.render(); }catch(e){ toast(this.err(e)); }
   },
   async toggleOpen(){ try{ const o=!this.clan.open; await Cloud.req(`clans/${this.clanId}/open`,"PUT",o); await Cloud.req("clanlist/"+this.clanId,"PATCH",{open:o}).catch(()=>{}); this.clan.open=o; this.render(); }catch(e){ toast(this.err(e)); } },
+
+  /* ---------- Einladungen in die Organisation ---------- */
+  clanInvs:[],
+  async loadClanInv(live){
+    const d=await Cloud.req("clanInv/"+this.me).catch(()=>null)||{}, now=Date.now();
+    const before=this.clanInvs.length;
+    this.clanInvs=Object.entries(d).map(([cid,v])=>({cid,...v})).filter(i=>!i.t||now-i.t<7*864e5);
+    if(live && this.clanInvs.length>before){ const i=this.clanInvs[this.clanInvs.length-1];
+      if(!this.clanId && !(UI.current==="duel"&&!Duel.over) && !$("modal").classList.contains("show"))
+        UI.dialog(`🏢 ${esc(i.from||"Jemand")} lädt dich in die Organisation<br><b>${esc(i.name)} [${esc(i.tag)}]</b> ein!`,
+          [["✅ Beitreten",()=>this.acceptClanInv(i.cid),"green"],["Später",null,"ghost"]]);
+      else toast(`🏢 Einladung in „${i.name}“ – siehe Freunde & Orga`); }
+    this.badge(); if(UI.current==="social") this.render();
+  },
+  async acceptClanInv(cid){ await Cloud.req(`clanInv/${this.me}/${cid}`,"DELETE").catch(()=>{}); this.clanInvs=this.clanInvs.filter(i=>i.cid!==cid); this.tab="clan"; await this.join(cid,true); },
+  async declineClanInv(cid){ await Cloud.req(`clanInv/${this.me}/${cid}`,"DELETE").catch(()=>{}); this.clanInvs=this.clanInvs.filter(i=>i.cid!==cid); this.render(); },
+  async inviteToClan(uid, nick){
+    if(!this.clan) return; if(this.clan.members[uid]) return toast(`${nick} ist schon Mitglied`);
+    if(Object.keys(this.clan.members).length>=CLAN_MAX) return toast("Die Organisation ist voll");
+    try{ await Cloud.req(`clanInv/${uid}/${this.clanId}`,"PUT",{name:this.clan.name, tag:this.clan.tag, from:this.nick()||"Spieler", t:{".sv":"timestamp"}});
+      const s=Store.get("clanInvSent",{}); s[uid]=Date.now(); Store.set("clanInvSent",s); toast(`Einladung an ${nick} gesendet ✉️`); this.render(); }
+    catch(e){ toast(this.err(e)); }
+  },
+  /* Liste zum Einladen: Freunde + gefundene Spieler, die noch nicht Mitglied sind */
+  inviteList(){
+    const mem=(this.clan&&this.clan.members)||{}, sent=Store.get("clanInvSent",{}), q=this.cq||"", seen=new Set();
+    const L=[...this.friends.map(f=>({...f,friend:1})), ...(this.players||[])].filter(p=>{ if(seen.has(p.uid)||mem[p.uid]||p.uid===this.me) return false; seen.add(p.uid); return true; })
+      .filter(p=>!q||String(p.nick).toLowerCase().includes(q)).slice(0,40);
+    if(!L.length) return `<p class="muted">${q?"Niemand mit diesem Namen gefunden.":"Keine Spieler zum Einladen gefunden."}</p>`;
+    return L.map(p=>`<div class="sorow">${this.dot(p)}<b>${esc(p.nick)}</b>${p.friend?` <small class="muted">Freund</small>`:""}${p.clanTag?` <small class="muted">[${esc(p.clanTag)}]</small>`:""}<span class="sp"></span>
+      ${sent[p.uid]&&Date.now()-sent[p.uid]<864e5?`<small class="muted">✉️ eingeladen</small>`:`<button class="small blue" data-act="inviteToClan|${p.uid}|${esc(p.nick)}">✉️ Einladen</button>`}</div>`).join("");
+  },
 
   /* ---------- Fortschritt der Organisations-Aufträge ---------- */
   pendingKey(){ return "clanPending"; },
@@ -341,10 +375,11 @@ const Social = {
     if(!this.ok()){ el.innerHTML=`<p class="muted">Freunde und Organisationen brauchen eine Internetverbindung zum Spielserver.</p>`; return; }
     if(!this.me){ el.innerHTML=`<p class="muted">Verbinde …</p>`; await this.start(); if(!this.me){ el.innerHTML=`<p class="muted">⚠️ Keine Verbindung zum Server.</p>`; return; } }
     if(full){ el.innerHTML=`<p class="muted">Lade …</p>`;
-      await Promise.all([this.loadFriends(), this.loadReqs(), this.loadInvites(), this.touch(true).then(()=>this.loadClan()), this.loadPlayers().catch(()=>{})]);
+      await Promise.all([this.loadFriends(), this.loadReqs(), this.loadInvites(), this.touch(true).then(()=>this.loadClan()), this.loadPlayers().catch(()=>{}), this.loadClanInv().catch(()=>{})]);
       if(!this.clanId) await this.loadList(); else this.loadMemberStatus(); this.flush(); }
     el.innerHTML = this.tab==="friends" ? this.htmlFriends() : this.htmlClan();
     el.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const [fn,...a]=b.dataset.act.split("|"); this[fn](...a); });
+    const cf=$("clFind"); if(cf) cf.oninput=()=>{ this.cq=cf.value.trim().toLowerCase(); $("clInvList").innerHTML=this.inviteList(); $("clInvList").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const [fn,...a]=b.dataset.act.split("|"); this[fn](...a); }); };
     const fi=$("soFind"); if(fi){ fi.onkeydown=e=>{ if(e.key==="Enter") this.searchPlayers(); }; fi.oninput=()=>{ this.pq=fi.value.trim().toLowerCase(); $("soPlayers").innerHTML=this.playerList(); $("soPlayers").querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>{ const [fn,...a]=b.dataset.act.split("|"); this[fn](...a); }); }; }
     if(this.tab==="clan" && !this.clan){
       el.querySelectorAll("[data-em]").forEach(s=>s.onclick=()=>{ this._emblem=s.dataset.em; el.querySelectorAll("[data-em]").forEach(x=>x.classList.toggle("on",x===s)); });
@@ -377,7 +412,8 @@ const Social = {
   htmlClan(){
     if(!this.clan){
       const side=this._side||"polizei", em=this._emblem||CLAN_EMBLEMS[0];
-      return `
+      return `${this.clanInvs.length?`<div class="panel"><h3 class="qh">✉️ Einladungen</h3>${this.clanInvs.map(i=>`<div class="sorow"><div><b>${esc(i.name)}</b> <small class="muted">[${esc(i.tag)}]</small><br><small class="muted">von ${esc(i.from||"?")}</small></div><span class="sp"></span>
+        <button class="small green" data-act="acceptClanInv|${i.cid}">Beitreten</button><button class="small ghost" data-act="declineClanInv|${i.cid}">✕</button></div>`).join("")}</div>`:""}
       <div class="panel"><h3 class="qh">🏢 Organisation gründen</h3>
         <p class="muted" style="margin-top:0">Eine Dienststelle oder ein Syndikat mit bis zu ${CLAN_MAX} Mitgliedern. Gemeinsam erfüllt ihr schwere Wochen-Aufträge, steigt im Rang auf und bekommt Boni.</p>
         <label>Name</label><input id="clName" maxlength="24" placeholder="z. B. Revier Nord">
@@ -411,6 +447,10 @@ const Social = {
       ${mem.map(([u,m])=>`<div class="sorow">${u===this.me?"":this.dot(this.profCache&&this.profCache[u])}<b>${esc(m.nick)}</b>${m.role==="leader"?" 👑":""}<small class="muted"> · ${contrib[u]||0} Beiträge</small><span class="sp"></span>
         ${u!==this.me?`<button class="small red" data-act="challenge|${u}|${esc(m.nick)}">⚔️</button>${leader?`<button class="small ghost" data-act="promote|${u}">👑</button><button class="small ghost" data-act="kick|${u}">✕</button>`:""}`:`<small class="muted">du</small>`}</div>`).join("")}
     </div>
+    ${mem.length<CLAN_MAX?`<div class="panel"><h3 class="qh">✉️ Mitglieder einladen</h3>
+      <p class="muted" style="margin-top:0">Lade Freunde oder andere Spieler direkt ein – auch wenn die Aufnahme geschlossen ist.</p>
+      <input id="clFind" placeholder="Name filtern …" value="${esc(this.cq||"")}">
+      <div id="clInvList">${this.inviteList()}</div></div>`:""}
     <div class="row">${leader?`<button class="small ghost" data-act="toggleOpen">${c.open?"🔒 Aufnahme schließen":"🔓 Aufnahme öffnen"}</button>`:""}<button class="small ghost" data-act="leave">🚪 ${leader&&mem.length<=1?"Auflösen":"Verlassen"}</button></div>`;
   },
   show(t){ this.tab=t; this.render(); if(t==="clan"&&this.clan) this.loadMemberStatus(); },

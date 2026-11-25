@@ -754,7 +754,7 @@ const UI = {
     const me=$("homeMe"); if(me) me.innerHTML=`${acc}👤 ${esc(nick)} · 👮${pp.lv} · 🦹${pv.lv}${sp?'<span class="dot"></span>':""}`;
     const b=$("btnProfile"); if(b) b.innerHTML=`⭐ Laufbahn${sp?` (${sp})`:""}`;
     const q=$("btnQuests"); if(q && typeof Quests!=="undefined"){ const n=Quests.claimable(); q.innerHTML=`📋 Aufträge${n?` <span class="qdot">${n}</span>`:""}`; }
-    const so=$("btnSocial"); if(so && typeof Social!=="undefined"){ const n=Social.reqs.length+Social.invites.length; so.innerHTML=`👥 Freunde &amp; Orga${n?` <span class="qdot">${n}</span>`:""}`; }
+    const so=$("btnSocial"); if(so && typeof Social!=="undefined"){ const n=Social.reqs.length+Social.invites.length+(Social.clanId?0:(Social.clanInvs||[]).length); so.innerHTML=`👥 Freunde &amp; Orga${n?` <span class="qdot">${n}</span>`:""}`; }
   },
   back(){ // Android-Zurück-Taste
     if($("reveal").classList.contains("show")){return true}
