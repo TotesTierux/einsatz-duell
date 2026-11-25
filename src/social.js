@@ -114,14 +114,21 @@ const Social = {
     let d=null;
     try{ d=await Cloud.req("profiles","GET",undefined,'&orderBy="seen"&limitToLast=200'); }
     catch(e){ d=await Cloud.req("profiles").catch(()=>null); }      // ohne Index: alles laden
-    this.players=Object.entries(d||{}).map(([uid,p])=>({uid,...p})).filter(p=>p.uid!==this.me && p.nick)
-      .sort((a,b)=>(this.online(b)-this.online(a))||((b.reg?1:0)-(a.reg?1:0))||(b.seen||0)-(a.seen||0));
+    this.players=this.clean(Object.entries(d||{}).map(([uid,p])=>({uid,...p})));
+  },
+  /* Nur registrierte Spieler (keine Gäste), ohne Standardnamen, pro Name nur der zuletzt aktive Eintrag */
+  clean(list){
+    const best=new Map();
+    list.filter(p=>p.uid!==this.me && p.reg===true && p.nick && p.nick!=="Spieler").forEach(p=>{
+      const k=String(p.nick).trim().toLowerCase(), o=best.get(k);
+      if(!o || (p.seen||0)>(o.seen||0)) best.set(k,p); });
+    const myNick=(this.nick()||"").trim().toLowerCase(); best.delete(myNick);
+    return [...best.values()].sort((a,b)=>(this.online(b)-this.online(a))||(b.seen||0)-(a.seen||0));
   },
   async searchPlayers(){
     const q=($("soFind")?$("soFind").value:"").trim().toLowerCase(); this.pq=q;
     if(q.length>=2){ try{ const d=await Cloud.req("profiles","GET",undefined,`&orderBy="nickLower"&startAt=${encodeURIComponent(JSON.stringify(q))}&endAt=${encodeURIComponent(JSON.stringify(q+"\uf8ff"))}&limitToFirst=50`);
-        const extra=Object.entries(d||{}).map(([uid,p])=>({uid,...p})).filter(p=>p.uid!==this.me&&p.nick);
-        const have=new Set((this.players||[]).map(p=>p.uid)); this.players=[...(this.players||[]),...extra.filter(p=>!have.has(p.uid))]; }catch(e){} }
+        this.players=this.clean([...(this.players||[]),...Object.entries(d||{}).map(([uid,p])=>({uid,...p}))]); }catch(e){} }
     this.render();
   },
   playerList(){
@@ -129,7 +136,7 @@ const Social = {
     const L=(this.players||[]).filter(p=>!q||String(p.nick).toLowerCase().includes(q)).slice(0,60);
     if(!this.players) return `<p class="muted">Lade Spieler …</p>`;
     if(!L.length) return `<p class="muted">${q?"Kein Spieler mit diesem Namen gefunden.":"Noch keine registrierten Spieler sichtbar."}</p>`;
-    return `<small class="muted">${(this.players||[]).length} Spieler insgesamt${q?` · ${L.length} Treffer`:""}</small>`+L.map(p=>`<div class="sorow">${this.dot(p)}<b>${esc(p.nick)}</b>${p.reg?"":` <small class="muted">(Gast)</small>`}${p.clanTag?` <small class="muted">[${esc(p.clanTag)}]</small>`:""}<span class="sp"></span>
+    return `<small class="muted">${(this.players||[]).length} Spieler insgesamt${q?` · ${L.length} Treffer`:""}</small>`+L.map(p=>`<div class="sorow">${this.dot(p)}<b>${esc(p.nick)}</b>${p.clanTag?` <small class="muted">[${esc(p.clanTag)}]</small>`:""}<span class="sp"></span>
       ${fr.has(p.uid)?`<small class="muted">✓ Freund</small>`:inc.has(p.uid)?`<button class="small green" data-act="accept|${p.uid}">Annehmen</button>`
         :sent[p.uid]?`<small class="muted">✉️ gesendet</small>`:`<button class="small blue" data-act="request|${p.uid}">＋ Anfrage</button>`}</div>`).join("");
   },
@@ -405,7 +412,7 @@ const Social = {
         :`<p class="muted">Noch keine Freunde. Schick deinen Code herum – oder such unten nach Spielern.</p>`}
     </div>
     <div class="panel"><h3 class="qh">🔎 Spieler finden</h3>
-      <p class="muted" style="margin-top:0">Alle Spieler mit aktueller App-Version, online und zuletzt aktive zuerst.</p>
+      <p class="muted" style="margin-top:0">Registrierte Spieler (mit Konto), online und zuletzt aktive zuerst.</p>
       <div class="row"><input id="soFind" placeholder="Name suchen …" value="${esc(this.pq)}" style="flex:1"><button class="small blue" data-act="searchPlayers">Suchen</button></div>
       <div id="soPlayers">${this.playerList()}</div></div>`;
   },
